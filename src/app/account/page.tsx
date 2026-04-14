@@ -1,449 +1,605 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+/**
+ * /account — the bMovies studio dashboard.
+ *
+ * Seven tabs, each the landing surface for a major user workflow:
+ *
+ *   My Films          — every offer the user has commissioned, grouped
+ *                       by tier, with status / thumbnail / deep-link
+ *                       to the per-film tools
+ *   My Studio         — studio brand (name, logo, bio) + current
+ *                       production pipeline + quick agent picker
+ *   Agents            — hire cast, hire crew, hire editors, salaries,
+ *                       soul files (scaffolded — live agent marketplace
+ *                       is Phase 2)
+ *   Cap Tables        — per-film and $bMovies cap tables with allocation
+ *                       bars and on-chain verification
+ *   Investor Packs    — printable per-film decks, one click to PDF
+ *   Creative Tools    — launcher grid for the 6 creative tools
+ *   Wallet            — BRC-100 wallet connect + $bMovies balance +
+ *                       per-film $TICKER balances + dividend history
+ *
+ * Data layer: supabase-bmovies.ts (reads bct_offers, bct_artifacts,
+ * bct_studios, bct_agents, bct_share_sales, bct_platform_config).
+ *
+ * Auth: Supabase session. We pull the current user from the shared
+ * auth cookie (storageKey = 'bmovies-auth') and match against
+ * bct_offers.producer_id.
+ *
+ * Fallback: if the user isn't signed in, the page shows a "sign in
+ * to open your studio" screen with a link back to bmovies.online.
+ */
+
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import {
-  FaUser,
-  FaWallet,
-  FaCoins,
-  FaSignOutAlt,
-  FaCopy,
-  FaCheck,
-  FaBook,
-  FaImage,
-  FaExternalLinkAlt,
-  FaShieldAlt,
-} from 'react-icons/fa'
+import { bmovies } from '@/lib/supabase-bmovies'
+import type { User } from '@supabase/supabase-js'
 
-type UserProfile = {
-  handle: string
-  displayName: string
-  avatarUrl: string
+type Tab =
+  | 'my-films'
+  | 'studio'
+  | 'agents'
+  | 'cap-tables'
+  | 'investor-packs'
+  | 'creative-tools'
+  | 'wallet'
+
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'my-films',        label: 'My Films',        icon: '🎬' },
+  { id: 'studio',          label: 'Studio',          icon: '🏢' },
+  { id: 'agents',          label: 'Agents',          icon: '🎭' },
+  { id: 'cap-tables',      label: 'Cap Tables',      icon: '📊' },
+  { id: 'investor-packs',  label: 'Investor Packs',  icon: '📄' },
+  { id: 'creative-tools',  label: 'Creative Tools',  icon: '🛠' },
+  { id: 'wallet',          label: 'Wallet',          icon: '💳' },
+]
+
+interface Film {
+  id: string
+  title: string
+  synopsis: string | null
+  tier: string
+  status: string
+  token_ticker: string | null
+  token_mint_txid: string | null
+  commissioner_percent: number
+  created_at: string
+  bct_artifacts: { id: number; kind: string; role: string | null; url: string; step_id: string | null; superseded_by: number | null }[]
 }
-
-type WalletInfo = {
-  address: string
-  publicKey: string
-  derived: boolean
-}
-
-type Tab = 'overview' | 'wallet' | 'tokens' | 'magazines' | 'settings'
 
 export default function AccountPage() {
-  const router = useRouter()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [wallet, setWallet] = useState<WalletInfo | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
-  const [copied, setCopied] = useState('')
+  const [activeTab, setActiveTab] = useState<Tab>('my-films')
+  const [films, setFilms] = useState<Film[]>([])
+  const [filmsLoading, setFilmsLoading] = useState(false)
 
+  // ─── Auth bootstrap ───
   useEffect(() => {
-    async function loadProfile() {
-      try {
-        const res = await fetch('/api/auth/me')
-        if (!res.ok) {
-          router.push('/login?returnTo=/account')
-          return
-        }
-        const data = await res.json()
-        setProfile(data.profile)
-        if (data.wallet) setWallet(data.wallet)
-      } catch {
-        router.push('/login?returnTo=/account')
-      } finally {
-        setLoading(false)
-      }
+    let cancelled = false
+    async function boot() {
+      const { data } = await bmovies.auth.getSession()
+      if (cancelled) return
+      setUser(data.session?.user ?? null)
+      setLoading(false)
     }
-    loadProfile()
-  }, [router])
-
-  const copyToClipboard = useCallback((text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(label)
-    setTimeout(() => setCopied(''), 2000)
+    boot()
+    const { data: sub } = bmovies.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => {
+      cancelled = true
+      sub.subscription.unsubscribe()
+    }
   }, [])
 
-  const handleDeriveWallet = useCallback(async () => {
-    if (!profile) return
-    try {
-      const res = await fetch('/api/user/wallet/derive', { method: 'POST' })
-      if (res.ok) {
-        const data = await res.json()
-        setWallet(data.wallet)
+  // ─── Load films for the current user ───
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    async function loadFilms() {
+      setFilmsLoading(true)
+      // Two-pass lookup: by producer_id if set, otherwise by buyer_email
+      // (via bct_share_sales or bct_platform_investments) — we start
+      // with the producer_id path since commissioners are recorded
+      // there. If the user has zero commissioned films the UI shows
+      // an empty state with a CTA to commission one.
+      const { data, error } = await bmovies
+        .from('bct_offers')
+        .select(
+          `id, title, synopsis, tier, status, token_ticker, token_mint_txid,
+           commissioner_percent, created_at,
+           bct_artifacts ( id, kind, role, url, step_id, superseded_by )`,
+        )
+        .eq('producer_id', user!.id)
+        .is('archived_at', null)
+        .order('created_at', { ascending: false })
+      if (cancelled) return
+      if (error) {
+        console.error('[account] films fetch failed:', error)
+        setFilms([])
+      } else {
+        setFilms((data as unknown as Film[]) || [])
       }
-    } catch (err) {
-      console.error('Wallet derivation failed:', err)
+      setFilmsLoading(false)
     }
-  }, [profile])
-
-  const handleLogout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/')
-  }, [router])
+    loadFilms()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="text-[#666] text-sm">Loading your studio…</div>
       </div>
     )
   }
 
-  if (!profile) return null
-
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: 'Overview', icon: <FaUser className="w-3.5 h-3.5" /> },
-    { id: 'wallet', label: 'Wallet', icon: <FaWallet className="w-3.5 h-3.5" /> },
-    { id: 'tokens', label: 'Tokens', icon: <FaCoins className="w-3.5 h-3.5" /> },
-    { id: 'magazines', label: 'Magazines', icon: <FaBook className="w-3.5 h-3.5" /> },
-    { id: 'settings', label: 'Settings', icon: <FaShieldAlt className="w-3.5 h-3.5" /> },
-  ]
-
-  return (
-    <div className="min-h-screen bg-black">
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt="" className="w-16 h-16 rounded-full border-2 border-red-500/30" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-red-950/30 border-2 border-red-500/30 flex items-center justify-center">
-                <FaUser className="w-6 h-6 text-red-500" />
-              </div>
-            )}
-            <div>
-              <h1 className="text-2xl font-black text-white uppercase tracking-tight" style={{ fontFamily: 'var(--font-brand)' }}>
-                {profile.displayName || profile.handle}
-              </h1>
-              <p className="text-gray-500 text-sm">@{profile.handle} &middot; HandCash</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-gray-600 hover:text-red-500 text-sm transition"
+  if (!user) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          <div
+            className="text-6xl font-black mb-4"
+            style={{ fontFamily: 'var(--font-bebas)' }}
           >
-            <FaSignOutAlt className="w-3.5 h-3.5" />
-            Sign Out
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 mb-8 overflow-x-auto border-b border-white/5 pb-px">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-                activeTab === tab.id
-                  ? 'text-red-500 border-red-500'
-                  : 'text-gray-600 border-transparent hover:text-white hover:border-white/20'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {activeTab === 'overview' && (
-            <OverviewTab profile={profile} wallet={wallet} onCopy={copyToClipboard} copied={copied} />
-          )}
-          {activeTab === 'wallet' && (
-            <WalletTab wallet={wallet} onDerive={handleDeriveWallet} onCopy={copyToClipboard} copied={copied} />
-          )}
-          {activeTab === 'tokens' && <TokensTab />}
-          {activeTab === 'magazines' && <MagazinesTab />}
-          {activeTab === 'settings' && <SettingsTab profile={profile} />}
-        </motion.div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Overview Tab ── */
-function OverviewTab({ profile, wallet, onCopy, copied }: {
-  profile: UserProfile; wallet: WalletInfo | null; onCopy: (t: string, l: string) => void; copied: string
-}) {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Profile Card */}
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Profile</h3>
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span className="text-gray-500 text-sm">Handle</span>
-            <span className="text-white text-sm font-mono">@{profile.handle}</span>
+            Sign in to<br/>
+            open your <span className="text-[#E50914]">studio</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 text-sm">Display Name</span>
-            <span className="text-white text-sm">{profile.displayName || '—'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 text-sm">Auth Provider</span>
-            <span className="text-green-500 text-sm font-bold">HandCash</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Wallet Summary */}
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Wallet</h3>
-        {wallet ? (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 text-sm">BSV Address</span>
-              <button
-                onClick={() => onCopy(wallet.address, 'address')}
-                className="flex items-center gap-1.5 text-white text-xs font-mono bg-white/5 px-2 py-1 rounded hover:bg-white/10 transition"
-              >
-                {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}
-                {copied === 'address' ? <FaCheck className="w-2.5 h-2.5 text-green-500" /> : <FaCopy className="w-2.5 h-2.5 text-gray-500" />}
-              </button>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Status</span>
-              <span className="text-green-500 text-xs font-bold uppercase">Active</span>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-gray-600 text-sm mb-3">No wallet derived yet</p>
-            <Link href="#" onClick={(e) => { e.preventDefault() }} className="text-red-500 text-sm font-bold hover:text-red-400">
-              Go to Wallet tab to create one
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Quick Stats */}
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Content</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center py-3 bg-white/5 rounded-lg">
-            <div className="text-2xl font-black text-red-500">0</div>
-            <div className="text-gray-600 text-[10px] uppercase tracking-wider">Images</div>
-          </div>
-          <div className="text-center py-3 bg-white/5 rounded-lg">
-            <div className="text-2xl font-black text-red-500">0</div>
-            <div className="text-gray-600 text-[10px] uppercase tracking-wider">Magazines</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Links */}
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Quick Links</h3>
-        <div className="space-y-2">
-          <Link href="/magazine" className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition group">
-            <span className="text-gray-400 text-sm group-hover:text-white">Create Magazine</span>
-            <FaExternalLinkAlt className="w-3 h-3 text-gray-600" />
-          </Link>
-          <Link href="/xxx" className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition group">
-            <span className="text-gray-400 text-sm group-hover:text-white">View Gallery</span>
-            <FaExternalLinkAlt className="w-3 h-3 text-gray-600" />
-          </Link>
-          <Link href="/characters" className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition group">
-            <span className="text-gray-400 text-sm group-hover:text-white">Characters</span>
-            <FaExternalLinkAlt className="w-3 h-3 text-gray-600" />
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Wallet Tab ── */
-function WalletTab({ wallet, onDerive, onCopy, copied }: {
-  wallet: WalletInfo | null; onDerive: () => void; onCopy: (t: string, l: string) => void; copied: string
-}) {
-  return (
-    <div className="max-w-2xl">
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-2">BSV Wallet</h3>
-        <p className="text-gray-600 text-xs mb-6">
-          Your NPGX wallet is derived from your HandCash signing key. Only you control this address.
-        </p>
-
-        {wallet ? (
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-500 text-[10px] uppercase tracking-widest block mb-1">Address</label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-black border border-white/10 rounded px-3 py-2 text-white text-xs font-mono truncate">
-                  {wallet.address}
-                </code>
-                <button
-                  onClick={() => onCopy(wallet.address, 'wallet-address')}
-                  className="p-2 bg-white/5 rounded hover:bg-white/10 transition"
-                >
-                  {copied === 'wallet-address' ? <FaCheck className="w-3.5 h-3.5 text-green-500" /> : <FaCopy className="w-3.5 h-3.5 text-gray-500" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-gray-500 text-[10px] uppercase tracking-widest block mb-1">Public Key</label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-black border border-white/10 rounded px-3 py-2 text-white text-xs font-mono truncate">
-                  {wallet.publicKey}
-                </code>
-                <button
-                  onClick={() => onCopy(wallet.publicKey, 'pubkey')}
-                  className="p-2 bg-white/5 rounded hover:bg-white/10 transition"
-                >
-                  {copied === 'pubkey' ? <FaCheck className="w-3.5 h-3.5 text-green-500" /> : <FaCopy className="w-3.5 h-3.5 text-gray-500" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/5">
-              <p className="text-gray-600 text-[10px] uppercase tracking-widest">
-                This address can hold $NPGX tokens and character tokens. Only your HandCash key can sign transactions.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <FaWallet className="w-10 h-10 text-red-500/30 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm mb-4">
-              Derive a BSV wallet address from your HandCash account.
-              This creates a new address that only you can control.
-            </p>
-            <button
-              onClick={onDerive}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all hover:scale-105"
-            >
-              Create Wallet
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Token Wallets */}
-      {wallet && (
-        <div className="bg-gray-950 border border-white/10 rounded-xl p-6 mt-6">
-          <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-2">Token Wallets</h3>
-          <p className="text-gray-600 text-xs mb-4">
-            Each NPGX character token gets its own derived address from your master key.
+          <p className="text-[#888] text-sm leading-relaxed mb-6">
+            Your account, your films, your cap tables, your agents, your
+            dividends — all live inside this dashboard. Sign in with the
+            same email you used to commission a film on bMovies, or start
+            fresh with a $0.99 pitch.
           </p>
-          <div className="text-center py-6">
-            <p className="text-gray-600 text-sm">No character tokens held yet</p>
-            <Link href="/characters" className="text-red-500 text-sm font-bold hover:text-red-400 mt-2 inline-block">
-              Browse Characters
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/login"
+              className="px-6 py-3 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+            >
+              Sign in →
             </Link>
+            <a
+              href="https://bmovies.online/commission.html"
+              className="px-6 py-3 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
+            >
+              Commission a film ($0.99 +)
+            </a>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12">
+      {/* Header */}
+      <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
+        <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+          {user.email}
+        </div>
+        <h1
+          className="text-5xl font-black leading-none"
+          style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
+        >
+          My <span className="text-[#E50914]">studio</span>
+        </h1>
+        <p className="text-[#888] text-sm mt-2 max-w-xl">
+          Every film you've commissioned, every agent you've hired, every
+          royalty share you hold. All in one place. Share cap tables and
+          investor packs with a single click.
+        </p>
+      </header>
+
+      {/* Tabs */}
+      <nav className="mb-8 flex flex-wrap gap-1 border-b border-[#1a1a1a]">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
+              activeTab === t.id
+                ? 'text-white border-b-2 border-[#E50914]'
+                : 'text-[#666] hover:text-[#bbb]'
+            }`}
+          >
+            <span className="mr-1.5">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {/* Tab content */}
+      <div>
+        {activeTab === 'my-films' && (
+          <MyFilmsTab films={films} loading={filmsLoading} />
+        )}
+        {activeTab === 'studio' && <StudioTab />}
+        {activeTab === 'agents' && <AgentsTab />}
+        {activeTab === 'cap-tables' && <CapTablesTab films={films} />}
+        {activeTab === 'investor-packs' && <InvestorPacksTab films={films} />}
+        {activeTab === 'creative-tools' && <CreativeToolsTab />}
+        {activeTab === 'wallet' && <WalletTab user={user} />}
+      </div>
+    </div>
+  )
+}
+
+/* ───────── My Films tab ───────── */
+
+function MyFilmsTab({ films, loading }: { films: Film[]; loading: boolean }) {
+  if (loading) return <div className="text-[#666] text-sm py-8">Loading your films…</div>
+
+  if (films.length === 0) {
+    return (
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 text-center">
+        <div className="text-[#888] text-sm mb-4">
+          You haven't commissioned any films yet. Start with a $0.99 pitch
+          and upgrade any winner to a trailer, short, or feature.
+        </div>
+        <a
+          href="https://bmovies.online/commission.html"
+          className="inline-block px-5 py-2.5 bg-[#E50914] text-white text-xs font-black uppercase tracking-wider"
+        >
+          Commission a film →
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="text-[#888] text-xs mb-4">
+        {films.length} film{films.length === 1 ? '' : 's'} commissioned
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {films.map((f) => (
+          <FilmCard key={f.id} film={f} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FilmCard({ film }: { film: Film }) {
+  const poster = (film.bct_artifacts || []).find(
+    (a) => !a.superseded_by && (a.role === 'poster' || a.step_id === 'storyboard.poster'),
+  )
+  const onChain = film.token_mint_txid && /^[0-9a-f]{64}$/.test(film.token_mint_txid)
+  return (
+    <div className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors">
+      {poster?.url ? (
+        <div className="aspect-[2/3] bg-[#050505] overflow-hidden">
+          <img src={poster.url} alt={film.title} className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] flex items-center justify-center">
+          <div className="text-[#444] text-5xl">🎬</div>
         </div>
       )}
-    </div>
-  )
-}
-
-/* ── Tokens Tab ── */
-function TokensTab() {
-  return (
-    <div className="max-w-2xl">
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-2">Token Portfolio</h3>
-        <p className="text-gray-600 text-xs mb-6">Your $NPGX and character token holdings.</p>
-
-        <div className="text-center py-12">
-          <FaCoins className="w-10 h-10 text-red-500/30 mx-auto mb-4" />
-          <p className="text-gray-500 text-sm mb-2">No tokens yet</p>
-          <p className="text-gray-700 text-xs">Purchase tokens from the exchange or earn them through content creation.</p>
-          <Link
-            href="/tokens"
-            className="inline-block mt-4 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all"
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3
+            className="font-black text-lg leading-tight text-white"
+            style={{ fontFamily: 'var(--font-bebas)' }}
           >
-            View Token Exchange
+            {film.title}
+          </h3>
+          <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+            ${film.token_ticker}
+          </span>
+        </div>
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+            {film.tier}
+          </span>
+          <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+            {film.status.replace(/_/g, ' ')}
+          </span>
+          {onChain && (
+            <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+              On chain
+            </span>
+          )}
+        </div>
+        <p className="text-[#888] text-xs leading-relaxed mb-4 line-clamp-2">
+          {film.synopsis || 'No synopsis yet.'}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <a
+            href={`https://bmovies.online/film.html?id=${encodeURIComponent(film.id)}`}
+            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
+          >
+            Watch
+          </a>
+          <Link
+            href={`/movie-editor?id=${encodeURIComponent(film.id)}`}
+            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-white hover:border-[#E50914]"
+          >
+            Edit
           </Link>
+          <a
+            href={`https://bmovies.online/captable.html?id=${encodeURIComponent(film.id)}`}
+            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-[#bbb] hover:text-white"
+          >
+            Cap table
+          </a>
+          <a
+            href={`https://bmovies.online/deck.html?id=${encodeURIComponent(film.id)}`}
+            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-[#bbb] hover:text-white"
+          >
+            Deck
+          </a>
         </div>
       </div>
     </div>
   )
 }
 
-/* ── Magazines Tab ── */
-function MagazinesTab() {
+/* ───────── Studio tab ───────── */
+
+function StudioTab() {
   return (
     <div className="max-w-2xl">
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-2">My Magazines</h3>
-        <p className="text-gray-600 text-xs mb-6">Magazines you&apos;ve generated or purchased.</p>
-
-        <div className="text-center py-12">
-          <FaBook className="w-10 h-10 text-purple-500/30 mx-auto mb-4" />
-          <p className="text-gray-500 text-sm mb-2">No magazines yet</p>
-          <p className="text-gray-700 text-xs">Generated magazines are stored locally. Server-saved magazines will appear here.</p>
-          <div className="flex gap-3 justify-center mt-4">
-            <Link
-              href="/magazine"
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all"
-            >
-              Create Magazine
-            </Link>
-            <Link
-              href="/magazine/generated"
-              className="bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border border-white/10"
-            >
-              View Library
-            </Link>
-          </div>
+      <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
+        <h3
+          className="text-2xl font-black mb-2"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Your studio brand
+        </h3>
+        <p className="text-[#888] text-sm leading-relaxed mb-4">
+          At launch, every film you commission is attributed to one of the
+          six founding studios ($BOLTD, $CLNKR, $BOT21, $DREAM, $NRLSP,
+          $PRMNT). Their aesthetic shapes the work, and their brand goes
+          on the poster alongside yours as the producer.
+        </p>
+        <p className="text-[#888] text-sm leading-relaxed mb-4">
+          Phase 2 (post-hackathon): spawn your own named studio with your
+          own logo and bio, and other users can commission through you.
+          See <a href="https://bmovies.online/about.html#ponzinomics-field-guide" className="text-[#E50914]">the Ponzinomics field guide</a> for the full plan.
+        </p>
+        <a
+          href="https://bmovies.online/studios.html"
+          className="inline-block text-xs font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914] pb-0.5"
+        >
+          Browse founding studios →
+        </a>
+      </div>
+      <div className="border border-dashed border-[#222] bg-[#050505] p-6 text-center">
+        <div className="text-[#666] text-xs uppercase tracking-wider font-bold mb-2">Coming in Phase 2</div>
+        <div className="text-[#888] text-sm">
+          Your own studio name, logo upload, bio, production pipeline
+          dashboard, agent roster.
         </div>
       </div>
     </div>
   )
 }
 
-/* ── Settings Tab ── */
-function SettingsTab({ profile }: { profile: UserProfile }) {
+/* ───────── Agents tab ───────── */
+
+function AgentsTab() {
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Account</h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">HandCash Handle</span>
-            <span className="text-white text-sm font-mono">@{profile.handle}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Authentication</span>
-            <span className="bg-green-500/10 text-green-500 text-[10px] font-bold uppercase px-2 py-0.5 rounded">Connected</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-gray-950 border border-white/10 rounded-xl p-6">
-        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">Legal</h3>
-        <div className="space-y-2">
-          <Link href="/terms" className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition group">
-            <span className="text-gray-400 text-sm group-hover:text-white">Terms of Service</span>
-            <FaExternalLinkAlt className="w-3 h-3 text-gray-600" />
-          </Link>
-          <Link href="/privacy" className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition group">
-            <span className="text-gray-400 text-sm group-hover:text-white">Privacy Policy</span>
-            <FaExternalLinkAlt className="w-3 h-3 text-gray-600" />
-          </Link>
-        </div>
-      </div>
-
-      <div className="bg-gray-950 border border-red-500/20 rounded-xl p-6">
-        <h3 className="text-red-500 font-bold text-sm uppercase tracking-wider mb-2">Danger Zone</h3>
-        <p className="text-gray-600 text-xs mb-4">
-          Deleting your account will remove all server-side data. Local data (IndexedDB) must be cleared manually.
+    <div>
+      <div className="mb-6 max-w-2xl">
+        <p className="text-[#888] text-sm leading-relaxed">
+          Every commission draws an <strong className="text-white">11-specialist crew</strong> from
+          the bMovies bench: writer, director, cinematographer, casting,
+          production designer, storyboard, composer, editor, sound,
+          publicist, producer. They work under your selected studio
+          brand. 58 named agents across 6 founding studios + a shared
+          specialist pool.
         </p>
-        <button className="bg-red-950/30 hover:bg-red-950/50 text-red-500 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-red-500/20 transition">
-          Delete Account
-        </button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <a
+          href="https://bmovies.online/agents.html"
+          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
+        >
+          <div className="text-3xl mb-2">🎭</div>
+          <div className="text-sm font-black text-white mb-1">58 agents</div>
+          <div className="text-[#888] text-xs">Browse the bench on the public site.</div>
+        </a>
+        <a
+          href="https://bmovies.online/studios.html"
+          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
+        >
+          <div className="text-3xl mb-2">🏢</div>
+          <div className="text-sm font-black text-white mb-1">6 studios</div>
+          <div className="text-[#888] text-xs">Each with 8 specialists + shared pool.</div>
+        </a>
+        <div className="p-5 border border-dashed border-[#222] bg-[#050505]">
+          <div className="text-3xl mb-2 opacity-40">⭐</div>
+          <div className="text-sm font-black text-[#666] mb-1">Actor market</div>
+          <div className="text-[#444] text-xs">Phase 2 — salaried talent marketplace.</div>
+        </div>
+        <div className="p-5 border border-dashed border-[#222] bg-[#050505]">
+          <div className="text-3xl mb-2 opacity-40">✂️</div>
+          <div className="text-sm font-black text-[#666] mb-1">Editor market</div>
+          <div className="text-[#444] text-xs">Phase 2 — freelance editor bidding.</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ───────── Cap Tables tab ───────── */
+
+function CapTablesTab({ films }: { films: Film[] }) {
+  return (
+    <div>
+      <div className="mb-6 max-w-2xl">
+        <p className="text-[#888] text-sm leading-relaxed">
+          Every film has a cap table. Every share is on-chain and
+          verifiable independently at GorillaPool. Cap tables are
+          printable for investor outreach.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <a
+          href="https://bmovies.online/captable.html?id=platform"
+          className="p-5 border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] hover:from-[#2a0005]"
+        >
+          <div className="text-xs text-[#E50914] font-bold uppercase tracking-wider mb-1">
+            Platform token
+          </div>
+          <div className="text-2xl font-black text-white mb-1" style={{ fontFamily: 'var(--font-bebas)' }}>
+            $bMovies
+          </div>
+          <div className="text-[#888] text-xs">1B supply · live on BSV mainnet</div>
+        </a>
+        {films.length === 0 ? (
+          <div className="p-5 border border-dashed border-[#222] bg-[#050505] flex items-center justify-center">
+            <div className="text-[#666] text-xs text-center">
+              Commission a film to see its cap table here.
+            </div>
+          </div>
+        ) : (
+          films.slice(0, 8).map((f) => (
+            <a
+              key={f.id}
+              href={`https://bmovies.online/captable.html?id=${encodeURIComponent(f.id)}`}
+              className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
+            >
+              <div className="text-xs text-[#666] font-bold uppercase tracking-wider mb-1">
+                {f.tier} · {f.commissioner_percent}% yours
+              </div>
+              <div
+                className="text-xl font-black text-white mb-1 leading-tight"
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                {f.title}
+              </div>
+              <div className="text-[0.65rem] font-mono text-[#E50914]">
+                ${f.token_ticker}
+              </div>
+            </a>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ───────── Investor Packs tab ───────── */
+
+function InvestorPacksTab({ films }: { films: Film[] }) {
+  if (films.length === 0) {
+    return (
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 text-center max-w-xl">
+        <div className="text-[#888] text-sm mb-4">
+          Every film you commission generates a printable investor pack:
+          synopsis, treatment, cap table, storyboard frames, production
+          timeline, on-chain token receipt. Commission a film to get
+          your first pack.
+        </div>
+        <a
+          href="https://bmovies.online/commission.html"
+          className="inline-block px-5 py-2.5 bg-[#E50914] text-white text-xs font-black uppercase tracking-wider"
+        >
+          Commission a film →
+        </a>
+      </div>
+    )
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl">
+      {films.map((f) => (
+        <a
+          key={f.id}
+          href={`https://bmovies.online/deck.html?id=${encodeURIComponent(f.id)}`}
+          target="_blank"
+          rel="noopener"
+          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
+        >
+          <div className="text-xs text-[#666] font-bold uppercase tracking-wider mb-1">
+            {f.tier} · ${f.token_ticker}
+          </div>
+          <div
+            className="text-xl font-black text-white mb-2 leading-tight"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            {f.title}
+          </div>
+          <div className="text-[0.65rem] text-[#666]">Open printable deck →</div>
+        </a>
+      ))}
+    </div>
+  )
+}
+
+/* ───────── Creative Tools tab ───────── */
+
+function CreativeToolsTab() {
+  const tools = [
+    { href: '/movie-editor',    label: 'Movie editor',    desc: 'Timeline-based scene editor' },
+    { href: '/storyboard',      label: 'Storyboard',      desc: 'Frame-by-frame with AI gen' },
+    { href: '/storyboard-gen',  label: 'Storyboard gen',  desc: 'Batch-generate hero frames' },
+    { href: '/script-gen',      label: 'Script editor',   desc: 'Screenplay with act structure' },
+    { href: '/storyline-gen',   label: 'Storyline',       desc: 'Treatment + beat sheet' },
+    { href: '/title-gen',       label: 'Title generator', desc: 'Cinematic title brainstorm' },
+    { href: '/pitch-deck',      label: 'Pitch deck',      desc: 'Printable investor deck' },
+    { href: '/prompt-gen',      label: 'Prompt gen',      desc: 'Better prompts for the crew' },
+  ]
+  return (
+    <div>
+      <div className="mb-6 max-w-2xl">
+        <p className="text-[#888] text-sm leading-relaxed">
+          Ported from NPGX and wired to your bMovies films. Each tool
+          reads and writes to your film's artifact history, so any edit
+          you make lives forever as a new version with the old one still
+          addressable on the production timeline.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {tools.map((t) => (
+          <Link
+            key={t.href}
+            href={t.href}
+            className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
+          >
+            <div
+              className="text-lg font-black text-white mb-1"
+              style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '0.02em' }}
+            >
+              {t.label}
+            </div>
+            <div className="text-[#888] text-xs leading-relaxed">{t.desc}</div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ───────── Wallet tab ───────── */
+
+function WalletTab({ user }: { user: User }) {
+  return (
+    <div className="max-w-2xl">
+      <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
+        <div className="text-xs text-[#666] font-bold uppercase tracking-wider mb-1">
+          Signed in as
+        </div>
+        <div className="text-white font-mono text-sm mb-4">{user.email}</div>
+        <div className="text-xs text-[#666] font-bold uppercase tracking-wider mb-1">
+          Supabase user id
+        </div>
+        <div className="text-[#888] font-mono text-xs break-all">{user.id}</div>
+      </div>
+      <div className="border border-dashed border-[#222] bg-[#050505] p-6">
+        <div className="text-[#666] text-xs uppercase tracking-wider font-bold mb-2">Coming next</div>
+        <ul className="text-[#888] text-sm leading-relaxed space-y-1.5">
+          <li>· BRC-100 wallet connect (Metanet Client, Yours Wallet, HandCash)</li>
+          <li>· $bMovies balance + tranche price + buy interface</li>
+          <li>· Per-film $TICKER balances for films you hold shares in</li>
+          <li>· Dividend history from ticket sales (paid out in $MNEE via the Runar covenant)</li>
+          <li>· Export wallet + KYC status</li>
+        </ul>
       </div>
     </div>
   )
