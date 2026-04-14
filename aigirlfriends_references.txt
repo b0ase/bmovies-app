@@ -1,0 +1,382 @@
+
+============================================================
+References for 'aigirlfriends'
+============================================================
+
+File: DEPLOYMENT_GUIDE.md
+L203: Your AIGIRLFRIENDS.WEBSITE platform is now production-ready with:
+---
+File: NEW_DATABASE_SETUP.md
+L83: This new database is **completely separate** from your original `aigirlfriends` project:
+L84: - **Old Database**: `jncomccwpastcfuefbgn` (aigirlfriends)
+---
+File: src/app/cookies/page.tsx
+L235: <a href="mailto:privacy@aigirlfriends.website" className="text-purple-400 hover:underline">
+L236: privacy@aigirlfriends.website
+L254: <p><strong>Email:</strong> <a href="mailto:privacy@aigirlfriends.website" className="text-purple-400 hover:underline">privacy@aigirlfriends.website</a></p>
+L255: <p><strong>Website:</strong> <a href="https://www.aigirlfriends.website" className="text-purple-400 hover:underline">www.aigirlfriends.website</a></p>
+---
+File: src/app/demo-video/page.tsx
+L114: See how AIGIRLFRIENDS is revolutionizing content creation and generating millions in revenue
+---
+File: src/app/demo/page.tsx
+L111: See how AIGIRLFRIENDS is revolutionizing content creation and generating millions in revenue
+---
+File: src/app/investors/page.tsx
+L168: href="mailto:invest@aigirlfriends.website"
+L397: href="mailto:invest@aigirlfriends.website"
+---
+File: src/app/invoices/page.tsx
+L36: clientEmail: 'client@aigirlfriends.website',
+L50: clientEmail: 'client@aigirlfriends.website',
+---
+File: src/app/joe/page.tsx
+L335: <Link href="https://www.aigirlfriends.website/notion" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-4">
+L349: <Link href="https://www.aigirlfriends.website/database" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-4">
+---
+File: src/app/pitch-deck/page.tsx
+L25: content: "AIGIRLFRIENDS: Revolutionary AI platform generating ultra-realistic girlfriend content that monetizes across all major social platforms.",
+L286: href="mailto:investors@aigirlfriends.website"
+---
+File: src/app/sales-funnel/page.tsx
+L519: <span>Website: aigirlfriends.website</span>
+L750: Complete user-focused sales funnel for aigirlfriends.website targeting individuals seeking AI companionship,
+---
+File: src/components/AIGirlfriendGallery.tsx.backup
+L22: const sampleAIGirlfriends: AIGirlfriend[] = [
+L207: {sampleAIGirlfriends.map((girlfriend, index) => (
+---
+File: supabase_clean_start.sql
+L115: 'b0ase@aigirlfriends.website',
+---
+File: supabase_user_profiles.sql
+L106: 'b0ase@aigirlfriends.website',
+---
+File: supabase_user_profiles_simple.sql
+L106: 'b0ase@aigirlfriends.website',
+
+============================================================
+File and Directory Names
+============================================================
+
+./public/ai-girlfriends-2
+./public/ai-girlfriends-images
+./public/ai girlfriends black and brown
+./public/ai-girlfriends-publicity
+./public/ai girlfriends ethnic 1
+./src/app/ai-girlfriends
+./src/components/AIGirlfriendGallery.tsx.backup
+
+============================================================
+References for 'ai-girlfriends'
+============================================================
+
+File: src/app/character/[slug]/page.tsx
+L109: style={{ backgroundImage: `url(${character.image_url || '/ai-girlfriends-images/download.jpg'})` }}
+---
+File: src/app/create/page.tsx
+L45: image: "/ai-girlfriends-images/download-6.jpg",
+L52: image: "/ai-girlfriends-images/download-1.jpg",
+L59: image: "/ai-girlfriends-images/download-2.jpg",
+L66: image: "/ai-girlfriends-images/download-3.jpg",
+L143: href="/ai-girlfriends#generator"
+---
+File: src/app/dashboard/page.tsx
+L26: avatar: "/ai-girlfriends-images/download.jpg",
+L39: image: "/ai-girlfriends-images/download.jpg",
+L50: image: "/ai-girlfriends-images/download-3.jpg",
+L61: image: "/ai-girlfriends-images/download-4.jpg",
+L287: <Link href="/ai-girlfriends#generator" className="block p-6 border border-gray-200 rounded-xl hover:shadow-lg transition-shadow">
+---
+File: src/app/demo-video/page.tsx
+L24: thumbnail: "/ai-girlfriends-publicity/download.jpg",
+L32: thumbnail: "/ai-girlfriends-publicity/download-1.jpg",
+L40: thumbnail: "/ai-girlfriends-publicity/download-2.jpg",
+L48: thumbnail: "/ai-girlfriends-publicity/download-3.jpg",
+L59: avatar: "/ai-girlfriends-publicity/download-4.jpg",
+L67: avatar: "/ai-girlfriends-publicity/download-5.jpg",
+L75: avatar: "/ai-girlfriends-publicity/download-6.jpg",
+L93: style={{ backgroundImage: `url('/ai-girlfriends-publicity/download-7.jpg')` }} />
+L95: style={{ backgroundImage: `url('/ai-girlfriends-publicity/download-8.jpg')` }} />
+L97: style={{ backgroundImage: `url('/ai-girlfriends-publicity/download-9.jpg')` }} />
+L99: style={{ backgroundImage: `url('/ai-girlfriends-publicity/download-10.jpg')` }} />
+---
+File: src/app/demo/page.tsx
+L24: thumbnail: "/ai-girlfriends-publicity/download-1.jpg",
+L31: thumbnail: "/ai-girlfriends-publicity/download-2.jpg",
+L38: thumbnail: "/ai-girlfriends-publicity/download-3.jpg",
+L45: thumbnail: "/ai-girlfriends-publicity/download-4.jpg",
+L78: image: "/ai-girlfriends-images/download-1.jpg",
+L85: image: "/ai-girlfriends-images/download-2.jpg",
+L92: image: "/ai-girlfriends-images/download-3.jpg",
+---
+File: src/app/example/page.tsx
+L74: { id: 1, type: 'image', url: '/ai-girlfriends-2/download-1.jpg', title: 'Morning Yoga Flow', likes: 45672, views: 234567, premium: false },
+L75: { id: 2, type: 'video', url: '/ai-girlfriends-2/download-2.jpg', title: 'Workout Routine', likes: 67890, views: 456789, premium: true },
+L76: { id: 3, type: 'image', url: '/ai-girlfriends-2/download-3.jpg', title: 'Beach Vibes', likes: 89012, views: 567890, premium: false },
+L77: { id: 4, type: 'video', url: '/ai-girlfriends-2/download-4.jpg', title: 'Cooking Tutorial', likes: 34567, views: 234567, premium: false },
+L78: { id: 5, type: 'image', url: '/ai-girlfriends-2/download-5.jpg', title: 'Fashion Haul', likes: 78901, views: 345678, premium: true },
+L79: { id: 6, type: 'image', url: '/ai-girlfriends-2/download-6.jpg', title: 'Sunset Selfie', likes: 56789, views: 456789, premium: false },
+L80: { id: 7, type: 'video', url: '/ai-girlfriends-2/download-7.jpg', title: 'Dance Workout', likes: 91234, views: 678901, premium: true },
+L81: { id: 8, type: 'image', url: '/ai-girlfriends-2/download-8.jpg', title: 'Skincare Routine', likes: 67890, views: 234567, premium: false }
+L211: style={{ backgroundImage: `url('/ai-girlfriends-2/download.jpg')` }}
+L276: style={{ backgroundImage: `url('/ai-girlfriends-2/download.jpg')` }}
+L604: style={{ backgroundImage: `url('/ai-girlfriends-2/download.jpg')` }}
+---
+File: src/app/exchange/page.tsx
+L24: image: '/ai-girlfriends-2/download.jpg',
+L33: image: '/ai-girlfriends-2/download-3.jpg',
+L42: image: '/ai-girlfriends-2/download-5.jpg',
+L51: image: '/ai-girlfriends-2/download-1.jpg',
+L60: image: '/ai-girlfriends-2/download-4.jpg',
+L69: image: '/ai-girlfriends-images/download-1.jpg',
+L78: image: '/ai-girlfriends-2/download-2.jpg',
+L87: image: '/ai-girlfriends-images/download.jpg',
+---
+File: src/app/girlfriend/[slug]/page.tsx
+L13: image: "/ai-girlfriends-images/download.jpg",
+L24: image: "/ai-girlfriends-images/download-1.jpg",
+L41: <Link href="/ai-girlfriends" className="text-pink-400 hover:text-pink-300">
+---
+File: src/app/globals.css
+L124: background-image: linear-gradient(rgba(0,0,0,0.8), rgba(10,10,10,0.9)), url('/ai-girlfriends-publicity/download.jpg');
+L131: background-image: linear-gradient(rgba(0,0,0,0.7), rgba(255,0,64,0.1)), url('/ai-girlfriends-publicity/download-1.jpg');
+L138: background-image: linear-gradient(rgba(0,0,0,0.8), rgba(0,255,65,0.1)), url('/ai-girlfriends-publicity/download-2.jpg');
+L145: background-image: linear-gradient(rgba(0,0,0,0.75), rgba(0,255,255,0.1)), url('/ai-girlfriends-publicity/download-3.jpg');
+L152: background-image: linear-gradient(rgba(0,0,0,0.8), rgba(255,102,0,0.1)), url('/ai-girlfriends-publicity/download-4.jpg');
+---
+File: src/app/investors/page.tsx
+L79: image: '/ai-girlfriends-2/download.jpg',
+L86: image: '/ai-girlfriends-2/download-1.jpg',
+L93: image: '/ai-girlfriends-2/download-2.jpg',
+L100: image: '/ai-girlfriends-2/download-3.jpg',
+L107: image: '/ai-girlfriends-2/download-4.jpg',
+L114: image: '/ai-girlfriends-2/download-5.jpg',
+L127: backgroundImage: `url('/ai-girlfriends-2/download-6.jpg')`,
+L372: style={{ backgroundImage: `url('/ai-girlfriends-images/download-7.jpg')` }} />
+L374: style={{ backgroundImage: `url('/ai-girlfriends-images/download-8.jpg')` }} />
+L376: style={{ backgroundImage: `url('/ai-girlfriends-images/download-9.jpg')` }} />
+L378: style={{ backgroundImage: `url('/ai-girlfriends-images/download-10.jpg')` }} />
+---
+File: src/app/launchpad/page.tsx
+L160: image: '/ai-girlfriends-images/download.jpg'
+L168: image: '/ai-girlfriends-images/download-1.jpg'
+L176: image: '/ai-girlfriends-images/download-2.jpg'
+---
+File: src/app/marketplace/page.tsx
+L39: image: '/ai-girlfriends-images/download-5.jpg',
+L56: image: '/ai-girlfriends-images/download-6.jpg',
+L74: image: '/ai-girlfriends-images/download-11.jpg',
+L91: image: '/ai-girlfriends-images/download-2.jpg',
+L108: image: '/ai-girlfriends-images/download-3.jpg',
+L125: image: '/ai-girlfriends-images/download-7.jpg',
+L142: image: '/ai-girlfriends-images/download-8.jpg',
+L159: image: '/ai-girlfriends-images/download-4.jpg',
+L185: image: '/ai-girlfriends-images/download-5.jpg',
+L193: image: '/ai-girlfriends-images/download-6.jpg',
+L201: image: '/ai-girlfriends-images/download-7.jpg',
+---
+File: src/app/merch/page.tsx
+L36: image: '/ai-girlfriends-images/download-5.jpg',
+L51: image: '/ai-girlfriends-images/download-6.jpg',
+L66: image: '/ai-girlfriends-images/download-11.jpg',
+L81: image: '/ai-girlfriends-images/download-2.jpg',
+L96: image: '/ai-girlfriends-images/download-3.jpg',
+L111: image: '/ai-girlfriends-images/download-4.jpg',
+L126: image: '/ai-girlfriends-images/download-7.jpg',
+L141: image: '/ai-girlfriends-images/download-8.jpg',
+---
+File: src/app/ninja-punk-girls/page.tsx
+L15: image: '/ai-girlfriends-images/download.jpg'
+L24: image: '/ai-girlfriends-images/download-1.jpg'
+L33: image: '/ai-girlfriends-images/download-2.jpg'
+L42: image: '/ai-girlfriends-images/download-3.jpg'
+L51: image: '/ai-girlfriends-images/download-4.jpg'
+L60: image: '/ai-girlfriends-images/download-5.jpg'
+---
+File: src/app/profile/page.tsx
+L119: avatar: userProfile?.avatar_url || session?.user?.image || '/ai-girlfriends-images/download.jpg',
+L135: image: "/ai-girlfriends-images/download.jpg",
+L145: image: "/ai-girlfriends-images/download-3.jpg",
+L155: image: "/ai-girlfriends-images/download-4.jpg",
+L355: backgroundImage: `url(${character.image_url || '/ai-girlfriends-images/download.jpg'})`,
+---
+File: src/app/rankings/page.tsx
+L38: '/ai-girlfriends-images/download.jpg',
+L39: '/ai-girlfriends-images/download-1.jpg',
+L40: '/ai-girlfriends-images/download-2.jpg',
+L41: '/ai-girlfriends-images/download-3.jpg',
+L42: '/ai-girlfriends-images/download-4.jpg',
+L43: '/ai-girlfriends-images/download-5.jpg',
+L44: '/ai-girlfriends-2/download.jpg',
+L45: '/ai-girlfriends-2/download-1.jpg',
+L46: '/ai-girlfriends-2/download-2.jpg',
+L47: '/ai-girlfriends-2/download-3.jpg'
+---
+File: src/app/tokens/page.tsx
+L20: image: '/ai-girlfriends-2/download.jpg',
+L35: image: '/ai-girlfriends-2/download-1.jpg',
+L50: image: '/ai-girlfriends-2/download-2.jpg',
+L65: image: '/ai-girlfriends-2/download-3.jpg',
+L80: image: '/ai-girlfriends-2/download-4.jpg',
+L95: image: '/ai-girlfriends-2/download-5.jpg',
+L110: image: '/ai-girlfriends-images/download.jpg',
+L125: image: '/ai-girlfriends-images/download-1.jpg',
+---
+File: src/app/video-prompts/page.tsx
+L290: style={{ backgroundImage: `url(${finalizedCharacter.image_url || '/ai-girlfriends-images/download.jpg'})` }}
+---
+File: src/components/AIGirlfriendGallery.tsx.backup
+L27: imageUrl: '/ai-girlfriends-images/download-1.jpg',
+L40: imageUrl: '/ai-girlfriends-images/download-2.jpg',
+L53: imageUrl: '/ai-girlfriends-images/download-3.jpg',
+L66: imageUrl: '/ai-girlfriends-images/download-4.jpg',
+L79: imageUrl: '/ai-girlfriends-images/download-5.jpg',
+L92: imageUrl: '/ai-girlfriends-images/download-6.jpg',
+L105: imageUrl: '/ai-girlfriends-images/download-7.jpg',
+L118: imageUrl: '/ai-girlfriends-images/download-8.jpg',
+L144: imageUrl: '/ai-girlfriends-images/download-14.jpg',
+---
+File: src/components/HeroSection.tsx
+L15: '/ai-girlfriends-2/download.jpg',
+L16: '/ai-girlfriends-2/download-1.jpg',
+L17: '/ai-girlfriends-2/download-2.jpg',
+L18: '/ai-girlfriends-2/download-3.jpg',
+L19: '/ai-girlfriends-2/download-4.jpg',
+L20: '/ai-girlfriends-2/download-5.jpg'
+L28: src: '/ai-girlfriends-images/download.jpg',
+L35: src: '/ai-girlfriends-images/download-1.jpg',
+L42: src: '/ai-girlfriends-2/download.jpg',
+L49: src: '/ai-girlfriends-2/download-1.jpg',
+---
+File: src/components/Navigation.tsx
+L224: style={{ backgroundImage: `url(${session.user?.image || '/ai-girlfriends-images/download.jpg'})` }}
+---
+File: src/components/NinjaPunkGirlsGallery.tsx
+L28: imageUrl: '/ai-girlfriends-images/download.jpg',
+L43: imageUrl: '/ai-girlfriends-images/download-1.jpg',
+L58: imageUrl: '/ai-girlfriends-images/download-2.jpg',
+L73: imageUrl: '/ai-girlfriends-images/download-3.jpg',
+L88: imageUrl: '/ai-girlfriends-images/download-4.jpg',
+L103: imageUrl: '/ai-girlfriends-images/download-5.jpg',
+L118: imageUrl: '/ai-girlfriends-2/download.jpg',
+L133: imageUrl: '/ai-girlfriends-2/download-1.jpg',
+L148: imageUrl: '/ai-girlfriends-2/download-2.jpg',
+L163: imageUrl: '/ai-girlfriends-2/download-3.jpg',
+---
+File: src/lib/ai/imageGeneration.ts
+L353: luna: '/ai-girlfriends-images/download-1.jpg',
+L354: nova: '/ai-girlfriends-images/download-2.jpg',
+L355: raven: '/ai-girlfriends-images/download-3.jpg',
+L356: phoenix: '/ai-girlfriends-images/download-4.jpg',
+L357: storm: '/ai-girlfriends-images/download-5.jpg',
+L358: vega: '/ai-girlfriends-images/download-6.jpg',
+L359: zara: '/ai-girlfriends-images/download-7.jpg',
+L360: scarlett: '/ai-girlfriends-images/download-8.jpg',
+L361: nyx: '/ai-girlfriends-images/download-9.jpg',
+L362: jade: '/ai-girlfriends-images/download-10.jpg',
+L363: echo: '/ai-girlfriends-images/download-11.jpg',
+L364: default: '/ai-girlfriends-images/download.jpg'
+---
+File: supabase_clean_start.sql
+L154: ('Sophia', '/ai-girlfriends-images/download.jpg', 15230.00, 94000, 127, ARRAY['OnlyFans', 'Instagram', 'TikTok'], ARRAY['Sweet', 'Adventurous'], 'SOPHIA', 0.023400),
+L155: ('Luna', '/ai-girlfriends-images/download-3.jpg', 18650.00, 112000, 203, ARRAY['OnlyFans', 'X.com', 'Instagram'], ARRAY['Mysterious', 'Night'], 'LUNA', 0.048900),
+L156: ('Maya', '/ai-girlfriends-images/download-4.jpg', 13350.00, 78000, 89, ARRAY['OnlyFans', 'TikTok'], ARRAY['Tropical', 'Sunny'], 'MAYA', 0.022300)
+---
+File: supabase_user_profiles.sql
+L145: ('Sophia', '/ai-girlfriends-images/download.jpg', 15230.00, 94000, 127, ARRAY['OnlyFans', 'Instagram', 'TikTok'], ARRAY['Sweet', 'Adventurous'], 'SOPHIA', 0.023400),
+L146: ('Luna', '/ai-girlfriends-images/download-3.jpg', 18650.00, 112000, 203, ARRAY['OnlyFans', 'X.com', 'Instagram'], ARRAY['Mysterious', 'Night'], 'LUNA', 0.048900),
+L147: ('Maya', '/ai-girlfriends-images/download-4.jpg', 13350.00, 78000, 89, ARRAY['OnlyFans', 'TikTok'], ARRAY['Tropical', 'Sunny'], 'MAYA', 0.022300)
+---
+File: supabase_user_profiles_simple.sql
+L145: ('Sophia', '/ai-girlfriends-images/download.jpg', 15230.00, 94000, 127, ARRAY['OnlyFans', 'Instagram', 'TikTok'], ARRAY['Sweet', 'Adventurous'], 'SOPHIA', 0.023400),
+L146: ('Luna', '/ai-girlfriends-images/download-3.jpg', 18650.00, 112000, 203, ARRAY['OnlyFans', 'X.com', 'Instagram'], ARRAY['Mysterious', 'Night'], 'LUNA', 0.048900),
+L147: ('Maya', '/ai-girlfriends-images/download-4.jpg', 13350.00, 78000, 89, ARRAY['OnlyFans', 'TikTok'], ARRAY['Tropical', 'Sunny'], 'MAYA', 0.022300)
+
+============================================================
+References for 'ai girlfriends'
+============================================================
+
+File: DATABASE_SETUP.md
+L128: - `ai_girlfriends_count` - Number of AI girlfriends
+---
+File: DEPLOYMENT_GUIDE.md
+L101: 2. Replace placeholder with real AI girlfriends
+L110: - Platform section (AI Girlfriends)
+---
+File: services_and_expenses_overview.md
+L263: This comprehensive overview provides a complete picture of all services, costs, and scaling strategies for the AI girlfriends platform. The database schema above will track all these expenses in real-time! 🚀
+---
+File: src/app/ai-girlfriends/page.tsx
+L22: avatar: '/ai girlfriends black and brown/download-1.jpg',
+L32: avatar: '/ai girlfriends black and brown/download-2.jpg',
+L42: avatar: '/ai girlfriends black and brown/download-3.jpg',
+L52: avatar: '/ai girlfriends black and brown/download-4.jpg',
+L62: avatar: '/ai girlfriends black and brown/download-5.jpg',
+L72: avatar: '/ai girlfriends black and brown/download-6.jpg',
+---
+File: src/app/competition/page.tsx
+L270: description: 'Export AI girlfriends to OnlyFans, social media, and other platforms',
+---
+File: src/app/concerns/page.tsx
+L67: content: 'As we scale to 100K+ AI girlfriends, manual content moderation becomes impossible. Need automated NSFW detection and content filtering systems.',
+---
+File: src/app/database/page.tsx
+L42: description: 'Clothing and outfit options for AI girlfriends',
+L78: description: 'Props, jewelry, and accessories for AI girlfriends',
+---
+File: src/app/joe/page.tsx
+L101: content: 'Replika focuses on emotional support with 10M+ users, $70/year pricing. Character.AI emphasizes roleplay with 100M+ users, freemium model. Our differentiation: AI girlfriends with visual content and monetization tools.',
+L144: 'Daily revenue tracking across all AI girlfriends',
+L226: strategy: 'AI girlfriends recommend health products for "better performance"'
+L233: strategy: 'AI girlfriends identify insecurities and suggest improvement courses'
+L240: strategy: 'AI girlfriends compliment appearance while subtly suggesting solutions'
+L247: strategy: 'AI girlfriends encourage financial and personal growth through education'
+L1039: Your brilliant idea of AI girlfriends as product partners/ambassadors is already
+L1105: description: "Create and customize AI girlfriends with unique personalities",
+L1271: description: "Users can create custom AI girlfriends with templates and customization",
+L1277: description: "AI girlfriends listed with earnings, ratings, and purchase options",
+L1340: The multi-sided marketplace where AI girlfriends serve as product partners is already
+---
+File: src/app/sales-funnel/page.tsx
+L44: description: "Create and customize AI girlfriends",
+L130: description: "Proven conversation topics that create deeper connections with AI girlfriends, including product discussion scenarios",
+L150: description: "Real testimonials from users who found love and improved their lives through AI girlfriends and recommended products",
+L166: description: "Social media ads featuring AI girlfriends promoting lifestyle products",
+L255: <li>• <strong>First-mover advantage:</strong> AI girlfriends as product ambassadors</li>
+L375: <li>• More AI girlfriends = More product variety = Higher customer satisfaction</li>
+L377: <li>• More creators = Better AI girlfriends = Premium pricing power</li>
+---
+File: src/app/stripe/page.tsx
+L110: 'Browse AI girlfriends',
+L122: 'Premium AI girlfriends',
+L134: 'Create and monetize AI girlfriends',
+L147: 'Unlimited AI girlfriends',
+---
+File: src/components/AIGirlfriendGallery.tsx.backup
+L174: Meet Our <span className="text-pink-600">AI Girlfriends</span> 💋
+---
+File: supabase_schema_safe.sql
+L273: -- User-owned AI girlfriends
+
+============================================================
+References for 'AIGirlfriend'
+============================================================
+
+File: NEW_DATABASE_SETUP.md
+L83: This new database is **completely separate** from your original `aigirlfriends` project:
+L84: - **Old Database**: `jncomccwpastcfuefbgn` (aigirlfriends)
+---
+File: src/components/AIGirlfriendGallery.tsx.backup
+L7: interface AIGirlfriend {
+L22: const sampleAIGirlfriends: AIGirlfriend[] = [
+L129: export function AIGirlfriendGallery() {
+L130: const [selectedGirlfriend, setSelectedGirlfriend] = useState<AIGirlfriend | null>(null)
+L140: const newGirlfriend: AIGirlfriend = {
+L207: {sampleAIGirlfriends.map((girlfriend, index) => (
+---
+File: src/lib/userProfiles.ts
+L25: export interface AIGirlfriend {
+L213: async getUserNPGXCharacters(userId: string): Promise<AIGirlfriend[]> {
+L233: async createAIGirlfriend(aiGirlfriendData: Partial<AIGirlfriend>): Promise<AIGirlfriend | null> {
+L237: .insert([aiGirlfriendData])

@@ -1,0 +1,3430 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&family=Permanent+Marker&family=Bangers&display=swap');
+
+.mint-app {
+  color-scheme: dark;
+  --bg: #1a0a0a;
+  --bg-2: #1e0c0c;
+  --panel: #281414;
+  --panel-2: #301a1a;
+  --panel-3: #3a2020;
+  --accent: #ff1a1a;
+  --accent-2: #ff4d4d;
+  --accent-dim: #cc2222;
+  --accent-glow: rgba(255, 26, 26, 0.2);
+  --text: #f0e4e4;
+  --muted: #8a6060;
+  --danger: #ff3333;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shine: linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, transparent 40%, rgba(255, 255, 255, 0.02) 100%);
+  --radius: 12px;
+  --radius-sm: 8px;
+
+  height: 100vh;
+  width: 100%;
+  font-family: 'Space Grotesk', 'Helvetica Neue', sans-serif;
+  background: #0a0000;
+  color: var(--text);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.mint-app *,
+.mint-app *::before,
+.mint-app *::after {
+  box-sizing: border-box;
+}
+
+/* Custom scrollbars */
+.mint-app ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.mint-app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mint-app ::-webkit-scrollbar-thumb {
+  background: rgba(255, 26, 26, 0.18);
+  border-radius: 3px;
+}
+
+.mint-app ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 26, 26, 0.35);
+}
+
+/* Custom range sliders */
+.mint-app input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--panel-3);
+  border-radius: 2px;
+  outline: none;
+}
+
+.mint-app input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff1a1a, #cc0000);
+  cursor: pointer;
+  border: 2px solid #1a1218;
+  box-shadow: 0 0 6px rgba(255, 26, 26, 0.3);
+  transition: box-shadow 0.15s ease;
+}
+
+.mint-app input[type='range']::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 10px rgba(255, 26, 26, 0.5);
+}
+
+.mint-app input[type='range']:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(255, 26, 26, 0.15);
+}
+
+/* Custom checkboxes */
+.mint-app input[type='checkbox'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: var(--panel-3);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.mint-app input[type='checkbox']:checked {
+  background: linear-gradient(135deg, #ff1a1a, #cc0000);
+  border-color: #c9a84c;
+}
+
+.mint-app input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.mint-app button,
+.mint-app input,
+.mint-app select {
+  font-family: inherit;
+}
+
+.mint-app .app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mint-app .topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 26, 26, 0.12);
+  background: linear-gradient(180deg, #221828 0%, #1c1220 100%);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
+.mint-app .topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mint-app .brand-title {
+  font-size: 13px;
+  margin: 0;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.mint-app .brand-accent {
+  color: var(--accent);
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff1a1a, #ff4d4d, #ff1a1a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mint-app .topbar-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.mint-app .main {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  gap: 8px;
+  padding: 8px 8px 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mint-app .panel {
+  background: var(--panel);
+  background-image: var(--shine);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  border: 1px solid rgba(255, 26, 26, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  animation: riseIn 0.5s ease;
+}
+
+.mint-app .panel h2,
+.mint-app .panel h3 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+
+.mint-app .panel h3 {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mint-app .left-panel {
+  overflow: hidden;
+}
+
+.mint-app .image-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 6px;
+}
+
+.mint-app .image-card {
+  display: grid;
+  grid-template-columns: 16px 56px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mint-app .image-card:hover {
+  border-color: rgba(255, 26, 26, 0.2);
+  transform: translateY(-2px);
+}
+
+.mint-app .image-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.mint-app .image-card img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.mint-app .image-card.paired {
+  border-color: rgba(255, 26, 26, 0.2);
+  background: var(--panel-3);
+}
+
+.mint-app .image-card.is-disabled {
+  opacity: 0.4;
+}
+
+.mint-app .image-card.is-disabled img {
+  filter: grayscale(0.6);
+}
+
+.mint-app .image-card.dragging {
+  opacity: 0.3;
+}
+
+.mint-app .image-card.drag-over {
+  border-color: var(--accent-2);
+  border-style: dashed;
+}
+
+.mint-app .image-drag-handle {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 10px;
+  flex-shrink: 0;
+  user-select: none;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.mint-app .image-card:hover .image-drag-handle {
+  opacity: 0.8;
+}
+
+.mint-app .image-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.mint-app .image-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.mint-app .image-card:hover .image-remove-btn {
+  opacity: 0.6;
+}
+
+.mint-app .image-remove-btn:hover {
+  opacity: 1 !important;
+  color: var(--danger);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .image-toggle {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.mint-app .image-toggle:hover {
+  opacity: 1;
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .image-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mint-app .image-meta span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mint-app .image-meta strong {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mint-app .canvas-panel {
+  background: #1e1522;
+  border-radius: var(--radius);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 26, 26, 0.08);
+}
+
+.mint-app .canvas-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  background: #160e1a;
+  overflow: hidden;
+  border: 1px solid rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .canvas-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-align: center;
+  padding: 24px;
+}
+
+.mint-app .canvas-wrapper canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+}
+
+.mint-app .canvas-helper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mint-app .spread-nav {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.mint-app .right-panel {
+  overflow-y: auto;
+}
+
+.mint-app .section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mint-app .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: var(--panel-2);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 26, 26, 0.06);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+}
+
+.mint-app .control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.mint-app .control-row input[type='range'] {
+  width: 100%;
+}
+
+.mint-app .control-row input[type='color'] {
+  background: transparent;
+  border: none;
+  width: 36px;
+  height: 24px;
+  padding: 0;
+}
+
+.mint-app .logo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mint-app .logo-item {
+  background: var(--panel-3);
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease;
+}
+
+.mint-app .logo-item img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mint-app .logo-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.mint-app button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #ff1a1a, #cc0000);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.mint-app button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255, 26, 26, 0.25);
+}
+
+.mint-app button.ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid rgba(255, 26, 26, 0.12);
+}
+
+.mint-app button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.mint-app button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 26, 26, 0.2), 0 0 12px var(--accent-glow);
+}
+
+.mint-app input[type='text'],
+.mint-app select {
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 26, 26, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.mint-app input[type='text']:focus,
+.mint-app select:focus {
+  outline: none;
+  border-color: rgba(255, 26, 26, 0.4);
+  box-shadow: 0 0 0 2px rgba(255, 26, 26, 0.1);
+}
+
+.mint-app .small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mint-app .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 26, 26, 0.1);
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Issue carousel */
+.mint-app .issue-carousel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+
+.mint-app .issue-carousel::-webkit-scrollbar {
+  height: 0;
+}
+
+.mint-app .issue-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  white-space: nowrap;
+}
+
+.mint-app .issue-chip:hover:not(:disabled) {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.2);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .issue-chip.active {
+  background: rgba(255, 26, 26, 0.1);
+  color: var(--accent);
+  border-color: rgba(255, 26, 26, 0.4);
+}
+
+.mint-app .issue-chip.new-issue {
+  background: transparent;
+  border: 1px dashed rgba(255, 26, 26, 0.2);
+  color: var(--muted);
+}
+
+.mint-app .issue-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  line-height: 1;
+}
+
+/* Canvas panel fullscreen mode */
+.mint-app .canvas-panel:fullscreen {
+  background: #120000;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mint-app .canvas-panel:fullscreen .canvas-wrapper {
+  background: #120000;
+  border: none;
+  border-radius: 0;
+}
+
+.mint-app .canvas-panel:fullscreen .canvas-helper {
+  color: var(--muted);
+}
+
+/* Fullscreen button */
+.mint-app .fullscreen-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid rgba(255, 26, 26, 0.15);
+  font-size: 18px;
+  padding: 6px 10px;
+  line-height: 1;
+  border-radius: 10px;
+}
+
+.mint-app .fullscreen-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.3);
+}
+
+/* Page strip — two-section layout: scrollable thumbs + pinned controls */
+.mint-app .page-strip-outer {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid rgba(255, 26, 26, 0.1);
+  background: #1a1218;
+  max-height: 90px;
+}
+
+.mint-app .page-strip-thumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-width: 0;
+  width: 0;
+}
+
+.mint-app .page-strip-thumbs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.mint-app .page-strip-thumbs::-webkit-scrollbar-thumb {
+  background: rgba(255, 26, 26, 0.2);
+  border-radius: 2px;
+}
+
+.mint-app .page-strip-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255, 26, 26, 0.08);
+}
+
+.mint-app .page-thumb {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.mint-app .page-thumb-images {
+  display: flex;
+  gap: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  background: var(--panel-2);
+  height: 60px;
+}
+
+.mint-app .page-thumb:hover .page-thumb-images {
+  border-color: rgba(255, 26, 26, 0.25);
+  transform: translateY(-2px);
+}
+
+.mint-app .page-thumb.active .page-thumb-images {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.mint-app .page-thumb-images img {
+  height: 56px;
+  width: auto;
+  object-fit: cover;
+  display: block;
+}
+
+.mint-app .page-thumb-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mint-app .page-thumb.disabled .page-thumb-images {
+  opacity: 0.35;
+  border-color: transparent;
+  filter: grayscale(0.6);
+}
+
+.mint-app .page-thumb.disabled:hover .page-thumb-images {
+  opacity: 0.6;
+  filter: grayscale(0.2);
+  border-color: rgba(255, 26, 26, 0.15);
+}
+
+.mint-app .page-thumb.disabled .page-thumb-label {
+  color: var(--danger);
+  opacity: 0.7;
+}
+
+.mint-app .page-strip-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 26, 26, 0.12);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.mint-app .page-strip-spacer {
+  flex: 1;
+}
+
+.mint-app .animate-btn {
+  flex-shrink: 0;
+  background: var(--panel-3);
+  color: var(--muted);
+  border: 1px dashed rgba(255, 26, 26, 0.2);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.mint-app .animate-btn.connected {
+  border-style: solid;
+  border-color: rgba(0, 200, 120, 0.4);
+  color: var(--text);
+}
+
+.mint-app .animate-btn.connected:hover:not(:disabled) {
+  border-color: rgba(0, 200, 120, 0.7);
+  background: rgba(0, 200, 120, 0.1);
+}
+
+.mint-app .model-select {
+  flex-shrink: 0;
+  max-width: 180px;
+  background: var(--panel-3);
+  border: 1px solid rgba(0, 200, 120, 0.3);
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* Animate progress */
+.mint-app .animate-progress {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.mint-app .animate-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--panel-3);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.mint-app .animate-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0, 200, 120, 0.6), rgba(0, 200, 120, 1));
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+}
+
+.mint-app .animate-progress-text {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+/* Page turn animation */
+.mint-app .canvas-wrapper {
+  transition: none;
+}
+
+.mint-app .canvas-wrapper.turning-left {
+  animation: turnLeft 0.3s ease;
+}
+
+.mint-app .canvas-wrapper.turning-right {
+  animation: turnRight 0.3s ease;
+}
+
+@keyframes turnLeft {
+  0% { opacity: 0.6; transform: translateX(30px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes turnRight {
+  0% { opacity: 0.6; transform: translateX(-30px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Logo Designer overlay */
+.mint-app .logo-designer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(18, 10, 22, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.mint-app .logo-designer {
+  background: #241a28;
+  border-radius: var(--radius);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 26, 26, 0.15);
+  border: 1px solid rgba(255, 26, 26, 0.1);
+  width: 100%;
+  max-width: 1100px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mint-app .logo-designer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .logo-designer-header h2 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+.mint-app .logo-designer-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mint-app .logo-designer-controls {
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-right: 1px solid rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .logo-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mint-app .logo-layout-card {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.mint-app .logo-layout-card:hover:not(:disabled) {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.2);
+}
+
+.mint-app .logo-layout-card.active {
+  background: rgba(255, 26, 26, 0.08);
+  color: var(--accent);
+  border-color: rgba(255, 26, 26, 0.4);
+}
+
+.mint-app .logo-designer-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  min-height: 0;
+}
+
+.mint-app .logo-preview-split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 0;
+}
+
+.mint-app .logo-preview-pane {
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.mint-app .logo-preview-pane.full {
+  flex: 1;
+  min-height: 0;
+}
+
+.mint-app .logo-preview-pane svg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+.mint-app .logo-preview-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.mint-app .logo-preview-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid transparent;
+}
+
+.mint-app .logo-preview-tab:hover:not(:disabled) {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.2);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .logo-preview-tab.active {
+  background: rgba(255, 26, 26, 0.1);
+  color: var(--accent);
+  border-color: rgba(255, 26, 26, 0.4);
+}
+
+.mint-app .logo-designer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 26, 26, 0.06);
+  gap: 12px;
+}
+
+.mint-app .logo-designer-footer .small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Turn mode toggle */
+.mint-app .turn-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.mint-app .turn-toggle-btn {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  letter-spacing: 0.04em;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.mint-app .turn-toggle-btn:hover:not(:disabled) {
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .turn-toggle-btn.active {
+  background: linear-gradient(135deg, #ff1a1a, #cc0000);
+  color: #fff;
+}
+
+/* FlipBook styles */
+.mint-app .flipbook-wrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #160e1a;
+  overflow: hidden;
+  border: 1px solid rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .flipbook-wrapper .stf__wrapper {
+  margin: 0 auto;
+}
+
+.mint-app .flipbook-page {
+  background: #1e1522;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mint-app .flipbook-page img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Wallet status */
+.mint-app .wallet-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid rgba(255, 26, 26, 0.12);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.mint-app .wallet-status:hover:not(:disabled) {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.3);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .wallet-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+}
+
+.mint-app .wallet-dot.connected {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* Stamp receipt */
+.mint-app .stamp-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 26, 26, 0.08);
+}
+
+.mint-app .stamp-receipt .small {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+/* Video canvas wrapper */
+.mint-app .canvas-video-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Video badge on sidebar thumbnails */
+.mint-app .video-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  background: rgba(255, 26, 26, 0.85);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+/* Video play overlay on canvas */
+.mint-app .video-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  padding: 0;
+  border-radius: 0;
+}
+
+.mint-app .video-play-overlay:hover svg circle {
+  fill: rgba(0, 0, 0, 0.7);
+}
+
+.mint-app .video-play-overlay:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Video player overlay */
+.mint-app .video-player-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(18, 10, 22, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: 12px;
+}
+
+.mint-app .video-player-overlay video {
+  max-width: 100%;
+  max-height: calc(100% - 48px);
+  border-radius: 8px;
+}
+
+.mint-app .video-close-btn {
+  background: rgba(255, 26, 26, 0.08);
+  color: var(--muted);
+  border: 1px solid rgba(255, 26, 26, 0.2);
+  padding: 6px 16px;
+  font-size: 12px;
+}
+
+/* Mode toggle (Stamp / Tokenise) */
+.mint-app .mode-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.mint-app .mode-toggle-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.mint-app .mode-toggle-btn:hover:not(:disabled) {
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .mode-toggle-btn.active {
+  background: linear-gradient(135deg, #ff1a1a, #cc0000);
+  color: #fff;
+}
+
+/* Frame Browser */
+.mint-app .frame-browser {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 8px;
+}
+
+.mint-app .frame-browser-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mint-app .frame-browser-info {
+  display: flex;
+  gap: 12px;
+}
+
+.mint-app .frame-browser-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mint-app .frame-browser-grid {
+  display: grid;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+.mint-app .frame-thumb {
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.mint-app .frame-thumb:hover {
+  border-color: rgba(255, 26, 26, 0.25);
+}
+
+.mint-app .frame-thumb.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.mint-app .frame-thumb img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.mint-app .frame-thumb-label {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Timeline view */
+.mint-app .frame-browser-timeline {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-end;
+  padding: 8px 0;
+}
+
+.mint-app .frame-timeline-item {
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: border-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mint-app .frame-timeline-item:hover {
+  border-color: rgba(255, 26, 26, 0.25);
+}
+
+.mint-app .frame-timeline-item.selected {
+  border-color: var(--accent);
+}
+
+.mint-app .frame-timeline-item img {
+  height: 80px;
+  width: auto;
+  display: block;
+  border-radius: 2px;
+}
+
+.mint-app .frame-timeline-ts {
+  font-size: 8px;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Waveform Editor */
+.mint-app .waveform-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 8px;
+}
+
+.mint-app .waveform-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mint-app .waveform-canvas {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  cursor: crosshair;
+  flex-shrink: 0;
+}
+
+.mint-app .waveform-hint {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.mint-app .waveform-segments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.mint-app .waveform-segment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel-2);
+  border-radius: 8px;
+}
+
+.mint-app .waveform-segment-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Tokenise panel progress */
+.mint-app .tokenise-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mint-app .tokenise-progress-bar {
+  height: 4px;
+  background: var(--panel-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mint-app .tokenise-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #cc0000, #ff4d4d);
+  border-radius: 2px;
+  transition: width 0.3s ease-out;
+}
+
+/* Progress overlay */
+.mint-app .progress-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(18, 10, 22, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-radius: var(--radius);
+}
+
+@media (max-width: 1200px) {
+  .mint-app .main {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .mint-app .right-panel {
+    grid-column: span 2;
+  }
+}
+
+/* === Mint (Currency Designer) === */
+
+.mint-app .mint-canvas-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 6px;
+}
+
+.mint-app .mint-canvas-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #160e1a;
+  overflow: hidden;
+  border: 1px solid rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .mint-canvas {
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 4px 30px rgba(255, 26, 26, 0.08), 0 0 60px rgba(255, 26, 26, 0.03);
+}
+
+.mint-app .mint-canvas-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+/* Layer List */
+.mint-app .layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.mint-app .layer-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  user-select: none;
+}
+
+.mint-app .layer-item:hover {
+  border-color: rgba(255, 26, 26, 0.15);
+}
+
+.mint-app .layer-item.selected {
+  border-color: var(--accent);
+  background: rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .layer-item.dragging {
+  opacity: 0.4;
+}
+
+.mint-app .layer-item.drag-over {
+  border-color: var(--accent-2);
+  border-style: dashed;
+}
+
+.mint-app .layer-drag-handle {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 10px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.mint-app .layer-vis-btn,
+.mint-app .layer-lock-btn,
+.mint-app .layer-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.mint-app .layer-vis-btn:hover,
+.mint-app .layer-lock-btn:hover,
+.mint-app .layer-action-btn:hover {
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .layer-action-btn.danger:hover {
+  color: var(--danger);
+}
+
+.mint-app .layer-type-icon {
+  font-size: 13px;
+  color: var(--accent-2);
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.mint-app .layer-thumb {
+  width: 28px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 26, 26, 0.08);
+}
+
+.mint-app .layer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.mint-app .layer-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mint-app .layer-item:hover .layer-actions,
+.mint-app .layer-item.selected .layer-actions {
+  opacity: 1;
+}
+
+/* Add Layer dropdown */
+.mint-app .layer-add-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid rgba(255, 26, 26, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+  box-shadow: 0 -8px 20px rgba(255, 26, 26, 0.08);
+  margin-bottom: 4px;
+}
+
+.mint-app .layer-add-menu button {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.mint-app .layer-add-menu button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Mint canvas grid stack */
+.mint-app .mint-canvas-stack {
+  position: relative;
+  display: inline-block;
+}
+
+.mint-app .mint-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Mint action bar */
+.mint-app .mint-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mint-app .mint-action-btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 6px 8px;
+  font-size: 11px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid rgba(255, 26, 26, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.mint-app .mint-action-btn:hover {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.2);
+}
+
+/* Grid/UV/Animate toggle active state */
+.mint-app .active-toggle {
+  color: var(--accent) !important;
+  border-color: rgba(255, 26, 26, 0.3) !important;
+}
+
+/* Dropdown sections */
+.mint-app .mint-dropdown-section {
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  border: 1px solid rgba(255, 26, 26, 0.06);
+}
+
+/* Template grid */
+.mint-app .mint-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.mint-app .mint-template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 26, 26, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+  color: var(--text);
+}
+
+.mint-app .mint-template-card:hover {
+  border-color: rgba(255, 26, 26, 0.3);
+  transform: none;
+  box-shadow: 0 0 8px rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .mint-template-name {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.mint-app .mint-template-desc {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Color scheme grid */
+.mint-app .mint-scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.mint-app .mint-scheme-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 26, 26, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.mint-app .mint-scheme-chip:hover {
+  border-color: rgba(255, 26, 26, 0.3);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .mint-scheme-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* Saved documents list */
+.mint-app .mint-saved-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.mint-app .mint-saved-doc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--panel-3);
+  border-radius: 6px;
+}
+
+.mint-app .mint-doc-name {
+  flex: 1;
+  text-align: left;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Document name input */
+.mint-app .mint-doc-name-input {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid rgba(255, 26, 26, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.mint-app .mint-doc-name-input::placeholder {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.mint-app .mint-doc-name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Layer add group labels */
+.mint-app .layer-add-group-label {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+/* Zoom controls */
+.mint-app .mint-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mint-app .mint-zoom-btn {
+  background: var(--panel-2);
+  border: 1px solid rgba(255, 26, 26, 0.1);
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1.4;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.mint-app .mint-zoom-btn:hover {
+  color: var(--text);
+  border-color: rgba(255, 26, 26, 0.25);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Animated preview — coin rotation */
+.mint-app .mint-animate-coin {
+  animation: coinRotate 4s ease-in-out infinite;
+  perspective: 800px;
+  transform-style: preserve-3d;
+}
+
+@keyframes coinRotate {
+  0%   { transform: translate(var(--pan-x, 0), var(--pan-y, 0)) rotateY(0deg); }
+  25%  { transform: translate(var(--pan-x, 0), var(--pan-y, 0)) rotateY(15deg); }
+  50%  { transform: translate(var(--pan-x, 0), var(--pan-y, 0)) rotateY(0deg); }
+  75%  { transform: translate(var(--pan-x, 0), var(--pan-y, 0)) rotateY(-15deg); }
+  100% { transform: translate(var(--pan-x, 0), var(--pan-y, 0)) rotateY(0deg); }
+}
+
+/* Animated preview — banknote shimmer */
+.mint-app .mint-animate-shimmer {
+  animation: noteShimmer 3s ease-in-out infinite;
+}
+
+@keyframes noteShimmer {
+  0%   { filter: brightness(1) saturate(1); }
+  25%  { filter: brightness(1.08) saturate(1.1); }
+  50%  { filter: brightness(1) saturate(1); }
+  75%  { filter: brightness(0.95) saturate(1.05); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+/* Number inputs in mint panel */
+.mint-app .mint-panel input[type='number'] {
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 26, 26, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+@media (max-width: 900px) {
+  .mint-app .main {
+    grid-template-columns: 1fr;
+  }
+
+  .mint-app .left-panel,
+  .mint-app .right-panel {
+    order: 2;
+  }
+
+  .mint-app .canvas-panel {
+    order: 1;
+  }
+
+  .mint-app .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .mint-app .topbar-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* === Splash Screen === */
+
+.mint-app .splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #120000;
+  transition: opacity 0.6s ease;
+}
+
+.mint-app .splash-screen.fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mint-app .splash-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  filter: saturate(1.8) brightness(0.5) contrast(1.15);
+}
+
+.mint-app .splash-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 0, 0, 0.15) 10%, rgba(10, 0, 0, 0.65) 70%),
+    linear-gradient(180deg, rgba(10, 0, 0, 0.4) 0%, transparent 25%, transparent 65%, rgba(10, 0, 0, 0.85) 100%);
+}
+
+.mint-app .splash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.mint-app .splash-badge {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mint-app .splash-title {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 96px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  margin: 0;
+  background: linear-gradient(160deg, #ff6644 0%, #ff1a1a 40%, #cc0000 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-transform: uppercase;
+  line-height: 1;
+  filter: drop-shadow(0 0 40px rgba(255, 26, 26, 0.4));
+}
+
+.mint-app .splash-tagline {
+  font-size: 14px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  margin-top: 4px;
+}
+
+.mint-app .splash-enter {
+  margin-top: 32px;
+  padding: 12px 40px;
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #ff1a1a, #cc0000);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 4px 20px rgba(255, 26, 26, 0.3);
+}
+
+.mint-app .splash-enter:hover {
+  box-shadow: 0 6px 28px rgba(255, 26, 26, 0.4);
+  transform: translateY(-2px);
+}
+
+.mint-app .splash-title-btn {
+  margin-top: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  background: linear-gradient(160deg, #ff6644 0%, #ff1a1a 40%, #cc0000 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 40px rgba(255, 26, 26, 0.4));
+  animation: npgxGlow 2s ease-in-out infinite, npgxFlash 4s ease-in-out infinite;
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.mint-app .splash-title-btn:hover {
+  filter: drop-shadow(0 0 80px rgba(255, 26, 26, 0.8)) drop-shadow(0 0 120px rgba(255, 80, 0, 0.4));
+  transform: scale(1.08);
+  box-shadow: none;
+  animation: npgxGlow 0.8s ease-in-out infinite, npgxFlash 1.5s ease-in-out infinite;
+}
+
+@keyframes npgxGlow {
+  0%, 100% { filter: drop-shadow(0 0 30px rgba(255, 26, 26, 0.3)) drop-shadow(0 0 60px rgba(255, 50, 0, 0.15)); }
+  50% { filter: drop-shadow(0 0 60px rgba(255, 26, 26, 0.6)) drop-shadow(0 0 100px rgba(255, 80, 0, 0.3)); }
+}
+
+@keyframes npgxFlash {
+  0%, 85%, 100% { opacity: 1; }
+  88% { opacity: 0.7; }
+  90% { opacity: 1; }
+  92% { opacity: 0.6; }
+  94% { opacity: 1; }
+}
+
+.mint-app .splash-footer {
+  position: absolute;
+  bottom: 24px;
+  z-index: 1;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+  animation: splashPulse 2s ease-in-out infinite;
+}
+
+@keyframes splashPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+/* === Empty State Backgrounds (canvas area when no content) === */
+
+.mint-app .canvas-empty-state {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mint-app .canvas-empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.08;
+  filter: saturate(0.4) brightness(0.6);
+  pointer-events: none;
+}
+
+.mint-app .canvas-empty-state.stamp-empty::before {
+  background-image: url('/bg-banknote-wide.jpg');
+}
+
+.mint-app .canvas-empty-state.mint-empty::before {
+  background-image: url('/bg-rosette.jpg');
+}
+
+.mint-app .canvas-empty-state.tokenise-empty::before {
+  background-image: url('/bg-coin.jpg');
+}
+
+.mint-app .canvas-empty-state::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, #1a1218 80%);
+  pointer-events: none;
+}
+
+.mint-app .canvas-empty-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.mint-app .canvas-empty-icon {
+  font-size: 40px;
+  opacity: 0.3;
+  line-height: 1;
+}
+
+.mint-app .canvas-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent-dim);
+}
+
+.mint-app .canvas-empty-hint {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* Panel background textures */
+.mint-app .left-panel {
+  position: relative;
+}
+
+.mint-app .left-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/bg-moire.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.025;
+  filter: saturate(0) brightness(0.5);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.mint-app .right-panel {
+  position: relative;
+}
+
+.mint-app .right-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/bg-guilloche.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.025;
+  filter: saturate(0) brightness(0.5);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Empty sidebar state */
+.mint-app .empty-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.mint-app .empty-sidebar-icon {
+  font-size: 28px;
+  opacity: 0.2;
+  color: var(--accent);
+}
+
+/* Text Overlay Panel */
+.mint-app .text-overlay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.mint-app .text-overlay-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel-3);
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.mint-app .text-overlay-item:hover {
+  border-color: rgba(255, 26, 26, 0.2);
+}
+
+.mint-app .text-overlay-item.active {
+  border-color: var(--accent);
+  background: rgba(255, 26, 26, 0.06);
+}
+
+.mint-app .text-overlay-preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.mint-app .text-align-group {
+  display: flex;
+  gap: 2px;
+}
+
+.mint-app .text-align-btn {
+  background: var(--panel-3);
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.mint-app .text-align-btn:hover:not(:disabled) {
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .text-align-btn.active {
+  color: var(--accent);
+  border-color: rgba(255, 26, 26, 0.3);
+  background: rgba(255, 26, 26, 0.08);
+}
+
+/* Covers Gallery */
+.mint-app .covers-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.mint-app .covers-gallery-thumb {
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.mint-app .covers-gallery-thumb:hover {
+  border-color: rgba(255, 26, 26, 0.3);
+  transform: translateY(-2px);
+}
+
+.mint-app .covers-gallery-thumb img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+}
+
+.mint-app .covers-gallery-placeholder {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mint-app .covers-gallery-label {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===================================================
+   WATCH CINEMA (Watch Mode -- Cinema-First)
+   =================================================== */
+
+.mint-app .watch-cinema {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+}
+
+.mint-app .watch-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.mint-app .watch-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.mint-app .watch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.mint-app .watch-empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
+  color: var(--accent);
+}
+
+.mint-app .watch-empty-hint {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.mint-app .watch-empty-keys {
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--muted);
+  opacity: 0.4;
+  margin-top: 8px;
+}
+
+/* Controls overlay -- auto-hides */
+.mint-app .watch-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.92));
+  padding: 40px 16px 12px;
+  z-index: 10;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.mint-app .watch-controls.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.mint-app .watch-controls.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+/* Now playing banner */
+.mint-app .watch-now-playing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.mint-app .watch-now-playing-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mint-app .watch-now-playing-pos {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Progress bar */
+.mint-app .watch-progress {
+  position: relative;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  margin-bottom: 10px;
+  border-radius: 2px;
+}
+
+.mint-app .watch-progress:hover { height: 6px; margin-bottom: 8px; }
+
+.mint-app .watch-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.mint-app .watch-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px rgba(255, 26, 26, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mint-app .watch-progress:hover .watch-progress-thumb { opacity: 1; }
+
+/* Transport bar */
+.mint-app .watch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mint-app .watch-bar-left,
+.mint-app .watch-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mint-app .watch-bar button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 0.8;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.mint-app .watch-bar button:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .watch-bar button:disabled { opacity: 0.3; cursor: default; }
+.mint-app .watch-bar button.active { color: var(--accent); opacity: 1; }
+
+.mint-app .watch-play-btn { font-size: 20px !important; }
+
+.mint-app .watch-bar select {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mint-app .watch-time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 6px;
+}
+
+.mint-app .watch-volume {
+  width: 70px;
+  height: 3px;
+  accent-color: var(--accent);
+}
+
+/* Playlist sidebar */
+.mint-app .watch-playlist {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 260px;
+  background: rgba(18, 10, 22, 0.92);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mint-app .watch-playlist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.mint-app .watch-playlist-count {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.mint-app .watch-playlist-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.mint-app .watch-playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+
+.mint-app .watch-playlist-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .watch-playlist-item.active {
+  background: var(--accent-glow);
+  border-left: 3px solid var(--accent);
+}
+
+.mint-app .watch-playlist-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.mint-app .watch-playlist-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mint-app .watch-playlist-dur {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ===================================================
+   VIDEO MIXER -- CherryX-style (Mix Mode)
+   =================================================== */
+
+.mint-app .mx-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #0a0000;
+  overflow-y: auto;
+  align-self: stretch;
+}
+
+/* -- Mobile tab bar (hidden on desktop) -- */
+.mint-app .mx-mobile-tabs {
+  display: none;
+  background: var(--panel-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.mint-app .mx-mobile-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.mint-app .mx-mobile-tab:hover { color: var(--text); }
+.mint-app .mx-mobile-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* -- Mobile content (hidden on desktop) -- */
+.mint-app .mx-mobile-content { display: none; }
+.mint-app .mx-mobile-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+/* -- Desktop 5-column layout -- */
+.mint-app .mx-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mint-app .mx-col {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.mint-app .mx-col-panel {
+  background: var(--panel);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mint-app .mx-col-panel:last-child { border-right: none; }
+
+.mint-app .mx-col-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #000;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* -- Panel -- */
+.mint-app .mx-panel {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mint-app .mx-panel-title {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent);
+  background: var(--panel-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* -- Toggle switch -- */
+.mint-app .mx-toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.mint-app .mx-toggle.on {
+  background: var(--accent);
+}
+
+.mint-app .mx-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.mint-app .mx-toggle.on .mx-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* -- FX item -- */
+.mint-app .mx-fx-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.mint-app .mx-fx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.mint-app .mx-fx-name {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.mint-app .mx-fx-body {
+  padding: 0 12px 10px;
+}
+
+/* -- Slider row -- */
+.mint-app .mx-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.mint-app .mx-slider-label {
+  font-size: 11px;
+  color: var(--muted);
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.mint-app .mx-slider {
+  flex: 1;
+  height: 3px;
+  accent-color: var(--accent);
+  min-width: 0;
+}
+
+.mint-app .mx-slider-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* -- Reset button -- */
+.mint-app .mx-reset-btn {
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--danger, #ff4444);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mint-app .mx-reset-btn:hover {
+  background: rgba(255, 68, 68, 0.15);
+  color: #ff6666;
+  transform: none;
+  box-shadow: none;
+}
+
+/* -- Canvas preview -- */
+.mint-app .mx-canvas {
+  width: 100%;
+  max-height: calc(100% - 140px);
+  object-fit: contain;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  background: #000;
+}
+
+/* -- Transport -- */
+.mint-app .mx-transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mint-app .mx-play-btn {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb, 255, 0, 128), 0.3);
+}
+
+.mint-app .mx-play-btn:hover {
+  filter: brightness(1.15);
+  transform: scale(1.05);
+  box-shadow: 0 2px 12px rgba(var(--accent-rgb, 255, 0, 128), 0.5);
+}
+
+/* -- Crossfader -- */
+.mint-app .mx-crossfader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.mint-app .mx-cross-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.mint-app .mx-cross-slider {
+  flex: 1;
+  height: 6px;
+  accent-color: var(--accent);
+}
+
+/* -- Clip strip -- */
+.mint-app .mx-clip-strip {
+  width: 100%;
+  background: var(--panel);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mint-app .mx-clip-strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--panel-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mint-app .mx-clip-strip-header:last-child {
+  border-bottom: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mint-app .mx-clip-strip-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.mint-app .mx-clip-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.mint-app .mx-clip-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 2px;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.mint-app .mx-clip-thumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mint-app .mx-clip-thumb:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: none;
+  box-shadow: none;
+}
+
+.mint-app .mx-clip-thumb.active-a {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb, 255, 0, 128), 0.3);
+}
+
+.mint-app .mx-clip-thumb.active-b {
+  border-color: #00d4ff;
+  background: rgba(0, 212, 255, 0.1);
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
+}
+
+.mint-app .mx-clip-thumb.active-a.active-b {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.1);
+  box-shadow: 0 0 6px rgba(255, 204, 0, 0.3);
+}
+
+.mint-app .mx-clip-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.mint-app .mx-clip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* -- Timeline bar -- */
+.mint-app .mx-timeline-bar {
+  background: linear-gradient(to right, var(--panel), var(--panel-2));
+  border: 1px solid rgba(255, 26, 26, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.mint-app .mx-timeline-collapse {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.mint-app .mx-timeline-collapse:hover { color: #fff; }
+
+.mint-app .mx-btn-sm {
+  padding: 4px 12px;
+  background: var(--panel-3);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mint-app .mx-btn-sm:hover { background: rgba(255,255,255,0.12); }
+
+.mint-app .mx-btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.mint-app .mx-btn-accent:hover { background: var(--accent-2); }
+
+.mint-app .mx-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: rgba(255, 26, 26, 0.2);
+  border: 1px solid rgba(255, 26, 26, 0.4);
+  border-radius: 4px;
+  color: var(--accent-2);
+}
+
+.mint-app .mx-keys-hint {
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 6px 12px;
+  background: var(--panel-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+
+/* -- Deck layer cards (from VexVoid AV client) -- */
+.mint-app .mx-deck-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mint-app .mx-layer-card {
+  background: var(--panel-2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: opacity 0.15s;
+}
+.mint-app .mx-layer-card.dim { opacity: 0.4; }
+.mint-app .mx-layer-card:hover { border-color: rgba(255, 255, 255, 0.15); }
+
+.mint-app .mx-layer-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mint-app .mx-layer-eye {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 14px;
+  padding: 0 2px;
+  cursor: pointer;
+  line-height: 1;
+}
+.mint-app .mx-layer-eye:hover { color: var(--text); }
+
+.mint-app .mx-layer-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text-2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.mint-app .mx-layer-select:hover { border-color: rgba(255, 255, 255, 0.2); }
+
+.mint-app .mx-layer-remove {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 0 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+.mint-app .mx-layer-remove:hover { color: #dc143c; }
+
+.mint-app .mx-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mint-app .mx-layer-row-label {
+  font-size: 10px;
+  color: var(--muted);
+  min-width: 32px;
+}
+
+.mint-app .mx-layer-blend {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text-2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+
+.mint-app .mx-add-layer {
+  width: 100%;
+  padding: 6px;
+  background: none;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s;
+}
+.mint-app .mx-add-layer:hover {
+  border-color: #e91e90;
+  color: #e91e90;
+  background: rgba(233, 30, 144, 0.05);
+}
+
+/* -- BPM section (from VexVoid) -- */
+.mint-app .mx-bpm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.mint-app .mx-bpm-display {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.mint-app .mx-bpm-unit {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.mint-app .mx-bpm-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mint-app .mx-bpm-tap {
+  padding: 6px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.mint-app .mx-bpm-tap:hover {
+  border-color: #e91e90;
+  color: #e91e90;
+}
+.mint-app .mx-bpm-tap:active {
+  background: #e91e90;
+  border-color: #e91e90;
+  color: #fff;
+  transform: scale(0.95);
+}
+
+/* -- BPM mini (in transport bar) -- */
+.mint-app .mx-bpm-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.mint-app .mx-bpm-tap-mini {
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.mint-app .mx-bpm-tap-mini:hover { border-color: #e91e90; color: #e91e90; }
+.mint-app .mx-bpm-tap-mini:active {
+  background: #e91e90;
+  border-color: #e91e90;
+  color: #fff;
+}
+
+.mint-app .mx-bpm-mini-value {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  color: var(--text-2);
+}
+
+.mint-app .mx-beat-sync-btn {
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mint-app .mx-beat-sync-btn:hover { border-color: #00e5ff; color: #00e5ff; }
+.mint-app .mx-beat-sync-btn.active {
+  background: #00e5ff;
+  border-color: #00e5ff;
+  color: #000;
+  animation: mx-sync-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes mx-sync-pulse {
+  from { box-shadow: 0 0 4px #00e5ff; }
+  to   { box-shadow: 0 0 12px #00e5ff, 0 0 20px rgba(0,229,255,0.3); }
+}
+
+/* -- Filter grid (color panel checkboxes) -- */
+.mint-app .mx-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+.mint-app .mx-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.mint-app .mx-filter-label:hover { color: var(--text); }
+.mint-app .mx-filter-check {
+  accent-color: #e91e90;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+/* -- Fit / Orientation button grid -- */
+.mint-app .mx-fit-grid {
+  display: flex;
+  gap: 4px;
+}
+.mint-app .mx-fit-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mint-app .mx-fit-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text);
+}
+.mint-app .mx-fit-btn.active {
+  background: #e91e90;
+  border-color: #e91e90;
+  color: #fff;
+}
+
+/* -- Canvas wrap + recording indicator -- */
+.mint-app .mx-canvas-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+.mint-app .mx-rec-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(220, 20, 60, 0.85);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+.mint-app .mx-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  animation: mx-rec-blink 1s ease-in-out infinite;
+}
+@keyframes mx-rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* -- Chaos + Record buttons -- */
+.mint-app .mx-chaos-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--panel-2);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mint-app .mx-chaos-btn:hover { border-color: #e91e90; color: var(--text); }
+.mint-app .mx-chaos-btn.active {
+  background: #e91e90;
+  border-color: #e91e90;
+  color: #fff;
+  animation: mx-chaos-pulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes mx-chaos-pulse {
+  from { box-shadow: 0 0 4px #e91e90; }
+  to   { box-shadow: 0 0 12px #e91e90, 0 0 24px rgba(233,30,144,0.3); }
+}
+
+.mint-app .mx-rec-start-btn, .mint-app .mx-rec-stop-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--panel-2);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mint-app .mx-rec-start-btn:hover { border-color: #dc143c; color: #dc143c; }
+.mint-app .mx-rec-stop-btn {
+  background: #dc143c;
+  border-color: #dc143c;
+  color: #fff;
+}
+.mint-app .mx-rec-stop-btn:hover { background: #b01030; }
+
+.mint-app .mx-rec-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--panel-2);
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+}
+.mint-app .mx-rec-btn:hover { border-color: #dc143c; color: #dc143c; }
+.mint-app .mx-rec-btn.active {
+  background: #dc143c;
+  border-color: #dc143c;
+  color: #fff;
+}
+
+/* -- Info grid (settings panel stats) -- */
+.mint-app .mx-info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  font-size: 11px;
+}
+.mint-app .mx-info-label {
+  color: var(--muted);
+  text-align: right;
+}
+.mint-app .mx-info-value {
+  color: var(--text-2);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* -- Responsive: mobile / small screens -- */
+@media (max-width: 900px) {
+  .mint-app .mx-columns { display: none; }
+  .mint-app .mx-mobile-tabs {
+    display: flex;
+  }
+  .mint-app .mx-mobile-content {
+    display: block;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
