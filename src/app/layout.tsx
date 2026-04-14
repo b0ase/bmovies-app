@@ -1,10 +1,5 @@
 import type { Metadata } from "next";
-import {
-  Inter, Orbitron, Permanent_Marker,
-  Bebas_Neue, Anton, Black_Ops_One, Russo_One, Teko, Staatliches,
-  Bungee, Monoton, Press_Start_2P, Creepster, Special_Elite,
-  Rubik_Mono_One, Bungee_Shade, Sedan_SC,
-} from "next/font/google";
+import { Inter, Bebas_Neue, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { LayoutShell } from "@/components/LayoutShell";
@@ -14,62 +9,50 @@ const inter = Inter({
   weight: ["400", "500", "600", "700", "800", "900"],
 });
 
-const orbitron = Orbitron({
-  subsets: ["latin"],
-  weight: ["400", "700", "900"],
-  variable: "--font-brand",
-});
-
-const permanentMarker = Permanent_Marker({
+const bebasNeue = Bebas_Neue({
   subsets: ["latin"],
   weight: "400",
-  variable: "--font-graffiti",
+  variable: "--font-bebas",
 });
 
-// ── Display / Title fonts ──
-const bebasNeue = Bebas_Neue({ subsets: ["latin"], weight: "400", variable: "--font-bebas" });
-const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-anton" });
-const blackOpsOne = Black_Ops_One({ subsets: ["latin"], weight: "400", variable: "--font-blackops" });
-const russoOne = Russo_One({ subsets: ["latin"], weight: "400", variable: "--font-russo" });
-const teko = Teko({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-teko" });
-const staatliches = Staatliches({ subsets: ["latin"], weight: "400", variable: "--font-staatliches" });
-const bungee = Bungee({ subsets: ["latin"], weight: "400", variable: "--font-bungee" });
-const bungeeShade = Bungee_Shade({ subsets: ["latin"], weight: "400", variable: "--font-bungee-shade" });
-const monoton = Monoton({ subsets: ["latin"], weight: "400", variable: "--font-monoton" });
-const pressStart = Press_Start_2P({ subsets: ["latin"], weight: "400", variable: "--font-pixel" });
-const creepster = Creepster({ subsets: ["latin"], weight: "400", variable: "--font-creepster" });
-const specialElite = Special_Elite({ subsets: ["latin"], weight: "400", variable: "--font-typewriter" });
-const rubikMonoOne = Rubik_Mono_One({ subsets: ["latin"], weight: "400", variable: "--font-rubik-mono" });
-const sedanSC = Sedan_SC({ subsets: ["latin"], weight: "400", variable: "--font-sedan" });
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.npg-x.com'),
-  title: "NPGX — 26 Girls. Your Fantasy. Your Film.",
-  description: "Generative adult cinema on Bitcoin. 26 collectible characters. Direct movies, create music, trade on the exchange. $403 protocol. Powered by HandCash, OpenClaw, BSV.",
-  keywords: "NPGX, ninja punk girls, generative video, AI cinema, Bitcoin SV, $403, adult content, blockchain tokens, content creation",
-  authors: [{ name: "Ninja Punk Girls X" }],
+  metadataBase: new URL("https://app.bmovies.online"),
+  title: "bMovies — Your studio. Your films. Your royalties.",
+  description:
+    "The authenticated creative suite for bMovies. Manage your studio, your commissioned films, your cap tables and investor packs. Edit scenes, design titles, write scripts, and ship films with a swarm of AI agents. Operated by The Bitcoin Corporation Ltd, registered in England & Wales.",
+  keywords:
+    "bMovies, AI film, creative suite, movie editor, storyboard generator, title designer, script editor, pitch deck, royalty shares, BSV-21, Bitcoin SV, x402, BRC-100",
+  authors: [{ name: "The Bitcoin Corporation Ltd" }],
   openGraph: {
-    title: "NPGX — 26 Girls. Your Fantasy. Your Film.",
-    description: "Generative adult cinema on Bitcoin. Direct movies, create music, trade content. 26 AI characters with their own tokens. $403 protocol.",
-    url: "https://www.npg-x.com",
-    siteName: "NPGX",
+    title: "bMovies — Your studio. Your films. Your royalties.",
+    description:
+      "The authenticated creative suite for bMovies. Manage your studio, commissioned films, cap tables and investor packs. Run the full production pipeline with AI agents.",
+    url: "https://app.bmovies.online",
+    siteName: "bMovies",
     images: [
       {
-        url: "/NPGX-OG.jpg",
-        width: 1200,
-        height: 630,
-        alt: "NPGX — Ninja Punk Girls X"
-      }
+        url: "https://bmovies.online/bmovies_og.jpg",
+        width: 1907,
+        height: 948,
+        alt: "bMovies — Films commissioned, financed, and produced by AI agents on Bitcoin SV",
+      },
     ],
-    locale: "en_US",
+    locale: "en_GB",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NPGX — 26 Girls. Your Fantasy. Your Film.",
-    description: "Generative adult cinema on Bitcoin. 26 collectible characters. Direct movies, create music, trade on the exchange. $403 protocol.",
-    images: ["/NPGX-OG.jpg"],
-    creator: "@ninjapunkgirls",
+    title: "bMovies — Your studio. Your films. Your royalties.",
+    description:
+      "Ship films with a swarm of AI agents. Own 99% of the royalty shares. From $0.99 for a pitch to $999 for a feature.",
+    images: ["https://bmovies.online/bmovies_og.jpg"],
+    creator: "@bMovies_Online",
   },
 };
 
@@ -81,21 +64,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `
-          if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(w){w.unregister()})});caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})})}
-        `}} />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#dc2626" />
+        <meta name="theme-color" content="#E50914" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="OpenClaw" />
+        <meta name="apple-mobile-web-app-title" content="bMovies" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body className={`${inter.className} ${orbitron.variable} ${permanentMarker.variable} ${bebasNeue.variable} ${anton.variable} ${blackOpsOne.variable} ${russoOne.variable} ${teko.variable} ${staatliches.variable} ${bungee.variable} ${bungeeShade.variable} ${monoton.variable} ${pressStart.variable} ${creepster.variable} ${specialElite.variable} ${rubikMonoOne.variable} ${sedanSC.variable}`}>
+      <body
+        className={`${inter.className} ${bebasNeue.variable} ${jetbrainsMono.variable}`}
+      >
         <Providers>
-          <LayoutShell>
-            {children}
-          </LayoutShell>
+          <LayoutShell>{children}</LayoutShell>
         </Providers>
       </body>
     </html>

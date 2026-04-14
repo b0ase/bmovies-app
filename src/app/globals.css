@@ -11,7 +11,7 @@
   --ninja-steel: #1a1a1a;
   --ninja-smoke: #2a2a2a;
   --ninja-ash: #3a3a3a;
-  --punk-blood: #ff0040;
+  --punk-blood: #E50914;
   --punk-white: #ffffff;
   --punk-gray: #888888;
 }
@@ -207,7 +207,7 @@
 
 /* ═══════════════════════════════════════════
    NPGX STYLE GUIDE
-   Black / White / Red (#ff0040)
+   Black / White / Red (#E50914)
    Font: Orbitron (--font-brand) for headings
    ═══════════════════════════════════════════ */
 
@@ -308,7 +308,7 @@
 .npgx-badge-red {
   background: rgba(255, 0, 64, 0.15);
   border: 1px solid rgba(255, 0, 64, 0.3);
-  color: #ff0040;
+  color: #E50914;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
