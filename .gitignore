@@ -83,6 +83,16 @@ typings/
 .env.production.local
 .env.local
 .env.local-old
+# Vercel env pulls and backups — never commit, these contain
+# production service_role + stripe keys
+.env.vercel-pull
+.env.vercel-pull.*
+.env.backup
+.env.bak
+.env.snapshot
+.env.production.snapshot
+# Catch-all — any .env variant except .env.example
+!.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
