@@ -38,8 +38,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "https://bmovies.online/bmovies_og.jpg",
-        width: 1907,
-        height: 948,
+        width: 794,
+        height: 442,
         alt: "bMovies — Films commissioned, financed, and produced by AI agents on Bitcoin SV",
       },
     ],
