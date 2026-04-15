@@ -1,468 +1,317 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { cdnUrl } from '@/lib/cdn'
+/**
+ * /exchange — tabbed view of every canonical BSV-21 token on bMovies.
+ *
+ * Mirrors the public /exchange.html on bmovies.online but lives inside
+ * the authenticated app so we can later wire buy / sell / cap-table
+ * modals directly without round-tripping to the public site.
+ *
+ * Four tabs: Films, Studios, Directors, $bMovies (platform token).
+ * Every row has deep-links to 1sat.market, GorillaPool, and the local
+ * cap-table view on bmovies.online.
+ */
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { bmovies } from '@/lib/supabase-bmovies'
 
-/* ─────────────────────────── Types ─────────────────────────── */
+type Tab = 'films' | 'studios' | 'directors' | 'platform'
 
-type FilterTab = 'tokens' | 'music' | 'videos' | 'images'
-type SortOption = 'price' | 'newest' | 'popular'
-
-interface Listing {
+interface Asset {
   id: string
   title: string
-  creator?: string
-  price: string
-  priceAlt?: string
-  type: FilterTab
-  badge: string
-  thumbnail?: string
+  ticker: string
+  txid: string | null
+  tier?: string
+  image?: string | null
   subtitle?: string
-  href?: string
-  hrefAlt?: string
-  hrefAltLabel?: string
-  linkLabel?: string
-  isCreateCard?: boolean
 }
-
-/* ─────────────────────────── Data ─────────────────────────── */
-
-const LISTINGS: Listing[] = [
-  // TOKENS
-  {
-    id: 'npgx',
-    title: '$NPGX',
-    creator: 'NPGX Protocol',
-    price: '$0.001',
-    type: 'tokens',
-    badge: 'INDEX',
-    subtitle: '1,000,000,000 supply',
-  },
-  {
-    id: 'aria',
-    title: '$ARIA',
-    creator: 'Aria Voidstrike',
-    price: '$0.001',
-    type: 'tokens',
-    badge: 'CHARACTER',
-    thumbnail: '/content/aria-voidstrike/images/avatar/aria-voidstrike-confrontational.png',
-  },
-  {
-    id: 'luna',
-    title: '$LUNA',
-    creator: 'Luna Cyberblade',
-    price: '$0.001',
-    type: 'tokens',
-    badge: 'CHARACTER',
-    thumbnail: '/content/luna-cyberblade/images/avatar/luna-cyberblade-avatar.png',
-  },
-  {
-    id: 'dahlia',
-    title: '$DAHLIA',
-    creator: 'Dahlia Ironveil',
-    price: '$0.001',
-    type: 'tokens',
-    badge: 'CHARACTER',
-    thumbnail: '/content/dahlia-ironveil/images/avatar/dahlia-ironveil-avatar.png',
-  },
-
-  // MUSIC
-  {
-    id: 'tokyo-gutter-punk',
-    title: 'Tokyo Gutter Punk',
-    creator: 'NPGX',
-    price: '$4.99',
-    type: 'music',
-    badge: 'ALBUM',
-    subtitle: '11 tracks',
-    thumbnail: cdnUrl('music/albums/tokyo-gutter-punk/cover.png'),
-    href: '/album/tokyo-gutter-punk',
-  },
-  {
-    id: 'neon-blood-riot',
-    title: 'Neon Blood Riot',
-    creator: 'NPGX',
-    price: '$4.99',
-    type: 'music',
-    badge: 'ALBUM',
-    subtitle: '11 tracks',
-    thumbnail: cdnUrl('music/albums/neon-blood-riot/cover.png'),
-    href: '/album/neon-blood-riot',
-  },
-  {
-    id: 'razor-kisses-single',
-    title: 'Razor Kisses',
-    creator: 'NPGX',
-    price: '$0.99',
-    type: 'music',
-    badge: 'SINGLE',
-    href: '/album/tokyo-gutter-punk/razor-kisses',
-  },
-
-  // VIDEOS
-  {
-    id: 'razor-kisses-video',
-    title: 'Razor Kisses',
-    creator: 'NPGX',
-    price: 'Free (SFW)',
-    priceAlt: '$99 (XXX)',
-    type: 'videos',
-    badge: 'MUSIC VIDEO',
-    subtitle: '67 clips',
-    thumbnail: '/og/razor-kisses.png',
-    href: '/watch/razor-kisses',
-    linkLabel: 'Watch',
-    hrefAlt: '/watch/razor-kisses/xxx',
-    hrefAltLabel: 'Buy XXX',
-  },
-  {
-    id: 'shibuya-mosh-pit',
-    title: 'Shibuya Mosh Pit',
-    creator: 'NPGX',
-    price: 'Free',
-    type: 'videos',
-    badge: 'MUSIC VIDEO',
-    subtitle: '22 clips',
-    href: '/watch/shibuya-mosh-pit',
-    linkLabel: 'Watch',
-  },
-  {
-    id: 'tokyo-gutter-queen',
-    title: 'Tokyo Gutter Queen',
-    creator: 'NPGX',
-    price: 'Free',
-    type: 'videos',
-    badge: 'MUSIC VIDEO',
-    subtitle: '53 clips',
-    href: '/watch/tokyo-gutter-queen',
-    linkLabel: 'Watch',
-  },
-  {
-    id: 'create-your-own',
-    title: 'Create Your Own',
-    creator: 'You',
-    price: 'Start Free',
-    type: 'videos',
-    badge: 'CREATE',
-    subtitle: 'AI-powered storyboard',
-    href: '/storyboard',
-    linkLabel: 'Create',
-    isCreateCard: true,
-  },
-
-  // IMAGES
-  {
-    id: 'aria-collection',
-    title: 'Aria Collection',
-    creator: 'Aria Voidstrike',
-    price: '$19.99',
-    type: 'images',
-    badge: 'COLLECTION',
-    subtitle: '50+ images',
-    thumbnail: '/content/aria-voidstrike/images/avatar/aria-voidstrike-confrontational.png',
-  },
-  {
-    id: 'dahlia-collection',
-    title: 'Dahlia Collection',
-    creator: 'Dahlia Ironveil',
-    price: '$19.99',
-    type: 'images',
-    badge: 'COLLECTION',
-    subtitle: '50+ images',
-    thumbnail: '/content/dahlia-ironveil/images/avatar/dahlia-ironveil-avatar.png',
-  },
-  {
-    id: 'luna-collection',
-    title: 'Luna Collection',
-    creator: 'Luna Cyberblade',
-    price: '$19.99',
-    type: 'images',
-    badge: 'COLLECTION',
-    subtitle: '50+ images',
-    thumbnail: '/content/luna-cyberblade/images/avatar/luna-cyberblade-avatar.png',
-  },
-  {
-    id: 'miss-void-magazine-1',
-    title: 'MISS VOID Magazine Issue 1',
-    creator: 'NPGX',
-    price: '$9.99',
-    type: 'images',
-    badge: 'MAGAZINE',
-    subtitle: 'Digital edition',
-  },
-]
-
-const TABS: { key: FilterTab; label: string }[] = [
-  { key: 'tokens', label: 'Tokens' },
-  { key: 'music', label: 'Music' },
-  { key: 'videos', label: 'Videos' },
-  { key: 'images', label: 'Images' },
-]
-
-const SORT_OPTIONS: { key: SortOption; label: string }[] = [
-  { key: 'price', label: 'Price' },
-  { key: 'newest', label: 'Newest' },
-  { key: 'popular', label: 'Most Popular' },
-]
-
-/* ─────────────────────────── Helpers ─────────────────────────── */
-
-function parsePriceForSort(price: string): number {
-  const match = price.match(/[\d.]+/)
-  if (!match) return 0
-  return parseFloat(match[0])
-}
-
-/* ─────────────────────────── Component ─────────────────────────── */
 
 export default function ExchangePage() {
-  const [activeTab, setActiveTab] = useState<FilterTab>('tokens')
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<SortOption>('popular')
-  const [userListings, setUserListings] = useState<Listing[]>([])
+  const [tab, setTab] = useState<Tab>('films')
+  const [films, setFilms] = useState<Asset[] | null>(null)
+  const [studios, setStudios] = useState<Asset[] | null>(null)
+  const [directors, setDirectors] = useState<Asset[] | null>(null)
+  const [platform, setPlatform] = useState<{ supply: number; sold: number; price_cents: number; txid: string | null } | null>(null)
 
-  // Load user-published listings from localStorage
   useEffect(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem('npgx-exchange-listings') || '[]')
-      const mapped: Listing[] = raw.map((l: any) => ({
-        id: l.id,
-        title: l.title,
-        creator: l.creator || 'User',
-        price: `$${l.price}`,
-        type: (l.type || 'videos') as FilterTab,
-        badge: l.tier === 'new-xxx' ? 'XXX' : l.tier === 'new-xx' ? 'XX' : 'USER',
-        subtitle: `${l.clipCount || 0} clips`,
-        thumbnail: l.thumbnail,
-        href: `/watch/${l.trackSlug}`,
-      }))
-      setUserListings(mapped)
-    } catch {}
+    async function load() {
+      const [filmsRes, studiosRes, directorsRes, cfgRes] = await Promise.all([
+        bmovies
+          .from('bct_offers')
+          .select('id, title, token_ticker, token_mint_txid, tier, bct_artifacts(kind, role, url, superseded_by)')
+          .is('archived_at', null)
+          .in('tier', ['pitch', 'trailer', 'short', 'feature'])
+          .not('token_mint_txid', 'is', null)
+          .order('created_at', { ascending: false }),
+        bmovies
+          .from('bct_studios')
+          .select('id, name, token_ticker, token_mint_txid, logo_url, aesthetic'),
+        bmovies
+          .from('bct_directors')
+          .select('id, name, token_ticker, token_mint_txid, headshot_url, studio_id'),
+        bmovies
+          .from('bct_platform_config')
+          .select('*')
+          .eq('id', 'platform')
+          .maybeSingle(),
+      ])
+
+      setFilms(
+        ((filmsRes.data as any[]) || [])
+          .filter((f) => f.token_mint_txid && /^[0-9a-f]{64}$/.test(f.token_mint_txid))
+          .map((f) => {
+            const arts = (f.bct_artifacts || []).filter((a: any) => !a.superseded_by)
+            const poster = arts.find((a: any) => a.kind === 'image' && a.role === 'poster')
+            const frame = arts.find((a: any) => a.kind === 'image')
+            return {
+              id: f.id,
+              title: f.title,
+              ticker: f.token_ticker,
+              txid: f.token_mint_txid,
+              tier: f.tier,
+              image: poster?.url || frame?.url || null,
+            }
+          }),
+      )
+      setStudios(
+        ((studiosRes.data as any[]) || []).map((s) => ({
+          id: s.id,
+          title: s.name,
+          ticker: s.token_ticker,
+          txid: s.token_mint_txid,
+          image: s.logo_url,
+          subtitle: s.aesthetic || undefined,
+        })),
+      )
+      setDirectors(
+        ((directorsRes.data as any[]) || []).map((d) => ({
+          id: d.id,
+          title: d.name,
+          ticker: d.token_ticker,
+          txid: d.token_mint_txid,
+          image: d.headshot_url,
+          subtitle: d.studio_id || undefined,
+        })),
+      )
+      if (cfgRes.data) {
+        const cfg = cfgRes.data as any
+        setPlatform({
+          supply: Number(cfg.total_supply),
+          sold: Number(cfg.sold_supply),
+          price_cents: Number(cfg.current_tranche_price_cents),
+          txid: cfg.token_mint_txid,
+        })
+      }
+    }
+    load()
   }, [])
 
-  const allListings = useMemo(() => [...LISTINGS, ...userListings], [userListings])
-
-  const filtered = useMemo(() => {
-    let items = allListings.filter(l => l.type === activeTab)
-
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      items = items.filter(
-        l =>
-          l.title.toLowerCase().includes(q) ||
-          l.creator?.toLowerCase().includes(q) ||
-          l.badge.toLowerCase().includes(q)
-      )
-    }
-
-    if (sort === 'price') {
-      items = [...items].sort((a, b) => parsePriceForSort(a.price) - parsePriceForSort(b.price))
-    }
-    // 'newest' and 'popular' keep default order (hardcoded ordering)
-
-    return items
-  }, [activeTab, search, sort])
+  const list = tab === 'films' ? films : tab === 'studios' ? studios : tab === 'directors' ? directors : null
 
   return (
-    <div className="min-h-screen bg-black pt-20 pb-32">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-
-        {/* ── Banner ── */}
-        <div className="mb-8 rounded-xl bg-gradient-to-r from-red-600/20 via-red-900/10 to-transparent border border-red-500/20 p-6 sm:p-8">
-          <h1
-            className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tighter mb-2 font-[family-name:var(--font-brand)]"
-          >
-            NPGX EXCHANGE
-          </h1>
-          <p className="text-gray-400 text-base sm:text-lg max-w-2xl">
-            Create &amp; Trade &mdash; Make music videos, trade tokens, collect content
-          </p>
+    <div className="max-w-[1400px] mx-auto px-6 py-12">
+      <header className="mb-6 pb-6 border-b border-[#1a1a1a]">
+        <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#E50914] font-bold mb-2">
+          bMovies exchange
         </div>
+        <h1
+          className="text-5xl font-black leading-none mb-2"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Every token.<br/>Every asset.
+        </h1>
+        <p className="text-[#888] text-sm max-w-2xl">
+          Every film, studio, director, and the $bMovies platform share —
+          all on BSV mainnet, all tradeable at 1sat.market, all
+          independently verifiable at GorillaPool. You don't need a wallet
+          to look; you need one to trade.
+        </p>
+      </header>
 
-        {/* ── Search + Sort Row ── */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search listings..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-red-500 focus:outline-none transition-colors"
-            />
+      <nav className="flex gap-1 mb-8 border-b border-[#1a1a1a]">
+        {(['films', 'studios', 'directors', 'platform'] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
+              tab === t
+                ? 'text-white border-b-2 border-[#E50914]'
+                : 'text-[#666] hover:text-[#bbb]'
+            }`}
+          >
+            {t === 'platform' ? '$bMovies' : t}
+          </button>
+        ))}
+      </nav>
+
+      {tab === 'platform' ? (
+        <PlatformTab platform={platform} />
+      ) : list === null ? (
+        <div className="text-[#666] text-sm">Loading…</div>
+      ) : list.length === 0 ? (
+        <div className="text-[#666] text-sm">No assets in this category yet.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {list.map((a) => (
+            <AssetCard key={a.id} asset={a} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AssetCard({ asset }: { asset: Asset }) {
+  const short = asset.txid ? `${asset.txid.slice(0, 10)}…${asset.txid.slice(-6)}` : null
+  return (
+    <div className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors">
+      {asset.image ? (
+        <div className="aspect-[3/2] bg-[#050505] overflow-hidden">
+          <img src={asset.image} alt={asset.title} className="w-full h-full object-cover" />
+        </div>
+      ) : null}
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3
+            className="font-black text-lg leading-tight text-white"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            {asset.title}
+          </h3>
+          <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+            ${asset.ticker}
+          </span>
+        </div>
+        {asset.tier && (
+          <span className="inline-block text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888] mb-2">
+            {asset.tier}
+          </span>
+        )}
+        {asset.subtitle && (
+          <p className="text-[#888] text-xs mb-2">{asset.subtitle}</p>
+        )}
+        {short && (
+          <div className="font-mono text-[0.55rem] text-[#555] mb-3 break-all">
+            {short}
           </div>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          {asset.txid && (
+            <>
+              <a
+                href={`https://1sat.market/outpoint/${asset.txid}_0/bsv21`}
+                target="_blank"
+                rel="noopener"
+                className="text-[0.55rem] font-bold uppercase tracking-wider px-2 py-1 bg-[#E50914] text-white"
+              >
+                Trade
+              </a>
+              <a
+                href={`https://ordinals.gorillapool.io/api/bsv20/id/${asset.txid}_0`}
+                target="_blank"
+                rel="noopener"
+                className="text-[0.55rem] font-bold uppercase tracking-wider px-2 py-1 border border-[#333] text-[#bbb] hover:text-white"
+              >
+                On-chain
+              </a>
+            </>
+          )}
+          <a
+            href={`https://bmovies.online/captable.html?id=${encodeURIComponent(asset.id)}`}
+            className="text-[0.55rem] font-bold uppercase tracking-wider px-2 py-1 border border-[#333] text-[#bbb] hover:text-white"
+          >
+            Cap table
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600 text-xs font-mono uppercase tracking-widest whitespace-nowrap">Sort by</span>
-            <div className="flex bg-white/[0.03] rounded-lg p-0.5 border border-white/5">
-              {SORT_OPTIONS.map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setSort(s.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                    sort === s.key
-                      ? 'bg-red-600 text-white'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
+function PlatformTab({ platform }: { platform: { supply: number; sold: number; price_cents: number; txid: string | null } | null }) {
+  if (!platform) return <div className="text-[#666] text-sm">Loading platform token…</div>
+  const fmt = (n: number) => n.toLocaleString()
+  const onChain = platform.txid && /^[0-9a-f]{64}$/.test(platform.txid)
+  return (
+    <div className="max-w-3xl">
+      <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-8 mb-4">
+        <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914] mb-2">
+          Platform token
+        </div>
+        <h2
+          className="text-5xl font-black mb-4"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          $<span className="text-[#E50914]">bMovies</span>
+        </h2>
+        <p className="text-[#bbb] text-sm mb-6 leading-relaxed max-w-xl">
+          One billion shares, fixed. Every share is a pro-rata claim on
+          1% of every production's royalty supply — passed through to
+          $bMovies holders as tickets sell. The treasury holds the full
+          supply until the first tranche opens to KYC'd retail.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#666] mb-1">Supply</div>
+            <div className="font-mono text-lg text-white">{fmt(platform.supply)}</div>
+          </div>
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#666] mb-1">Sold</div>
+            <div className="font-mono text-lg text-white">{fmt(platform.sold)}</div>
+          </div>
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#666] mb-1">T1 price</div>
+            <div className="font-mono text-lg text-white">${(platform.price_cents / 100).toFixed(4)}</div>
+          </div>
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#666] mb-1">Status</div>
+            <div className="text-xs font-bold text-[#6bff8a]">
+              {onChain ? 'On chain' : 'Not minted'}
             </div>
           </div>
         </div>
-
-        {/* ── Filter Tabs ── */}
-        <div className="flex gap-1 mb-8 bg-white/[0.02] rounded-lg p-1 w-fit border border-white/5">
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`px-5 py-2.5 rounded-md text-sm font-bold uppercase tracking-wider transition-colors ${
-                activeTab === t.key
-                  ? 'bg-red-600 text-white'
-                  : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Grid ── */}
-        {filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-gray-600 font-mono text-sm">No listings found.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map(listing => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────── Card ─────────────────────────── */
-
-function ListingCard({ listing }: { listing: Listing }) {
-  const {
-    title,
-    creator,
-    price,
-    priceAlt,
-    badge,
-    thumbnail,
-    subtitle,
-    href,
-    linkLabel,
-    hrefAlt,
-    hrefAltLabel,
-    isCreateCard,
-  } = listing
-
-  const cardContent = (
-    <div
-      className={`group rounded-xl border transition-all duration-200 overflow-hidden ${
-        isCreateCard
-          ? 'border-dashed border-white/20 hover:border-red-500/50 bg-white/[0.02]'
-          : 'border-white/10 hover:border-red-500/50 bg-white/5'
-      }`}
-    >
-      {/* Thumbnail */}
-      <div className="aspect-video bg-zinc-900 relative overflow-hidden">
-        {thumbnail ? (
-          <img
-            src={thumbnail}
-            alt={title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : isCreateCard ? (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-red-600/10 to-transparent">
-            <svg className="w-12 h-12 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            <span className="text-gray-500 text-sm font-mono">AI Storyboard</span>
-          </div>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-3xl font-black text-white/10">{title.charAt(0)}</span>
-          </div>
-        )}
-
-        {/* Badge */}
-        <span className="absolute top-2 left-2 text-[9px] font-mono font-bold uppercase tracking-wider bg-black/70 backdrop-blur-sm text-red-400 px-2 py-0.5 rounded">
-          {badge}
-        </span>
-      </div>
-
-      {/* Info */}
-      <div className="p-4">
-        <h3 className="font-bold text-white text-sm truncate mb-0.5 font-[family-name:var(--font-brand)]">
-          {title}
-        </h3>
-        {creator && (
-          <p className="text-gray-500 text-xs truncate mb-1">{creator}</p>
-        )}
-        {subtitle && (
-          <p className="text-gray-600 text-[11px] font-mono mb-3">{subtitle}</p>
-        )}
-
-        {/* Price + Actions */}
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <span className="text-white font-mono text-sm font-bold">{price}</span>
-            {priceAlt && (
-              <span className="text-gray-500 font-mono text-xs ml-2">{priceAlt}</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {/* Primary link */}
-            {href && linkLabel && (
-              <Link
-                href={href}
-                className="text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors"
+        <div className="flex flex-wrap gap-2">
+          {onChain && (
+            <>
+              <a
+                href={`https://1sat.market/outpoint/${platform.txid}_0/bsv21`}
+                target="_blank"
+                rel="noopener"
+                className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
               >
-                {linkLabel}
-              </Link>
-            )}
-
-            {/* Secondary link (e.g. Buy XXX) */}
-            {hrefAlt && hrefAltLabel && (
-              <Link
-                href={hrefAlt}
-                className="text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                Trade on 1sat.market
+              </a>
+              <a
+                href={`https://ordinals.gorillapool.io/api/bsv20/id/${platform.txid}_0`}
+                target="_blank"
+                rel="noopener"
+                className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
               >
-                {hrefAltLabel}
-              </Link>
-            )}
-          </div>
+                Verify at GorillaPool
+              </a>
+            </>
+          )}
+          <a
+            href="https://bmovies.online/captable.html?id=platform"
+            className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
+          >
+            Cap table
+          </a>
+          <a
+            href="https://bmovies.online/legal/platform-token-prospectus.html"
+            className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
+          >
+            Prospectus
+          </a>
         </div>
       </div>
+      {onChain && (
+        <div className="text-[#666] text-[0.65rem] font-mono break-all">
+          txid: {platform.txid}
+        </div>
+      )}
     </div>
   )
-
-  // If the card itself should be a link (no explicit action buttons), wrap it
-  if (href && !linkLabel) {
-    return (
-      <Link href={href} className="block">
-        {cardContent}
-      </Link>
-    )
-  }
-
-  return cardContent
 }
