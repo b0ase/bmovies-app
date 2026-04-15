@@ -10,8 +10,15 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  eslint: {
-    ignoreDuringBuilds: false,
+  // Serve public/index.html at the root path. Next.js will happily
+  // serve public/<anything>.html at /<anything>.html on its own, but
+  // it does NOT auto-serve public/index.html at /. The rewrite closes
+  // that gap so the merged brochure lands on the domain root without
+  // forcing us to add a src/app/page.tsx wrapper.
+  async rewrites() {
+    return [
+      { source: '/', destination: '/index.html' },
+    ];
   },
 };
 

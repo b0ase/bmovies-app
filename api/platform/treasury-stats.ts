@@ -136,7 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const mod = await import('stripe');
       const Stripe = mod.default;
       const stripe = new Stripe(stripeKey, { apiVersion: '2026-03-25.dahlia' } as any);
-      const since = Math.floor(thirtyDaysAgo && new Date(thirtyDaysAgo).getTime() / 1000);
+      const since = Math.floor(new Date(thirtyDaysAgo).getTime() / 1000);
       const charges = await stripe.charges.list({
         limit: 100,
         created: { gte: since },

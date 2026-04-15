@@ -151,11 +151,13 @@ export default async function handler(
   const lockedStudio = (offer.pipeline_state as { studio?: string } | null)?.studio;
   const studio = lockedStudio || studioForOffer(offerId);
 
-  // Per-studio agent lookup for the requested role
+  // Per-studio agent lookup for the requested role. We pull the
+  // ledger columns (total_earned_sats, jobs_completed) too so we
+  // can bump them after the x402 receipt is verified below.
   let agentId = `${studio}--${role}`;
   let { data: agent } = await supa
     .from('bct_agents')
-    .select('id, name, studio, wallet_address')
+    .select('id, name, studio, wallet_address, total_earned_sats, jobs_completed')
     .eq('id', agentId)
     .maybeSingle();
 
@@ -163,7 +165,7 @@ export default async function handler(
   if (!agent) {
     const { data: shared } = await supa
       .from('bct_agents')
-      .select('id, name, studio, wallet_address')
+      .select('id, name, studio, wallet_address, total_earned_sats, jobs_completed')
       .eq('role', role)
       .order('id', { ascending: true });
     if (!shared || shared.length === 0) {
@@ -200,10 +202,8 @@ export default async function handler(
   await supa
     .from('bct_agents')
     .update({
-      total_earned_sats: (agent as { total_earned_sats?: number }).total_earned_sats
-        ? ((agent as { total_earned_sats: number }).total_earned_sats + receipt.amountSats)
-        : receipt.amountSats,
-      jobs_completed: ((agent as { jobs_completed?: number }).jobs_completed ?? 0) + 1,
+      total_earned_sats: (agent.total_earned_sats ?? 0) + receipt.amountSats,
+      jobs_completed: (agent.jobs_completed ?? 0) + 1,
     })
     .eq('id', agentId);
 
