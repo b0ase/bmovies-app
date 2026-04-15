@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Invest in the platform</title>
+  <meta name="description" content="Buy $bMovies platform shares. 1% of every film commissioned flows to holders. 1 billion supply. KYC-gated. Sold only on bmovies.online.">
+  <meta property="og:title" content="bMovies — Invest in the platform">
+  <meta property="og:description" content="1% of every film. 1 billion shares. Sold only here.">
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 3rem 3rem 5rem; }
+
+    .hero {
+      text-align: center;
+      padding: 2rem 0 1rem;
+      border-bottom: 1px solid #1f1f1f;
+    }
+    .hero-eyebrow {
+      font-size: 0.65rem;
+      color: #E50914;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 4.8rem);
+      color: #fff;
+      margin: 0.5rem 0 0.8rem;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+    .hero h1 span { color: #E50914; }
+    .hero .sub {
+      color: #aaa;
+      max-width: 740px;
+      margin: 0 auto;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .hero .sub b { color: #fff; }
+
+    /* Stat strip */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    @media (max-width: 900px) { .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+    .stat {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.4rem;
+      text-align: left;
+    }
+    .stat-label {
+      font-size: 0.55rem;
+      color: #888;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      color: #fff;
+      margin-top: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+    .stat.accent .stat-val { color: #E50914; }
+    .stat-sub {
+      font-size: 0.65rem;
+      color: #888;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 0.3rem;
+    }
+
+    /* Section labels */
+    .section { margin-top: 4rem; }
+    .section-label {
+      font-size: 0.6rem;
+      color: #E50914;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: #fff;
+      margin: 0.5rem 0 1.4rem;
+      letter-spacing: 0.02em;
+      line-height: 1.05;
+    }
+
+    /* Value prop grid */
+    .values {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 980px) { .values { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 640px) { .values { grid-template-columns: 1fr; } }
+    .vcard {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.4rem;
+      position: relative;
+    }
+    .vcard .n {
+      position: absolute;
+      top: 0.8rem;
+      right: 1rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: #E50914;
+      opacity: 0.3;
+    }
+    .vcard h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      color: #fff;
+      margin: 0 0 0.8rem;
+      letter-spacing: 0.03em;
+    }
+    .vcard p {
+      color: #9a9a9a;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Buy widget */
+    .buy {
+      border: 2px solid #E50914;
+      background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
+      padding: 2.4rem;
+      margin-top: 1.5rem;
+    }
+    .buy .buy-eyebrow {
+      font-size: 0.55rem;
+      color: #E50914;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .buy h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #fff;
+      margin: 0.3rem 0 0.8rem;
+      letter-spacing: 0.02em;
+    }
+    .buy-sub {
+      color: #aaa;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      max-width: 640px;
+    }
+    .buy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1.8rem;
+      align-items: end;
+    }
+    @media (max-width: 700px) { .buy-grid { grid-template-columns: 1fr; } }
+    .buy-field label {
+      display: block;
+      font-size: 0.55rem;
+      color: #888;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .buy-field input {
+      width: 100%;
+      padding: 0.9rem 1rem;
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .buy-field input:focus {
+      outline: none;
+      border-color: #E50914;
+    }
+    .buy-field .total-display {
+      padding: 0.9rem 1rem;
+      background: #000;
+      border: 1px solid #1a1a1a;
+      color: #6bff8a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+    }
+    .buy-cta {
+      grid-column: 1 / -1;
+      margin-top: 0.5rem;
+      padding: 1.1rem 2rem;
+      background: #E50914;
+      color: #fff;
+      border: 0;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+    }
+    .buy-cta:hover { background: #c4070f; }
+    .buy-cta:disabled { opacity: 0.4; cursor: not-allowed; }
+    .buy-status {
+      grid-column: 1 / -1;
+      margin-top: 0.8rem;
+      font-size: 0.75rem;
+      color: #888;
+      min-height: 1.2rem;
+    }
+    .buy-status.error { color: #ff4757; }
+    .buy-status.success { color: #6bff8a; }
+
+    /* Tokenomics table */
+    .tok {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.6rem 2rem;
+    }
+    .tok-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.7rem 0;
+      border-bottom: 1px dashed #1a1a1a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+    .tok-row:last-child { border-bottom: 0; }
+    .tok-row .l { color: #aaa; }
+    .tok-row .v { color: #fff; font-weight: 700; }
+
+    /* How payouts work */
+    .payout-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 1000px) { .payout-flow { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .payout-flow { grid-template-columns: 1fr; } }
+    .pflow-step {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1rem;
+      position: relative;
+    }
+    .pflow-step .n {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.7rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      color: #E50914;
+      opacity: 0.45;
+    }
+    .pflow-step h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      color: #fff;
+      margin: 0 0 0.5rem;
+      letter-spacing: 0.03em;
+    }
+    .pflow-step p { color: #9a9a9a; font-size: 0.72rem; line-height: 1.55; margin: 0; }
+
+    /* Risk disclosure */
+    .risk {
+      border: 1px solid #332a1a;
+      background: rgba(229, 155, 9, 0.04);
+      padding: 1.2rem 1.4rem;
+      margin-top: 1rem;
+    }
+    .risk h3 {
+      font-size: 0.65rem;
+      color: #e09b09;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+    .risk p {
+      color: #9a8a6a;
+      font-size: 0.72rem;
+      line-height: 1.55;
+      margin: 0 0 0.4rem;
+    }
+
+    .signin-nag {
+      text-align: center;
+      padding: 2rem;
+      color: #888;
+      font-size: 0.85rem;
+    }
+    .signin-nag a { color: #E50914; text-decoration: none; }
+    .signin-nag a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main class="wrap">
+    <div class="hero">
+      <div class="hero-eyebrow">$bMovies — the platform share</div>
+      <h1>Own a slice of<br>every film <span>bMovies</span> makes</h1>
+      <p class="sub">
+        Every film commissioned through bMovies — trailer, short, feature, or pitch — pays <b>1% of its royalty shares</b> into a shared pool held on behalf of $bMovies holders. You own a piece of every single one. Not a subscription. Not a promise. A real fractional claim on the platform's entire catalog, forever.
+      </p>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat accent">
+        <div class="stat-label">Platform fee on every film</div>
+        <div class="stat-val">1%</div>
+        <div class="stat-sub">flows to $bMovies holders</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total supply</div>
+        <div class="stat-val">1B</div>
+        <div class="stat-sub">fixed, no more will ever mint</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Current price</div>
+        <div class="stat-val" id="current-price">—</div>
+        <div class="stat-sub" id="current-price-sub">loading…</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Sold so far</div>
+        <div class="stat-val" id="sold-count">—</div>
+        <div class="stat-sub" id="sold-remaining">— remaining</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Why it's different</div>
+      <h2>This is not a token. It's a revenue share.</h2>
+      <div class="values">
+        <div class="vcard">
+          <div class="n">01</div>
+          <h3>Revenue, not hype</h3>
+          <p>Every film made on bMovies sets aside <b>1% of its royalty shares</b> for the $bMovies pool. When films earn ticket revenue, you earn pro-rata, automatically, forever.</p>
+        </div>
+        <div class="vcard">
+          <div class="n">02</div>
+          <h3>Fixed supply</h3>
+          <p>1 billion $bMovies. Minted once, then burned. The only way to acquire them is this page or the secondary market. No team unlock cliffs, no VC tranches, no surprise mints.</p>
+        </div>
+        <div class="vcard">
+          <div class="n">03</div>
+          <h3>KYC-gated, legally clean</h3>
+          <p>Every buyer is identity-verified via Veriff before shares are delivered. These are real fractional revenue-share instruments, not a meme coin.</p>
+        </div>
+        <div class="vcard">
+          <div class="n">04</div>
+          <h3>Sold here, only here</h3>
+          <p>Primary issuance is exclusive to bmovies.online. You can resell on the secondary market later, but the initial allocation only comes through this page.</p>
+        </div>
+        <div class="vcard">
+          <div class="n">05</div>
+          <h3>Automatic settlement</h3>
+          <p>Dividends land in your account the moment a film earns. No monthly reports, no "check back next quarter", no waiting room. The platform distributes in real time as tickets sell.</p>
+        </div>
+        <div class="vcard">
+          <div class="n">06</div>
+          <h3>Transparent treasury</h3>
+          <p>The 1% pool is a published account you can inspect. Watch it collect from every film in real time. No foundation, no custodian, no opaque reporting.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Buy $bMovies</div>
+      <div class="buy">
+        <div class="buy-eyebrow">Primary issuance</div>
+        <h3>Purchase platform shares</h3>
+        <p class="buy-sub">
+          Enter the number of $bMovies shares you want. Minimum 1,000 shares; maximum 10,000,000 per checkout. You must be signed in and have completed identity verification. Payment via Stripe; shares credited to your account page immediately after checkout.
+        </p>
+        <div id="buy-signin-nag" class="signin-nag" style="display:none;">
+          <a href="/login?returnTo=%2Faccount">Sign in</a> to buy $bMovies shares.
+        </div>
+        <div id="buy-kyc-nag" class="signin-nag" style="display:none;">
+          Identity verification required. <a href="/account?tab=kyc">Complete KYC</a> to unlock purchases.
+        </div>
+        <div id="buy-form" class="buy-grid" style="display:none;">
+          <div class="buy-field">
+            <label for="tokens-input">Shares to buy</label>
+            <input id="tokens-input" type="number" min="1000" max="10000000" step="1000" value="10000" />
+          </div>
+          <div class="buy-field">
+            <label>Total</label>
+            <div class="total-display" id="total-display">$10.00</div>
+          </div>
+          <button class="buy-cta" id="buy-btn" type="button">Buy with Stripe →</button>
+          <div class="buy-status" id="buy-status">&nbsp;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Supply breakdown</div>
+      <h2>Tokenomics</h2>
+      <div class="tok">
+        <div class="tok-row"><div class="l">Total supply</div><div class="v">1,000,000,000 $bMovies</div></div>
+        <div class="tok-row"><div class="l">Primary issuance (this page)</div><div class="v">1,000,000,000 (100%)</div></div>
+        <div class="tok-row"><div class="l">Team / insiders</div><div class="v">0 — no pre-mint, no allocation</div></div>
+        <div class="tok-row"><div class="l">VC / private rounds</div><div class="v">0 — no private placements</div></div>
+        <div class="tok-row"><div class="l">Vesting cliffs</div><div class="v">None</div></div>
+        <div class="tok-row"><div class="l">Platform fee captured</div><div class="v">1% of every film's royalty supply</div></div>
+        <div class="tok-row"><div class="l">Distributed via</div><div class="v">Pro-rata, automatically, on every ticket sale</div></div>
+        <div class="tok-row"><div class="l">Redeemable for</div><div class="v">Nothing. Not a currency, not a security, not a voucher. Just a revenue share.</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">How payouts work</div>
+      <h2>From ticket sale to your wallet</h2>
+      <div class="payout-flow">
+        <div class="pflow-step">
+          <div class="n">01</div>
+          <h3>Film earns</h3>
+          <p>A viewer pays $2.99 to watch a bMovies feature (or $0.99 for a short). Every ticket flows straight into a public treasury — no opaque intermediaries.</p>
+        </div>
+        <div class="pflow-step">
+          <div class="n">02</div>
+          <h3>Cascade split</h3>
+          <p>1% of every ticket goes into the $bMovies platform pool. The other 99% goes to the film's own shareholders plus any parent works it was derived from.</p>
+        </div>
+        <div class="pflow-step">
+          <div class="n">03</div>
+          <h3>Pro-rata settle</h3>
+          <p>The treasury batches incoming ticket revenue and distributes pro-rata to every $bMovies holder. Your share = (your holdings / total supply sold) × pool balance.</p>
+        </div>
+        <div class="pflow-step">
+          <div class="n">04</div>
+          <h3>Your account</h3>
+          <p>Payouts land in your bMovies account's payout address. Sign in anytime to see your accumulated dividends and withdraw.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Risk disclosure</div>
+      <h2>Read before you buy</h2>
+      <div class="risk">
+        <h3>Please note</h3>
+        <p>$bMovies is a revenue-share instrument, not a currency or a security. Returns depend entirely on how many films are commissioned, how much ticket revenue they earn, and how many $bMovies are outstanding. There is no guarantee of any return.</p>
+        <p>You must be KYC-verified before your purchase is processed. If your verification fails, your purchase will be refunded in full.</p>
+        <p>Primary issuance is the only venue for new $bMovies. Secondary resale may or may not exist. Do not buy $bMovies with capital you cannot afford to hold indefinitely.</p>
+        <p>bMovies is a new platform. We run the production pipeline, the agent swarm, and the payment rails. If any of these fail, your revenue share may be delayed or reduced.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/nav-session.js"></script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient(
+      'https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } }
+    );
+
+    const fmtInt = (n) => Number(n).toLocaleString('en-US');
+    const fmtUsd = (cents) => `$${(cents / 100).toFixed(2)}`;
+
+    // ─── Load platform config ───
+    async function loadConfig() {
+      const { data: cfg } = await supabase
+        .from('bct_platform_config')
+        .select('*')
+        .eq('id', 'platform')
+        .maybeSingle();
+      if (!cfg) return;
+      const price = Number(cfg.current_tranche_price_cents);
+      const sold = Number(cfg.sold_supply);
+      const total = Number(cfg.total_supply);
+      const remaining = total - sold;
+      document.getElementById('current-price').textContent = `$${(price / 100).toFixed(4)}`;
+      document.getElementById('current-price-sub').textContent = 'per $bMovies share';
+      document.getElementById('sold-count').textContent = fmtInt(sold);
+      document.getElementById('sold-remaining').textContent = `${fmtInt(remaining)} remaining`;
+      return { price, sold, total, remaining };
+    }
+
+    // ─── Session + KYC gate ───
+    let session = null;
+    let account = null;
+    let kycApproved = false;
+    let currentPriceCents = 0.1;
+
+    async function loadSession() {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      session = s;
+      if (!s?.user) return null;
+      const { data: acc } = await supabase
+        .from('bct_accounts')
+        .select('id, email')
+        .eq('auth_user_id', s.user.id)
+        .maybeSingle();
+      account = acc;
+      if (!acc) return null;
+      const { data: kyc } = await supabase
+        .from('bct_user_kyc')
+        .select('status')
+        .eq('account_id', acc.id)
+        .maybeSingle();
+      kycApproved = kyc?.status === 'approved';
+      return { session: s, account: acc, kycApproved };
+    }
+
+    function renderGates() {
+      const signinNag = document.getElementById('buy-signin-nag');
+      const kycNag = document.getElementById('buy-kyc-nag');
+      const form = document.getElementById('buy-form');
+      signinNag.style.display = 'none';
+      kycNag.style.display = 'none';
+      form.style.display = 'none';
+      if (!session) { signinNag.style.display = 'block'; return; }
+      if (!kycApproved) { kycNag.style.display = 'block'; return; }
+      form.style.display = 'grid';
+    }
+
+    // ─── Total updater ───
+    function updateTotal() {
+      const tokens = Math.floor(Number(document.getElementById('tokens-input').value || 0));
+      const cents = Math.round(tokens * currentPriceCents);
+      document.getElementById('total-display').textContent = fmtUsd(cents);
+    }
+
+    // ─── Checkout ───
+    async function startCheckout() {
+      if (!account || !kycApproved) return;
+      const tokens = Math.floor(Number(document.getElementById('tokens-input').value || 0));
+      if (!tokens || tokens < 1000) {
+        setStatus('Minimum purchase is 1,000 $bMovies.', 'error');
+        return;
+      }
+      const btn = document.getElementById('buy-btn');
+      btn.disabled = true;
+      setStatus('Redirecting to Stripe…');
+      try {
+        const r = await fetch('/api/invest/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tokens,
+            accountId: account.id,
+            email: account.email,
+          }),
+        });
+        if (!r.ok) {
+          const err = await r.json();
+          throw new Error(err.error || 'checkout failed');
+        }
+        const { url } = await r.json();
+        if (url) window.location.href = url;
+        else throw new Error('no checkout URL');
+      } catch (e) {
+        setStatus('Checkout failed: ' + (e.message || e), 'error');
+        btn.disabled = false;
+      }
+    }
+
+    function setStatus(msg, kind) {
+      const el = document.getElementById('buy-status');
+      el.textContent = msg;
+      el.className = 'buy-status' + (kind ? ' ' + kind : '');
+    }
+
+    // ─── Init ───
+    (async () => {
+      const cfg = await loadConfig();
+      if (cfg) currentPriceCents = cfg.price;
+      await loadSession();
+      renderGates();
+      updateTotal();
+      document.getElementById('tokens-input').addEventListener('input', updateTotal);
+      document.getElementById('buy-btn').addEventListener('click', startCheckout);
+    })();
+  </script>
+</body>
+</html>

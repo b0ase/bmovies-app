@@ -1,0 +1,981 @@
+/*
+ * bMovies cinematic dark theme.
+ *
+ * Black background (#000 / #0a0a0a), Netflix red (#E50914)
+ * accents, white text. Applied across all brochure pages.
+ *
+ * This file overrides the inline brutalist black-on-white
+ * styles that each page ships. Linked AFTER mobile.css in
+ * every <head> so it cascades on top of both the inline styles
+ * and the mobile breakpoints.
+ *
+ * Specificity: uses `body` or higher to beat inline rules.
+ */
+
+/* ─── Global ─── */
+html, body {
+  /* Mobile horizontal-scroll guard. Any child with overflow (wide
+     absolute-positioned hero carousels, badges, long code blocks)
+     gets clipped at the viewport edge instead of pushing layout
+     sideways. Vertical scroll is untouched. */
+  overflow-x: hidden;
+}
+body {
+  background: #000 !important;
+  color: #e5e5e5 !important;
+  /* Canonical body font — set here so every brochure page inherits the
+     same default without having to remember to declare it. Individual
+     pages can still override for hero/headings. Prevents the nav font
+     drift that invest.html suffered before this line existed. */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* ─── Landing page wordmark ─── */
+/* Giant "bMovies" banner at the top of the hero on index.html. Lives
+   in theme.css so media queries can scale it instead of being frozen
+   at 12rem like the old inline style. */
+.bmovies-wordmark {
+  display: inline-block;
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 12rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  border: 4px solid #E50914;
+  padding: 0.3rem 2rem;
+  line-height: 1;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 40px rgba(229, 9, 20, 0.3);
+  max-width: 100%;
+}
+.bmovies-wordmark .wm-b { color: #fff; }
+.bmovies-wordmark .wm-movies { color: #E50914; }
+
+@media (max-width: 1100px) {
+  .bmovies-wordmark { font-size: 8rem; padding: 0.3rem 1.6rem; }
+}
+@media (max-width: 768px) {
+  .bmovies-wordmark {
+    font-size: 5rem;
+    padding: 0.25rem 1.1rem;
+    border-width: 3px;
+  }
+}
+@media (max-width: 480px) {
+  .bmovies-wordmark {
+    font-size: 3.6rem;
+    padding: 0.2rem 0.9rem;
+    border-width: 2px;
+    letter-spacing: 0.04em;
+  }
+}
+@media (max-width: 360px) {
+  .bmovies-wordmark { font-size: 3rem; padding: 0.15rem 0.75rem; }
+}
+
+/* ─── Unified site header (Netflix-style) ─── */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Full-bleed black bar but logo + nav stay aligned to the 1400px
+     content column. The max() trick: on wide screens the side padding
+     grows to (viewport - 1400) / 2 so the inner content is centered;
+     on narrow screens it falls back to a 3rem minimum. */
+  padding: 0.9rem max(3rem, calc((100% - 1400px) / 2));
+  background: #000;
+  border-bottom: 1px solid #222;
+  max-width: none;
+  margin: 0;
+}
+/* Logo — Option 1 (Bebas Neue) + Option 12 (red border badge) */
+.site-header .logo {
+  font-family: 'Bebas Neue', 'Oswald', 'Inter', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid #E50914;
+  padding: 0.15rem 0.7rem;
+  line-height: 1.1;
+  text-shadow: 1px 2px 4px rgba(229, 9, 20, 0.3);
+}
+.site-header .logo span {
+  color: #E50914;
+}
+.site-header nav {
+  display: flex;
+  /* Spread the 8 nav links + sign-in CTA evenly across the rest of the
+     header bar. justify-content: space-around + flex: 1 on the <nav>
+     makes the links spaced evenly from the logo to the right edge. */
+  flex: 1;
+  justify-content: space-around;
+  align-items: center;
+  gap: 0;
+  padding: 0 2rem;
+  border: none;
+  max-width: none;
+  margin: 0 0 0 2rem;
+  background: transparent;
+}
+.site-header nav a {
+  padding: 0.5rem 1rem;
+  /* Font pinned here so no page can accidentally override it through
+     a body font-family declaration. The shared nav MUST look identical
+     on every page. */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #aaa;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+.site-header nav a:hover {
+  color: #fff;
+}
+.site-header nav a.active {
+  color: #fff;
+  border-bottom-color: #E50914;
+}
+/* Social icons in the navbar — X, Instagram, YouTube. Rendered
+   from SOCIAL_LINKS in js/nav-session.js so one edit covers both
+   navbar and footer. */
+.site-header nav a.nav-social {
+  padding: 0.4rem 0.5rem;
+  color: #E50914;
+  border-bottom: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.site-header nav a.nav-social:first-of-type {
+  margin-left: 0.75rem;
+}
+.site-header nav a.nav-social svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+.site-header nav a.nav-social:hover {
+  color: #ff3642;
+}
+
+/* ─── Legacy header overrides (for pages not yet migrated) ─── */
+body header {
+  background: #000;
+  border-bottom-color: #222 !important;
+}
+body h1,
+body header h1 {
+  color: #fff !important;
+}
+body .tagline,
+body header .tagline {
+  color: #777 !important;
+}
+
+/* ─── Legacy nav overrides ─── */
+body nav {
+  border-bottom-color: #222 !important;
+  background: #000;
+}
+body nav a {
+  color: #aaa !important;
+}
+body nav a:hover {
+  color: #fff !important;
+}
+body nav a.active {
+  color: #fff !important;
+  border-bottom-color: #E50914 !important;
+}
+body .site-header nav a.nav-social {
+  color: #E50914 !important;
+}
+body .site-header nav a.nav-social:hover {
+  color: #ff3642 !important;
+}
+
+/* ─── Site footer ─── */
+.site-footer {
+  background: #0a0a0a;
+  border-top: 1px solid #222;
+  padding: 3rem;
+  margin-top: 4rem;
+}
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+}
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.footer-links a {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #666;
+  text-decoration: none;
+}
+.footer-links a:hover {
+  color: #fff;
+}
+.footer-copy {
+  font-size: 0.6rem;
+  color: #444;
+  letter-spacing: 0.05em;
+}
+/* Social row — X + future socials. Sits between the links and the
+   copyright. Injected by js/nav-session.js so it's one source of
+   truth for all brochure pages. */
+.footer-social {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0 1.2rem;
+}
+.footer-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #2a2a2a;
+  color: #888;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.footer-social a:hover {
+  color: #fff;
+  border-color: #E50914;
+  background: rgba(229, 9, 20, 0.1);
+}
+.footer-social svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* ─── Hamburger (mobile nav toggle) ─── */
+/* Hidden on desktop. Injected by nav-session.js between the logo and
+   <nav> so screen-reader order reads logo → menu button → links. */
+.site-header .nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid #333;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.site-header .nav-toggle:hover {
+  border-color: #E50914;
+  color: #E50914;
+}
+.site-header .nav-toggle svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.site-header .nav-toggle .icon-close { display: none; }
+.site-header.nav-open .nav-toggle .icon-open { display: none; }
+.site-header.nav-open .nav-toggle .icon-close { display: block; }
+
+@media (max-width: 860px) {
+  .site-header {
+    padding: 0.8rem 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    position: relative;
+  }
+  .site-header .logo { font-size: 1.4rem; }
+  .site-header .nav-toggle { display: inline-flex; margin-left: auto; }
+
+  /* Nav collapses into a full-width drop panel below the header bar.
+     Hidden by default; revealed by .nav-open on .site-header. */
+  .site-header nav {
+    display: none;
+    order: 3;
+    flex: 0 0 100%;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.5rem 0 0.75rem;
+    margin: 0.5rem 0 0;
+    border-top: 1px solid #222;
+    background: #000;
+  }
+  .site-header.nav-open nav { display: flex; }
+
+  .site-header nav a {
+    display: block;
+    padding: 0.85rem 0.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid #151515;
+    text-align: left;
+  }
+  .site-header nav a.active {
+    border-bottom-color: #E50914;
+  }
+  .site-header nav a.signin-cta {
+    margin: 0.75rem 0 0.5rem;
+    text-align: center;
+    padding: 0.85rem 1rem;
+    font-size: 0.75rem;
+  }
+  .site-header nav a.nav-social {
+    display: inline-flex;
+    padding: 0.6rem 0.75rem;
+    border-bottom: none;
+  }
+  .site-header nav a.nav-social:first-of-type {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+  .site-header nav a.nav-social svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-header { padding: 0.7rem 1rem; }
+  .site-header .logo { font-size: 1.25rem; }
+  .site-footer { padding: 2rem 1.25rem; }
+  .footer-links { gap: 0.4rem 1rem; }
+}
+
+/* ─── Main content ─── */
+body main {
+  background: #000;
+}
+
+/* ─── Sections / blocks ─── */
+body section,
+body section.block,
+body section.how,
+body section.catalog,
+body section.cta {
+  border-top-color: #222 !important;
+}
+body .intro,
+body .ns-intro {
+  border-bottom-color: #333 !important;
+}
+
+/* ─── Eyebrows / kickers ─── */
+body .eyebrow,
+body .kicker,
+body .intro .kicker,
+body .ns-intro .kicker {
+  color: #E50914 !important;
+}
+
+/* ─── Headings in sections ─── */
+body .section-title,
+body .intro h2,
+body .ns-intro h2,
+body section h2,
+body section h3,
+body section.block h3 {
+  color: #fff !important;
+}
+
+/* ─── Body text ─── */
+body .intro p,
+body .ns-intro p,
+body .hero-sub,
+body p {
+  color: #aaa;
+}
+body a {
+  color: #fff;
+}
+
+/* ─── Stats / counters ─── */
+body .stats {
+  color: #666 !important;
+}
+body .stats span {
+  color: #E50914 !important;
+}
+body .stat,
+body .counter,
+body .summary .stat {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .stat .label,
+body .counter .label,
+body .summary .stat .label {
+  color: #666 !important;
+}
+body .stat .value,
+body .counter .value,
+body .summary .stat .value {
+  color: #fff !important;
+}
+
+/* ─── Links ─── */
+body .links a {
+  background: #E50914 !important;
+  color: #fff !important;
+  border-color: #E50914 !important;
+}
+body .links a:hover {
+  background: #c4070f !important;
+}
+body .links a.outline {
+  background: transparent !important;
+  color: #fff !important;
+  border-color: #555 !important;
+}
+body .links a.outline:hover {
+  border-color: #E50914 !important;
+  color: #E50914 !important;
+}
+
+/* ─── Steps (how it works) ─── */
+body .step {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .step .step-head {
+  color: #fff !important;
+  border-bottom-color: #333 !important;
+}
+body .step .n {
+  color: #E50914 !important;
+}
+body .step p {
+  color: #888 !important;
+}
+
+/* ─── Cards ─── */
+body .card {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .card .body {
+  border-top-color: #333 !important;
+}
+body .card .body .title {
+  color: #fff !important;
+}
+body .card .body .title a {
+  color: #fff !important;
+}
+body .card .body .meta .k {
+  color: #666 !important;
+}
+body .card .body .meta .v {
+  color: #ccc !important;
+}
+body .card .body .progress-bar {
+  background: #222 !important;
+  border-color: #444 !important;
+}
+body .card .body .progress-bar .fill {
+  background: #E50914 !important;
+}
+body .card .body .progress-text {
+  color: #888 !important;
+}
+body .card .body .progress-text .status {
+  color: #E50914 !important;
+}
+body .card .body .tx {
+  border-top-color: #222 !important;
+  color: #666 !important;
+}
+body .card .body .tx a {
+  color: #E50914 !important;
+  border-bottom-color: #E50914 !important;
+}
+body .card .body .team .role {
+  border-color: #555 !important;
+  color: #ccc !important;
+}
+body .card .body .team .role:hover {
+  background: #E50914 !important;
+  color: #fff !important;
+  border-color: #E50914 !important;
+}
+body .card .body .treatment {
+  color: #aaa !important;
+  border-top-color: #222 !important;
+}
+body .card .body .treatment::after {
+  background: linear-gradient(transparent, #0a0a0a) !important;
+}
+body .card .body .audio {
+  border-top-color: #222 !important;
+}
+
+/* ─── CTA section ─── */
+body .cta,
+body section.cta {
+  background: #E50914 !important;
+  color: #fff !important;
+}
+body .cta h3 {
+  color: #fff !important;
+}
+body .cta a {
+  background: #fff !important;
+  color: #E50914 !important;
+}
+body .cta a:hover {
+  background: #eee !important;
+}
+
+/* ─── Leaderboard table ─── */
+body table.leaderboard th {
+  color: #666 !important;
+  border-bottom-color: #E50914 !important;
+}
+body table.leaderboard td {
+  border-bottom-color: #222 !important;
+  color: #ccc !important;
+}
+body table.leaderboard tr.row:hover {
+  background: #111 !important;
+}
+body table.leaderboard tr.row.funded,
+body table.leaderboard tr.row.producing {
+  background: #0a0a0a !important;
+}
+body td.title a {
+  color: #fff !important;
+}
+body .status-badge {
+  border-color: #555 !important;
+}
+body .status-badge.funded,
+body .status-badge.producing,
+body .status-badge.released {
+  background: #E50914 !important;
+  color: #fff !important;
+  border-color: #E50914 !important;
+}
+body .progress-bar {
+  background: #222 !important;
+  border-color: #444 !important;
+}
+body .progress-bar .fill {
+  background: #E50914 !important;
+}
+
+/* ─── Offer page ─── */
+body .hero {
+  border-color: #333 !important;
+}
+body .meta-head .kicker {
+  color: #E50914 !important;
+}
+body .synopsis {
+  color: #aaa !important;
+}
+body .artifact {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .artifact .role {
+  color: #E50914 !important;
+}
+body .artifact h4 {
+  color: #fff !important;
+}
+body .artifact .model {
+  color: #666 !important;
+}
+body .artifact .treatment {
+  color: #ccc !important;
+}
+body .artifact .shotlist li {
+  border-left-color: #E50914 !important;
+  color: #ccc !important;
+}
+body .artifact .shotlist li .n {
+  color: #666 !important;
+}
+body .artifact .tx-line {
+  border-top-color: #222 !important;
+  color: #666 !important;
+}
+body .artifact .tx-line a {
+  color: #E50914 !important;
+  border-bottom-color: #E50914 !important;
+}
+
+/* ─── Subscribers table ─── */
+body table.subs th {
+  color: #666 !important;
+  border-bottom-color: #E50914 !important;
+}
+body table.subs td {
+  border-bottom-color: #222 !important;
+  color: #ccc !important;
+}
+body table.subs td a {
+  color: #E50914 !important;
+  border-bottom-color: #E50914 !important;
+}
+
+/* ─── Proof panel ─── */
+body .proof {
+  border-color: #333 !important;
+}
+body .proof summary {
+  color: #fff !important;
+}
+body .proof[open] summary {
+  border-bottom-color: #333 !important;
+}
+body .proof .proof-body {
+  color: #aaa !important;
+}
+body .proof .proof-body li {
+  border-bottom-color: #222 !important;
+}
+body .proof .proof-body li .label {
+  color: #666 !important;
+}
+body .proof .proof-body li .detail {
+  color: #ccc !important;
+}
+body .proof .proof-body li a {
+  color: #E50914 !important;
+  border-bottom-color: #E50914 !important;
+}
+
+/* ─── Actions ─── */
+body .actions a {
+  border-color: #444 !important;
+  color: #ccc !important;
+}
+body .actions a:hover {
+  background: #222 !important;
+  color: #fff !important;
+}
+body .actions a.primary {
+  background: #E50914 !important;
+  border-color: #E50914 !important;
+  color: #fff !important;
+}
+body .actions a.primary:hover {
+  background: #c4070f !important;
+}
+
+/* ─── Pitch widget (FAB + overlay) ─── */
+body .pitch-fab {
+  background: #E50914 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 0 #900, 0 6px 16px rgba(229, 9, 20, 0.3) !important;
+}
+body .pitch-panel {
+  background: #111 !important;
+  border-color: #333 !important;
+  color: #e5e5e5 !important;
+}
+body .pitch-panel header {
+  border-bottom-color: #333 !important;
+}
+body .pitch-body textarea,
+body .pitch-body input {
+  background: #0a0a0a !important;
+  border-color: #333 !important;
+  color: #fff !important;
+}
+body .pitch-buttons button {
+  border-color: #444 !important;
+  background: #0a0a0a !important;
+  color: #ccc !important;
+}
+body .pitch-buttons button.primary {
+  background: #E50914 !important;
+  border-color: #E50914 !important;
+  color: #fff !important;
+}
+body .pitch-preview {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .tier-card {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+  color: #ccc !important;
+}
+body .tier-card.selected {
+  background: #E50914 !important;
+  color: #fff !important;
+  border-color: #E50914 !important;
+}
+body .pay-block {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+
+/* ─── Catalog rows ─── */
+body .cat-list {
+  border-top-color: #333 !important;
+}
+body .cat-row {
+  border-bottom-color: #222 !important;
+  color: #ccc !important;
+}
+body .cat-row:hover {
+  background: #111 !important;
+}
+body .cat-t {
+  color: #fff !important;
+}
+body .cat-m {
+  color: #666 !important;
+}
+body .cat-p {
+  color: #E50914 !important;
+}
+body .cat-loading {
+  color: #555 !important;
+}
+
+/* ─── Empty / state blocks ─── */
+body .empty h3,
+body .state h2 {
+  color: #333 !important;
+}
+body .empty,
+body .state {
+  color: #666 !important;
+}
+
+/* ─── Now showing grid (watch page) ─── */
+body .ns-card {
+  border-color: #222 !important;
+}
+body .ns-card .badge {
+  background: #E50914 !important;
+  color: #fff !important;
+}
+
+/* ─── Pitch tracker steps ─── */
+body .step.done {
+  background: #E50914 !important;
+  color: #fff !important;
+  border-color: #E50914 !important;
+}
+body .step.active {
+  background: #111 !important;
+  color: #fff !important;
+  border-color: #E50914 !important;
+}
+body .step.error {
+  background: #1a0000 !important;
+  color: #ff6b6b !important;
+  border-color: #c00 !important;
+}
+
+/* ─── Cascade visualization ─── */
+body .cas-light {
+  color: #e5e5e5 !important;
+}
+body .cas-light .cas-bar {
+  border-color: #555 !important;
+}
+body .cas-light .cas-swatch {
+  border-color: #555 !important;
+}
+
+/* ─── Pitch summary ─── */
+body .pitch-summary {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .pitch-summary .ps-meta .k {
+  color: #666 !important;
+}
+body .pitch-summary .ps-meta .v {
+  color: #ccc !important;
+}
+body .pitch-summary .ps-meta .v a {
+  color: #E50914 !important;
+  border-bottom-color: #E50914 !important;
+}
+
+/* ─── Report page ─── */
+body .toc a {
+  color: #E50914 !important;
+}
+
+/* ─── Agent cards ─── */
+body .agent-card {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .agent-card .role-badge {
+  border-color: #555 !important;
+}
+body .agent-card .role-badge.producer {
+  background: #E50914 !important;
+  border-color: #E50914 !important;
+}
+body .agent-card .meta-grid .k {
+  color: #666 !important;
+}
+body .agent-card .meta-grid .v {
+  color: #ccc !important;
+}
+body .agent-card .meta-grid .v a {
+  color: #E50914 !important;
+  border-bottom-color: #E50914 !important;
+}
+
+/* ─── Ticker feed ─── */
+body .ticker-feed {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .ticker-row {
+  border-bottom-color: #222 !important;
+}
+body .ticker-row .kind.tx {
+  color: #6bff8a !important;
+}
+body .ticker-row .who {
+  color: #fff !important;
+}
+body .ticker-row .msg {
+  color: #888 !important;
+}
+
+/* ─── Panels (wallet page) ─── */
+body .panel {
+  border-color: #333 !important;
+  background: #0a0a0a !important;
+}
+body .panel h3 {
+  color: #fff !important;
+}
+body .status-grid .v.good {
+  color: #6bff8a !important;
+}
+body .status-grid .v.bad {
+  color: #ff6b6b !important;
+}
+body .result {
+  border-color: #333 !important;
+  background: #111 !important;
+}
+body .result.success {
+  background: #0a1a0a !important;
+  border-color: #060 !important;
+  color: #6bff8a !important;
+}
+body .result.error {
+  background: #1a0a0a !important;
+  border-color: #600 !important;
+  color: #ff6b6b !important;
+}
+body .install-prompt {
+  border-color: #333 !important;
+  background: #111 !important;
+}
+body .install-prompt h4 {
+  color: #fff !important;
+}
+body .install-prompt p {
+  color: #aaa !important;
+}
+body .install-prompt a {
+  border-color: #555 !important;
+  color: #ccc !important;
+}
+body .install-prompt a.primary {
+  background: #E50914 !important;
+  border-color: #E50914 !important;
+  color: #fff !important;
+}
+body .pay-form input {
+  background: #0a0a0a !important;
+  border-color: #333 !important;
+  color: #fff !important;
+}
+body button {
+  border-color: #444 !important;
+  background: #111 !important;
+  color: #ccc !important;
+}
+body button.primary {
+  background: #E50914 !important;
+  border-color: #E50914 !important;
+  color: #fff !important;
+}
+body button:hover:not(:disabled) {
+  background: #222 !important;
+  color: #fff !important;
+}
+body button.primary:hover:not(:disabled) {
+  background: #c4070f !important;
+}
+
+/* ─── Save link banner (pitch tracker) ─── */
+body .save-link-banner {
+  background: #1a1500 !important;
+  border-color: #5a4500 !important;
+  color: #d4b500 !important;
+}
+body .save-link-banner strong {
+  color: #ffdd00 !important;
+}
+
+/* ─── Live indicator ─── */
+body .live-indicator {
+  color: #6bff8a !important;
+}
+body .live-indicator .dot {
+  background: #6bff8a !important;
+}
+
+/* ─── Pulse animation (now green on dark) ─── */
+body .pulse {
+  background: #E50914 !important;
+}
+
+/* ─── Sign-in CTA nav button ─── */
+body .site-header nav a.signin-cta {
+  background: #E50914;
+  color: #fff !important;
+  padding: 0.5rem 1rem;
+  border: 1px solid #E50914;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid #E50914 !important;
+  transition: background 0.15s;
+}
+body .site-header nav a.signin-cta:hover {
+  background: #c4070f;
+  color: #fff !important;
+}
+body .site-header nav a.signin-cta.signed-in {
+  background: transparent;
+  border: 1px solid #6bff8a !important;
+  border-bottom: 1px solid #6bff8a !important;
+  color: #6bff8a !important;
+}
+body .site-header nav a.signin-cta.signed-in:hover {
+  background: rgba(107, 255, 138, 0.1);
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Watch</title>
+  <meta http-equiv="refresh" content="0; url=/watch.html">
+  <link rel="canonical" href="https://bmovies.online/watch.html">
+  <meta name="description" content="Redirecting to /watch.html — the film catalogue." />
+  <meta name="robots" content="noindex">
+  <script>
+    // JS redirect — runs before meta refresh on most browsers.
+    // The marketplace page was removed when we simplified the nav:
+    // Watch already does the catalog, Exchange already does the
+    // invest flow. Anything that used to link here now goes to
+    // /watch.html.
+    window.location.replace('/watch.html');
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #000;
+      color: #888;
+      margin: 0;
+      padding: 3rem;
+      text-align: center;
+    }
+    a { color: #e50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <p>Marketplace moved. Redirecting to <a href="/watch.html">the film catalogue</a>.</p>
+</body>
+</html>

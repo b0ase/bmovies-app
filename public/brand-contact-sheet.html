@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Logo Contact Sheet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Bebas+Neue&family=Oswald:wght@700&family=Anton&family=Poppins:wght@900&family=Montserrat:wght@900&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #111; color: #fff; padding: 2rem; }
+
+    h1 { font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #E50914; margin-bottom: 0.5rem; }
+    .intro { font-size: 0.8rem; color: #666; margin-bottom: 2rem; line-height: 1.5; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+    .option {
+      border: 1px solid #333;
+      background: #000;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      position: relative;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .option .label {
+      position: absolute;
+      top: 0.6rem; left: 0.8rem;
+      font-size: 0.5rem; font-weight: 900;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: #555; background: #111; padding: 0.2rem 0.4rem;
+    }
+    .option .desc {
+      margin-top: 1rem;
+      font-size: 0.65rem; color: #555; line-height: 1.4;
+    }
+
+    /* ─── Option 1: Netflix Bold (Bebas Neue) ─── */
+    .logo-1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 5rem;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-shadow: 2px 4px 8px rgba(229, 9, 20, 0.4), 0 0 40px rgba(229, 9, 20, 0.15);
+    }
+    .logo-1 .b { color: #fff; }
+    .logo-1 .m { color: #E50914; }
+
+    /* ─── Option 2: Oswald Condensed ─── */
+    .logo-2 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 4.5rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      text-shadow: 3px 3px 0 #300, 0 0 20px rgba(229, 9, 20, 0.3);
+    }
+    .logo-2 .b { color: #fff; }
+    .logo-2 .m { color: #E50914; }
+
+    /* ─── Option 3: Anton Impact ─── */
+    .logo-3 {
+      font-family: 'Anton', sans-serif;
+      font-size: 5.5rem;
+      letter-spacing: -0.02em;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.8), 0 0 60px rgba(229, 9, 20, 0.2);
+    }
+    .logo-3 .b { color: #fff; }
+    .logo-3 .m {
+      background: linear-gradient(180deg, #FF3030, #E50914, #990008);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ─── Option 4: Poppins Modern ─── */
+    .logo-4 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+    .logo-4 .b { color: #fff; }
+    .logo-4 .m { color: #E50914; }
+    .logo-4 .dot {
+      display: inline-block; width: 0.5rem; height: 0.5rem;
+      background: #E50914; border-radius: 50%; margin-left: 0.3rem;
+      vertical-align: super;
+    }
+
+    /* ─── Option 5: Montserrat Stacked ─── */
+    .logo-5 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .logo-5 .b {
+      display: block; font-size: 6rem; color: #fff;
+      letter-spacing: -0.05em;
+    }
+    .logo-5 .m {
+      display: block; font-size: 2rem; color: #E50914;
+      letter-spacing: 0.4em; margin-top: -0.3rem;
+    }
+
+    /* ─── Option 6: Serif Cinematic (Playfair) ─── */
+    .logo-6 {
+      font-family: 'Playfair Display', serif;
+      font-size: 4.5rem;
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: 0.01em;
+      text-shadow: 2px 3px 6px rgba(0,0,0,0.6);
+    }
+    .logo-6 .b { color: #fff; }
+    .logo-6 .m { color: #E50914; }
+
+    /* ─── Option 7: All Red, Outline B ─── */
+    .logo-7 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 5rem;
+      letter-spacing: 0.05em;
+    }
+    .logo-7 .b {
+      color: transparent;
+      -webkit-text-stroke: 2px #fff;
+    }
+    .logo-7 .m { color: #E50914; }
+
+    /* ─── Option 8: Inter (current site font) ultra-bold ─── */
+    .logo-8 {
+      font-family: 'Inter', sans-serif;
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+    }
+    .logo-8 .b { color: #fff; }
+    .logo-8 .m { color: #E50914; }
+    .logo-8 .line {
+      display: block; height: 3px; background: #E50914;
+      margin-top: 0.3rem;
+    }
+
+    /* ─── Option 9: Generated SVG (current) ─── */
+    .logo-9 img {
+      max-width: 380px; width: 100%; height: auto;
+    }
+
+    /* ─── Option 10: Neon Glow ─── */
+    .logo-10 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 5rem;
+      letter-spacing: 0.05em;
+      text-shadow:
+        0 0 10px #E50914,
+        0 0 20px #E50914,
+        0 0 40px #E50914,
+        0 0 80px rgba(229, 9, 20, 0.4);
+    }
+    .logo-10 .b { color: #fff; text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 40px rgba(255,255,255,0.3); }
+    .logo-10 .m { color: #E50914; }
+
+    /* ─── Option 11: Minimal lowercase ─── */
+    .logo-11 {
+      font-family: 'Inter', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    .logo-11 .b { color: #888; }
+    .logo-11 .m { color: #E50914; }
+
+    /* ─── Option 12: Retro Cinema ─── */
+    .logo-12 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: 3px solid #E50914;
+      padding: 0.4rem 1.5rem;
+    }
+    .logo-12 .b { color: #fff; }
+    .logo-12 .m { color: #E50914; }
+  </style>
+</head>
+<body>
+  <h1>bMovies Logo Contact Sheet</h1>
+  <p class="intro">Pick a style. The white "b" + red "Movies" convention is preserved across all options. Each one can be scaled, tweaked, or combined.</p>
+
+  <div class="grid">
+    <div class="option">
+      <span class="label">01 — Netflix Bold (Bebas Neue)</span>
+      <div class="logo-1"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">Closest to Netflix's actual typeface. Tall condensed sans-serif with red glow.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">02 — Oswald Condensed</span>
+      <div class="logo-2"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">Slightly wider than Netflix, strong 3D shadow. Feels like a movie poster.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">03 — Anton + Gradient</span>
+      <div class="logo-3"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">Impact-style with a red gradient (bright top → dark bottom). Maximum weight.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">04 — Poppins Modern</span>
+      <div class="logo-4"><span class="b">b</span><span class="m">Movies</span><span class="dot"></span></div>
+      <div class="desc">Rounded modern sans with a branded dot. Friendlier, less cinematic, more tech.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">05 — Montserrat Stacked</span>
+      <div class="logo-5"><span class="b">b</span><span class="m">MOVIES</span></div>
+      <div class="desc">Giant "b" with MOVIES underneath in wide-spaced caps. Statement piece.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">06 — Playfair Serif Cinematic</span>
+      <div class="logo-6"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">Italic serif. Old Hollywood elegance. Feels like a prestige production company.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">07 — Outline B + Solid Red</span>
+      <div class="logo-7"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">The "b" is a white outline, "Movies" is solid red. Distinctive differentiation.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">08 — Inter Ultra-Bold + Underline</span>
+      <div class="logo-8"><span class="b">b</span><span class="m">MOVIES</span><span class="line"></span></div>
+      <div class="desc">Our current site font, maximised. Red underline accent. Consistent with body copy.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">09 — SVG Logo (current)</span>
+      <div class="logo-9"><img src="bmovies-logo.svg" alt="bMovies" /></div>
+      <div class="desc">The hand-crafted SVG from the designer agent. Custom paths, filters, glow effects.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">10 — Neon Glow</span>
+      <div class="logo-10"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">Intense neon glow radiating outward. Night-cinema energy. Very dramatic.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">11 — Minimal Lowercase</span>
+      <div class="logo-11"><span class="b">b</span><span class="m">movies</span></div>
+      <div class="desc">Understated. The "b" is muted gray, "movies" carries the red. Quiet confidence.</div>
+    </div>
+
+    <div class="option">
+      <span class="label">12 — Retro Cinema Badge</span>
+      <div class="logo-12"><span class="b">b</span><span class="m">Movies</span></div>
+      <div class="desc">Red border badge treatment. Feels like a cinema marquee or a rating label.</div>
+    </div>
+  </div>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

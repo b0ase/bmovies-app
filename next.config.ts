@@ -4,26 +4,21 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Strict mode: don't ship a build with type errors. The previous
+  // `ignoreBuildErrors: true` was a shortcut to unblock the NPGX
+  // port; on the merged codebase we fix errors instead of hiding them.
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  outputFileTracingExcludes: {
-    '*': [
-      './public/NPG-X-10/**',
-      './public/npgx-videos/**',
-      './public/npgx-images/**',
-      './public/npgx-characters/**',
-      './public/music/**',
-      './public/grok-video-*.mp4',
-      './public/content/**',
-      './public/adult-content/**',
-      './public/licensed-patents/**',
-      './public/landing-page-videos/**',
-      './public/remember/**',
-    ],
+  // Serve public/index.html at the root path. Next.js will happily
+  // serve public/<anything>.html at /<anything>.html on its own, but
+  // it does NOT auto-serve public/index.html at /. The rewrite closes
+  // that gap so the merged brochure lands on the domain root without
+  // forcing us to add a src/app/page.tsx wrapper.
+  async rewrites() {
+    return [
+      { source: '/', destination: '/index.html' },
+    ];
   },
 };
 

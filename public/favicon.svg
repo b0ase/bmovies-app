@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="bMovies">
+  <title>bMovies</title>
+  <rect width="100" height="100" fill="#000000"/>
+  <text x="50" y="74"
+        font-family="'Arial Black', 'Helvetica Neue', Impact, 'Bebas Neue', sans-serif"
+        font-size="64" font-weight="900"
+        text-anchor="middle"
+        letter-spacing="-2">
+    <tspan fill="#ffffff">b</tspan><tspan fill="#E50914">M</tspan>
+  </text>
+</svg>

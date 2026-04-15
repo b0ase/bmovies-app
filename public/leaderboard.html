@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Leaderboard</title>
+  <meta name="description" content="Live film rankings by gross ticket revenue, token price, and investment activity." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Leaderboard" />
+  <meta property="og:description" content="Live film rankings by gross revenue, token price, and tranche availability." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+    main { max-width: 1400px; margin: 0 auto; padding: 3rem; }
+
+    .page-intro {
+      max-width: 980px; padding-bottom: 2rem; border-bottom: 1px solid #222;
+      margin-bottom: 2.5rem;
+    }
+    .page-intro .kicker {
+      font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .page-intro h2 {
+      font-size: 2.4rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.03em; color: #fff; margin-top: 0.5rem; line-height: 1;
+    }
+    .page-intro p {
+      font-size: 0.9rem; color: #888; line-height: 1.6; margin-top: 1rem;
+      max-width: 720px;
+    }
+
+    .film-row {
+      display: flex; gap: 1.5rem; padding: 1.2rem 0;
+      border-bottom: 1px solid #1a1a1a; align-items: center;
+      transition: background 0.2s;
+    }
+    .film-row:hover { background: #0a0a0a; }
+
+    .film-rank {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 1.4rem;
+      font-weight: 900; color: #333; min-width: 2.5rem; text-align: center;
+    }
+    .film-row:nth-child(1) .film-rank { color: #E50914; }
+    .film-row:nth-child(2) .film-rank { color: #888; }
+    .film-row:nth-child(3) .film-rank { color: #664; }
+
+    .film-thumb {
+      width: 80px; height: 80px; flex-shrink: 0;
+      background: #111; overflow: hidden;
+    }
+    .film-thumb img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .film-thumb .placeholder {
+      width: 100%; height: 100%; display: flex; align-items: center;
+      justify-content: center; font-size: 1.5rem; color: #333;
+    }
+
+    .film-info { flex: 1; min-width: 0; }
+    .film-info .fi-title {
+      font-size: 1.1rem; font-weight: 900; text-transform: uppercase;
+      color: #fff; line-height: 1.1;
+    }
+    .film-info .fi-title a { color: #fff; text-decoration: none; }
+    .film-info .fi-title a:hover { color: #E50914; }
+    .film-info .fi-ticker {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.65rem;
+      color: #E50914; margin-top: 0.2rem;
+    }
+    .film-info .fi-synopsis {
+      font-size: 0.7rem; color: #555; margin-top: 0.25rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 400px;
+    }
+
+    .film-metrics {
+      display: flex; gap: 1.5rem; flex-shrink: 0;
+    }
+    .metric {
+      text-align: right; min-width: 90px;
+    }
+    .metric .m-value {
+      font-size: 1rem; font-weight: 900; color: #fff;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+    .metric .m-value.green { color: #6bff8a; }
+    .metric .m-label {
+      font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #555; font-weight: 700; margin-top: 0.15rem;
+    }
+
+    .film-status {
+      min-width: 70px; text-align: center;
+    }
+    .status-badge {
+      display: inline-block; font-size: 0.5rem; font-weight: 900;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 0.25rem 0.5rem; border: 1px solid #333; color: #888;
+    }
+    .status-badge.producing { border-color: #E50914; color: #E50914; }
+    .status-badge.funded { border-color: #6bff8a; color: #6bff8a; }
+    .status-badge.released { border-color: #fff; color: #fff; }
+
+    .tranche-bar {
+      width: 100%; height: 4px; background: #222; margin-top: 0.3rem;
+      position: relative; overflow: hidden;
+    }
+    .tranche-bar .t-fill {
+      position: absolute; top: 0; left: 0; bottom: 0; background: #E50914;
+    }
+
+    .empty-state {
+      text-align: center; padding: 4rem 0; color: #555;
+    }
+    .empty-state h3 {
+      font-size: 1.6rem; color: #333; font-weight: 900;
+      text-transform: uppercase; margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 860px) {
+      .film-metrics { flex-wrap: wrap; gap: 0.8rem; }
+      .metric { min-width: 70px; }
+      .film-info .fi-synopsis { display: none; }
+    }
+    @media (max-width: 600px) {
+      .film-row { flex-wrap: wrap; }
+      .film-metrics { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <section class="page-intro">
+      <div class="kicker">Box office</div>
+      <h2>Film rankings.</h2>
+      <p>
+        Ranked by gross ticket revenue. Every film has <strong>1 billion royalty tokens</strong>.
+        Token price rises through a bonding curve — early investors get in cheap.
+        Ticket revenue flows to whoever holds the tokens.
+      </p>
+    </section>
+
+    <div id="board">
+      <div class="empty-state"><h3>Loading...</h3></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient('https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig');
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const POSTER_MAP = {
+      'echoes of the last signal': 'img/films/echoes-of-the-last-signal.jpg',
+      'the fold': 'img/films/the-fold.jpg',
+      'the weight of water': 'img/films/the-weight-of-water.jpg',
+      'the lantern that forgot its flame': 'img/films/the-lantern-that-forgot-its-flame.jpg',
+      'the mirror protocol': 'img/films/the-mirror-protocol.jpg',
+      'off-key heroes': 'img/films/off-key-heroes.jpg',
+      'midnight swarm': 'img/films/midnight-swarm.jpg',
+      'the last piece': 'img/films/the-last-piece.jpg',
+      'star wars episode 1000': 'img/films/episode-1000.jpg',
+    };
+
+    const TOTAL_SUPPLY = 1_000_000_000;
+
+    // Bonding curve: 10 tranches of 10% each, price per 1% escalates 10x
+    const TRANCHES = [
+      { pct: 10, pricePerPercent: 99 },
+      { pct: 20, pricePerPercent: 999 },
+      { pct: 30, pricePerPercent: 9999 },
+      { pct: 40, pricePerPercent: 19999 },
+      { pct: 50, pricePerPercent: 29999 },
+      { pct: 60, pricePerPercent: 39999 },
+      { pct: 70, pricePerPercent: 49999 },
+      { pct: 80, pricePerPercent: 59999 },
+      { pct: 90, pricePerPercent: 69999 },
+      { pct: 100, pricePerPercent: 99999 },
+    ];
+
+    function getCurrentTranche(pctSold) {
+      for (const t of TRANCHES) {
+        if (pctSold < t.pct) return t;
+      }
+      return TRANCHES[TRANCHES.length - 1];
+    }
+
+    function formatUsd(n) {
+      if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'k';
+      return '$' + n.toFixed(0);
+    }
+
+    function pickThumb(arts, title) {
+      const poster = arts?.find(a => a.role === 'poster' && a.kind === 'image');
+      if (poster?.url) return poster.url;
+      const sb = arts?.find(a => a.role === 'storyboard' && a.kind === 'image');
+      if (sb) return sb.url;
+      const img = arts?.find(a => a.kind === 'image');
+      if (img) return img.url;
+      return POSTER_MAP[(title || '').toLowerCase()] || null;
+    }
+
+    async function load() {
+      const [offersRes, statsRes] = await Promise.all([
+        supabase
+          .from('bct_offers')
+          .select('id, title, synopsis, status, token_ticker, created_at, bct_artifacts(id, kind, url, role)')
+          .is('archived_at', null)
+          .order('created_at', { ascending: false })
+          .limit(100),
+        supabase
+          .from('bct_film_stats')
+          .select('offer_id, gross_usd, tickets_sold, percent_sold'),
+      ]);
+
+      if (offersRes.error) { console.error(offersRes.error); return; }
+
+      const statsMap = new Map();
+      (statsRes.data || []).forEach(s => statsMap.set(s.offer_id, s));
+
+      const enriched = (offersRes.data || []).map(o => ({
+        ...o,
+        stats: statsMap.get(o.id) || { gross_usd: 0, tickets_sold: 0, percent_sold: 0 },
+      }));
+
+      render(enriched);
+    }
+
+    function render(offers) {
+      const board = document.getElementById('board');
+
+      if (offers.length === 0) {
+        board.innerHTML = '<div class="empty-state"><h3>No films yet</h3><p>Commission the first one.</p></div>';
+        return;
+      }
+
+      const sorted = offers.map(o => {
+        const arts = o.bct_artifacts || [];
+        const rolesDelivered = arts.filter(a => a.role).length;
+        const gross = Number(o.stats?.gross_usd || 0);
+        const pctSold = Math.min(100, Number(o.stats?.percent_sold || 0));
+        const tranche = getCurrentTranche(pctSold);
+        return { ...o, gross, pctSold, tranche, rolesDelivered, arts };
+      });
+
+      sorted.sort((a, b) => b.gross - a.gross);
+
+      board.innerHTML = sorted.map((o, i) => {
+        const thumb = pickThumb(o.arts, o.title);
+        const trancheLabel = `Tranche ${TRANCHES.indexOf(o.tranche) + 1}/10`;
+        const tranchePct = o.pctSold;
+
+        return `
+          <div class="film-row">
+            <div class="film-rank">${i + 1}</div>
+            <div class="film-thumb">
+              ${thumb
+                ? `<img src="${esc(thumb)}" alt="${esc(o.title)}" loading="lazy" />`
+                : `<div class="placeholder">🎬</div>`
+              }
+            </div>
+            <div class="film-info">
+              <div class="fi-title"><a href="offer.html?id=${encodeURIComponent(o.id)}">${esc(o.title)}</a></div>
+              <div class="fi-ticker">$${esc(o.token_ticker)} · ${o.rolesDelivered}/8 roles</div>
+              <div class="fi-synopsis">${esc(o.synopsis || '')}</div>
+            </div>
+            <div class="film-metrics">
+              <div class="metric">
+                <div class="m-value${o.gross > 0 ? ' green' : ''}">$${o.gross.toFixed(0)}</div>
+                <div class="m-label">Gross revenue</div>
+              </div>
+              <div class="metric">
+                <div class="m-value">${formatUsd(o.tranche.pricePerPercent)}</div>
+                <div class="m-label">Price / 1%</div>
+              </div>
+              <div class="metric">
+                <div class="m-value">${tranchePct}%</div>
+                <div class="m-label">Tokens sold</div>
+                <div class="tranche-bar"><div class="t-fill" style="width:${tranchePct}%"></div></div>
+              </div>
+            </div>
+            <div class="film-status">
+              <span class="status-badge ${esc(o.status)}">${esc(o.status)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    load();
+    setInterval(load, 15_000);
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

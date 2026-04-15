@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Live Production</title>
+  <meta name="description" content="Watch a feature film being produced by 12 autonomous AI agents in real time. Every step is on-chain, every artifact is versioned, every payment is recorded." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Live Production Timeline" />
+  <meta property="og:description" content="Watch an autonomous AI feature film production unfold step by step." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #000;
+      color: #e8e8e8;
+      min-height: 100vh;
+    }
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 2rem 6rem;
+    }
+
+    /* ───── Header card ───── */
+    .head {
+      border: 1px solid #222;
+      background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .head .kicker { font-size: 0.65rem; color: #e50914; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700; }
+    .head h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.6rem;
+      line-height: 0.95;
+      letter-spacing: -0.01em;
+      color: #fff;
+      margin-top: 0.4rem;
+    }
+    .head .ticker { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #888; margin-top: 0.4rem; }
+    .head .meta-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 1.8rem;
+    }
+    @media (max-width: 720px) { .head .meta-row { grid-template-columns: repeat(2, 1fr); } }
+    .meta-cell {
+      border: 1px solid #1a1a1a;
+      background: #050505;
+      padding: 0.9rem 1rem;
+    }
+    .meta-cell .label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.12em; color: #666; font-weight: 700; }
+    .meta-cell .value { font-size: 1rem; font-weight: 700; color: #fff; margin-top: 0.3rem; font-family: 'JetBrains Mono', monospace; }
+    .meta-cell .value.green { color: #6bff8a; }
+    .meta-cell .value.red { color: #e50914; }
+    .meta-cell .value.pulse { animation: tx-pulse 2s ease-out; }
+    @keyframes tx-pulse {
+      0% { color: #fff; text-shadow: 0 0 16px #e50914; }
+      100% { color: #fff; text-shadow: none; }
+    }
+
+    /* ───── Phase strip ───── */
+    .phases {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.8rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 720px) { .phases { grid-template-columns: 1fr 1fr; } }
+    .phase {
+      border: 1px solid #1a1a1a;
+      background: #050505;
+      padding: 1rem;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .phase.done { border-color: #1f4d2a; background: #061008; }
+    .phase.active { border-color: #e50914; background: #150406; box-shadow: 0 0 24px rgba(229, 9, 20, 0.18); }
+    .phase .name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; color: #fff; }
+    .phase .num { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.12em; color: #666; font-weight: 700; }
+    .phase .pct { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #888; margin-top: 0.3rem; }
+    .phase.active .pct { color: #e50914; }
+    .phase.done .pct { color: #6bff8a; }
+
+    /* ───── Timeline ───── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    @media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+
+    .timeline {
+      border: 1px solid #222;
+      background: #0a0a0a;
+      padding: 1.5rem;
+    }
+    .timeline h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.02em;
+      color: #fff;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #222;
+      padding-bottom: 0.6rem;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      gap: 0.8rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #161616;
+      align-items: center;
+    }
+    .step:last-child { border-bottom: none; }
+    .step .dot { width: 10px; height: 10px; border-radius: 50%; background: #2a2a2a; margin-left: 6px; }
+    .step.done .dot { background: #6bff8a; box-shadow: 0 0 8px rgba(107, 255, 138, 0.5); }
+    .step.active .dot { background: #e50914; box-shadow: 0 0 8px rgba(229, 9, 20, 0.6); animation: pulse 1.4s infinite; }
+    .step.failed .dot { background: #ff4d4d; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .step .info { display: flex; flex-direction: column; }
+    .step .info .step-name { font-size: 0.85rem; color: #ddd; font-weight: 600; }
+    .step .info .step-meta { font-size: 0.65rem; color: #666; font-family: 'JetBrains Mono', monospace; margin-top: 0.15rem; }
+    .step .right { font-size: 0.65rem; color: #888; font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .step .right a { color: #e50914; text-decoration: none; }
+    .step .right a:hover { text-decoration: underline; }
+
+    /* ───── Live tail ───── */
+    .tail {
+      border: 1px solid #222;
+      background: #0a0a0a;
+      padding: 1.5rem;
+      max-height: 800px;
+      overflow-y: auto;
+    }
+    .tail h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.02em;
+      color: #fff;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #222;
+      padding-bottom: 0.6rem;
+    }
+    .event {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #161616;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #aaa;
+      line-height: 1.5;
+    }
+    .event:last-child { border-bottom: none; }
+    .event .ts { color: #555; }
+    .event .step { color: #6ba8ff; display: inline; padding: 0; margin: 0; border: none; }
+    .event .status-completed { color: #6bff8a; }
+    .event .status-failed { color: #ff4d4d; }
+    .event .status-started { color: #e8c46b; }
+    .event .msg { color: #ccc; display: block; margin-top: 0.2rem; }
+    .event .tx { color: #888; }
+    .event .tx a { color: #888; }
+
+    .empty {
+      padding: 2rem;
+      text-align: center;
+      color: #555;
+      font-size: 0.85rem;
+    }
+
+    /* ───── Artifacts grid ───── */
+    .deliverables {
+      margin-top: 1.5rem;
+      border: 1px solid #222;
+      background: #0a0a0a;
+      padding: 1.5rem;
+    }
+    .deliverables h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.02em;
+      color: #fff;
+      margin-bottom: 0.4rem;
+      border-bottom: 1px solid #222;
+      padding-bottom: 0.6rem;
+    }
+    .deliverables .sub {
+      font-size: 0.75rem;
+      color: #777;
+      margin-bottom: 1rem;
+    }
+    .art-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .art-card {
+      border: 1px solid #1a1a1a;
+      background: #050505;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .art-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+      background: #000;
+    }
+    .art-card video, .art-card audio {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+    .art-card.art-text { padding: 0.9rem; }
+    .art-text-preview {
+      font-size: 0.72rem;
+      color: #aaa;
+      line-height: 1.55;
+      max-height: 100px;
+      overflow: hidden;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .art-read-more {
+      display: inline-block;
+      margin-top: 0.6rem;
+      font-size: 0.65rem;
+      color: #e50914;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+    .art-read-more:hover { text-decoration: underline; }
+    .art-meta {
+      padding: 0.6rem 0.8rem;
+      border-top: 1px solid #1a1a1a;
+      background: #0a0a0a;
+    }
+    .art-card.art-text .art-meta { padding: 0.6rem 0; border-top: 1px solid #1a1a1a; margin-top: 0.6rem; background: transparent; }
+    .art-title {
+      font-size: 0.75rem;
+      color: #fff;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .art-sub {
+      font-size: 0.6rem;
+      color: #666;
+      margin-top: 0.2rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .draft-banner {
+      background: linear-gradient(90deg, #2a2206, #1a1404);
+      border: 1px solid #5a4a0e;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: #e8c46b;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .draft-banner .label {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #ffd84d;
+    }
+
+    /* ─── Recut deck ───
+       The NPGX-ported recut tools panel. Draft-only. Visual scaffold
+       for the PDF "Don't like the ending? Recut it" promise. */
+    .recut-deck {
+      border: 1px solid #2a2a2a;
+      background: linear-gradient(180deg, #1a0006 0%, #0a0a0a 100%);
+      padding: 1.6rem 1.6rem 2rem;
+      margin-bottom: 1.6rem;
+    }
+    .recut-deck-head { margin-bottom: 1.4rem; }
+    .recut-deck-eyebrow {
+      font-size: 0.55rem;
+      color: #E50914;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .recut-deck-head h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: #fff;
+      letter-spacing: 0.01em;
+      margin-top: 0.3rem;
+      line-height: 1;
+    }
+    .recut-deck-head h2 .r { color: #E50914; }
+    .recut-deck-head p {
+      font-size: 0.78rem;
+      color: #888;
+      line-height: 1.55;
+      margin-top: 0.6rem;
+      max-width: 760px;
+    }
+    .recut-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+    }
+    @media (max-width: 900px) {
+      .recut-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .recut-grid { grid-template-columns: 1fr; }
+    }
+    .recut-card {
+      border: 1px solid #2a1414;
+      background: #0a0a0a;
+      padding: 1rem 1rem 0.9rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .recut-card:hover {
+      border-color: #E50914;
+      background: #110404;
+    }
+    .recut-tag {
+      font-family: 'JetBrains Mono', 'Menlo', monospace;
+      font-size: 0.55rem;
+      color: #E50914;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .recut-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      color: #fff;
+      letter-spacing: 0.01em;
+      line-height: 1.05;
+      margin: 0;
+    }
+    .recut-card p {
+      font-size: 0.72rem;
+      color: #999;
+      line-height: 1.5;
+      margin: 0;
+      flex: 1;
+    }
+    .recut-role {
+      font-family: 'JetBrains Mono', 'Menlo', monospace;
+      font-size: 0.55rem;
+      color: #666;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-top: 1px dashed #1a1a1a;
+      padding-top: 0.5rem;
+      margin-top: 0.2rem;
+    }
+    .recut-btn {
+      margin-top: 0.4rem;
+      padding: 0.55rem 0.8rem;
+      background: #E50914;
+      border: 1px solid #E50914;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.65rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      align-self: flex-start;
+    }
+    .recut-btn:disabled {
+      background: #2a1414;
+      border-color: #2a1414;
+      color: #888;
+      cursor: wait;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div id="root">
+      <div class="empty"><h2 style="font-family:'Bebas Neue';font-size:2rem;color:#888;">Loading production…</h2></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient(
+      'https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } }
+    );
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const root = document.getElementById('root');
+
+    // ─── 28 named pipeline steps in their canonical order ───
+    // Mirrors PIPELINE in scripts/feature-worker.ts. Used to render
+    // the timeline even when the worker hasn't reached a step yet.
+    const PIPELINE_STEPS = [
+      { id: 'producer.token_mint',    phase: 'preproduction', label: 'Register royalty shares (1B supply)' },
+      { id: 'producer.kickoff',       phase: 'preproduction', label: 'Producer kickoff' },
+      { id: 'writer.logline',         phase: 'preproduction', label: 'Writer — logline' },
+      { id: 'writer.synopsis',        phase: 'preproduction', label: 'Writer — synopsis' },
+      { id: 'writer.treatment',       phase: 'preproduction', label: 'Writer — treatment (1500-2000 words)' },
+      { id: 'writer.beat_sheet',      phase: 'preproduction', label: 'Writer — beat sheet (15 beats)' },
+      { id: 'writer.screenplay',      phase: 'preproduction', label: 'Writer — screenplay (opening scenes)' },
+      { id: 'director.vision',        phase: 'preproduction', label: "Director's vision statement" },
+      { id: 'casting.cast_list',      phase: 'preproduction', label: 'Casting — cast list' },
+      { id: 'production.lookbook',    phase: 'preproduction', label: 'Production designer — lookbook' },
+      { id: 'dp.shot_plan',           phase: 'preproduction', label: 'Cinematographer — shot plan' },
+      { id: 'storyboard.pack',        phase: 'preproduction', label: 'Storyboard artist — 12 frames' },
+      { id: 'composer.themes',        phase: 'preproduction', label: 'Composer — themes & cues' },
+      { id: 'producer.bible',         phase: 'preproduction', label: 'Producer — production bible' },
+      { id: 'phase2.start',           phase: 'production',    label: 'Production — kickoff' },
+      { id: 'phase2.scene_loop',      phase: 'production',    label: 'Scene generation loop' },
+      { id: 'editor.rough_cut',       phase: 'post',          label: 'Editor — rough cut' },
+      { id: 'editor.fine_cut',        phase: 'post',          label: 'Editor — fine cut' },
+      { id: 'composer.final_score',   phase: 'post',          label: 'Composer — final score' },
+      { id: 'sound.final_mix',        phase: 'post',          label: 'Sound designer — final mix' },
+      { id: 'editor.picture_lock',    phase: 'post',          label: 'Editor — picture lock' },
+      { id: 'editor.trailer_cut',     phase: 'delivery',      label: 'Editor — trailer cut' },
+      { id: 'storyboard.poster',      phase: 'delivery',      label: 'One-sheet poster' },
+      { id: 'publicist.epk',          phase: 'delivery',      label: 'Publicist — EPK' },
+      { id: 'producer.investor_deck', phase: 'delivery',      label: 'Producer — investor deck' },
+      { id: 'producer.draft_open',    phase: 'delivery',      label: 'Open draft & presale' },
+    ];
+
+    const PHASE_LABELS = {
+      preproduction: { num: '01', name: 'Pre-production' },
+      production:    { num: '02', name: 'Production' },
+      post:          { num: '03', name: 'Post-production' },
+      delivery:      { num: '04', name: 'Delivery & draft' },
+    };
+
+    function getOfferId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id') || params.get('offerId') || '';
+    }
+
+    async function loadOffer(id) {
+      const { data } = await supabase
+        .from('bct_offers')
+        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, current_step, production_phase, started_at, target_complete_at, revision_deadline, revisions_remaining, presale_open, token_mint_txid, parent_offer_id')
+        .eq('id', id)
+        .maybeSingle();
+      return data;
+    }
+
+    async function loadStepLog(id) {
+      const { data } = await supabase
+        .from('bct_step_log')
+        .select('id, step_id, agent_id, status, payment_txid, payment_sats, message, artifact_id, created_at')
+        .eq('offer_id', id)
+        .order('created_at', { ascending: false })
+        .limit(80);
+      return data || [];
+    }
+
+    async function loadArtifacts(id) {
+      const { data } = await supabase
+        .from('bct_artifacts')
+        .select('id, kind, role, step_id, url, model, version, created_at')
+        .eq('offer_id', id)
+        .is('superseded_by', null)
+        .order('created_at', { ascending: true });
+      return data || [];
+    }
+
+    async function loadShareListings(id) {
+      const { data } = await supabase
+        .from('bct_share_listings')
+        .select('id, shares_offered, price_per_share_cents, total_price_cents, status, created_at, sold_at, buyer_account_id')
+        .eq('offer_id', id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return data || [];
+    }
+
+    function decodeDataUrl(url) {
+      if (!url || !url.startsWith('data:text/plain')) return null;
+      try {
+        const idx = url.indexOf(',');
+        if (idx < 0) return null;
+        return decodeURIComponent(url.slice(idx + 1));
+      } catch { return null; }
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '—';
+      try {
+        const d = new Date(ts);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch { return '—'; }
+    }
+
+    function shortTx(t) {
+      if (!t) return '';
+      return t.length > 18 ? t.slice(0, 10) + '…' + t.slice(-6) : t;
+    }
+
+    function computeStepStatuses(offer, log) {
+      // For each pipeline step decide: done | active | pending | failed
+      const statusByStep = {};
+      const completedSet = new Set();
+      const failedSet = new Set();
+      for (const ev of log) {
+        if (ev.status === 'completed') completedSet.add(ev.step_id);
+        if (ev.status === 'failed') failedSet.add(ev.step_id);
+      }
+      for (const step of PIPELINE_STEPS) {
+        if (failedSet.has(step.id)) statusByStep[step.id] = 'failed';
+        else if (completedSet.has(step.id)) statusByStep[step.id] = 'done';
+        else if (offer.current_step === step.id) statusByStep[step.id] = 'active';
+        else statusByStep[step.id] = 'pending';
+      }
+      return statusByStep;
+    }
+
+    function computePhaseProgress(stepStatuses) {
+      const byPhase = {};
+      for (const step of PIPELINE_STEPS) {
+        const p = step.phase;
+        if (!byPhase[p]) byPhase[p] = { total: 0, done: 0, active: 0 };
+        byPhase[p].total++;
+        if (stepStatuses[step.id] === 'done') byPhase[p].done++;
+        if (stepStatuses[step.id] === 'active') byPhase[p].active++;
+      }
+      return byPhase;
+    }
+
+    // ─── Rough cut player ───
+    //
+    // If the offer has at least one scene.N.video artifact, surface a
+    // dedicated "Watch the cut" player that plays the scene clips in
+    // sequence. Wiring happens AFTER innerHTML render via
+    // wireRoughCutPlayer() because the HTML parser closes the outer
+    // module on the literal close-script sequence regardless of context
+    // (inside string literals, inside comments, anywhere).
+    let _roughCutPlaylist = [];
+    function renderRoughCutPlayer(artifacts) {
+      const sceneClips = artifacts
+        .filter(a => a.kind === 'video' && a.step_id && a.step_id.startsWith('scene.'))
+        .sort((a, b) => (a.step_id || '').localeCompare(b.step_id || ''));
+      _roughCutPlaylist = sceneClips.map(c => c.url);
+      if (sceneClips.length === 0) return '';
+
+      const totalSec = sceneClips.length * 8;
+
+      return `
+        <div style="border:1px solid #2a2a2a;background:#0a0a0a;padding:1.5rem;margin-top:1.5rem;">
+          <div style="font-size:0.55rem;color:#e50914;text-transform:uppercase;letter-spacing:0.16em;font-weight:900;">Rough cut · ${sceneClips.length} scenes · ${totalSec} sec runtime</div>
+          <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#fff;margin-top:0.4rem;border:none;padding:0;">Watch the cut</h2>
+          <p style="font-size:0.78rem;color:#888;margin-top:0.4rem;line-height:1.55;">
+            Generated by the editor agent from the Phase 2 scene clips. Each clip is a real Grok Imagine 8-second video. The player below auto-advances through the cut.
+          </p>
+          <div style="position:relative;margin-top:1rem;background:#000;">
+            <video id="rough-cut-player" controls preload="metadata" style="width:100%;display:block;background:#000;" src="${esc(sceneClips[0].url)}"></video>
+            <div id="rough-cut-overlay" style="position:absolute;top:0.6rem;right:0.8rem;background:rgba(0,0,0,0.7);padding:0.3rem 0.6rem;font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#fff;pointer-events:none;">
+              Scene <span id="rough-cut-idx">1</span> / ${sceneClips.length}
+            </div>
+          </div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.6rem;flex-wrap:wrap;">
+            ${sceneClips.map((c, i) => `
+              <button type="button" class="rough-cut-thumb" data-idx="${i}" style="padding:0.4rem 0.7rem;background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;font-size:0.65rem;font-family:'JetBrains Mono',monospace;cursor:pointer;">
+                Scene ${i + 1}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function wireRoughCutPlayer() {
+      if (_roughCutPlaylist.length === 0) return;
+      const player = document.getElementById('rough-cut-player');
+      const idxEl = document.getElementById('rough-cut-idx');
+      const thumbs = document.querySelectorAll('.rough-cut-thumb');
+      if (!player || !idxEl) return;
+      let current = 0;
+      function load(i) {
+        if (i < 0 || i >= _roughCutPlaylist.length) return;
+        current = i;
+        player.src = _roughCutPlaylist[i];
+        player.play().catch(() => {});
+        idxEl.textContent = String(i + 1);
+        thumbs.forEach((b, j) => {
+          b.style.background = j === i ? '#e50914' : '#1a1a1a';
+          b.style.borderColor = j === i ? '#e50914' : '#2a2a2a';
+          b.style.color = j === i ? '#fff' : '#aaa';
+        });
+      }
+      player.addEventListener('ended', () => {
+        if (current + 1 < _roughCutPlaylist.length) load(current + 1);
+      });
+      thumbs.forEach((b, j) => b.addEventListener('click', () => load(j)));
+      // Mark the first thumb selected
+      load(0);
+    }
+
+    function renderArtifactCard(art) {
+      const title = (art.step_id || art.role || '').replace(/[._]/g, ' ');
+      const versionBadge = art.version > 1 ? `<span style="font-size:0.55rem;color:#e8c46b;background:#2a2206;padding:0.2rem 0.4rem;margin-left:0.4rem;">v${art.version}</span>` : '';
+      if (art.kind === 'image') {
+        return `
+          <div class="art-card">
+            <a href="${esc(art.url)}" target="_blank" rel="noopener">
+              <img src="${esc(art.url)}" alt="${esc(title)}" loading="lazy" />
+            </a>
+            <div class="art-meta">
+              <div class="art-title">${esc(title)} ${versionBadge}</div>
+              <div class="art-sub">${esc(art.role || '')} · ${esc(art.model || '')}</div>
+            </div>
+          </div>
+        `;
+      }
+      if (art.kind === 'video') {
+        return `
+          <div class="art-card">
+            <video src="${esc(art.url)}" controls preload="metadata"></video>
+            <div class="art-meta">
+              <div class="art-title">${esc(title)} ${versionBadge}</div>
+              <div class="art-sub">${esc(art.role || '')} · ${esc(art.model || '')}</div>
+            </div>
+          </div>
+        `;
+      }
+      if (art.kind === 'audio') {
+        return `
+          <div class="art-card">
+            <audio src="${esc(art.url)}" controls preload="metadata" style="width:100%;"></audio>
+            <div class="art-meta">
+              <div class="art-title">${esc(title)} ${versionBadge}</div>
+              <div class="art-sub">${esc(art.role || '')} · ${esc(art.model || '')}</div>
+            </div>
+          </div>
+        `;
+      }
+      // text — show first 280 chars + a "read more" link that opens a
+      // modal. We do NOT use <a href="data:..."> because Chrome and
+      // Firefox both block top-level navigation to data: URLs (a
+      // long-standing anti-phishing measure). Modal display keeps the
+      // user on the page and doesn't trip any browser security policy.
+      const decoded = decodeDataUrl(art.url) || '';
+      const preview = decoded.slice(0, 280);
+      const truncated = decoded.length > 280;
+      return `
+        <div class="art-card art-text">
+          <div class="art-text-preview">${esc(preview)}${truncated ? '…' : ''}</div>
+          ${truncated ? `<button type="button" class="art-read-more" data-art-id="${art.id}" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;">Open full document →</button>` : ''}
+          <div class="art-meta">
+            <div class="art-title">${esc(title)} ${versionBadge}</div>
+            <div class="art-sub">${esc(art.role || '')} · ${esc(art.model || '')} · ${decoded.length} chars</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── Text artifact modal ───
+    //
+    // Lazy-loads any text artifact into a full-screen modal when the
+    // user clicks "Open full document". Because we hold every loaded
+    // artifact in the render() closure, we look up the artifact by id
+    // from the most recent tick's `artifacts` array (cached on
+    // window._lastArtifacts).
+    function openTextArtifactModal(artId) {
+      const arts = window._lastArtifacts || [];
+      const art = arts.find(a => Number(a.id) === Number(artId));
+      if (!art) return;
+      const decoded = decodeDataUrl(art.url) || '(empty)';
+      const title = (art.step_id || art.role || '').replace(/[._]/g, ' ');
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:2rem;';
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      const box = document.createElement('div');
+      box.style.cssText = 'max-width:780px;width:100%;max-height:90vh;background:#0a0a0a;border:1px solid #333;display:flex;flex-direction:column;';
+      const head = document.createElement('div');
+      head.style.cssText = 'padding:1.2rem 1.5rem;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center;';
+      head.innerHTML = `
+        <div>
+          <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">${esc(art.role || '')} · ${esc(art.model || '')} · ${decoded.length} chars</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;margin-top:0.2rem;text-transform:capitalize;">${esc(title)}</div>
+        </div>
+        <button type="button" id="modal-close" style="background:none;border:1px solid #444;color:#fff;padding:0.4rem 0.8rem;cursor:pointer;font:inherit;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;">Close</button>
+      `;
+      const body = document.createElement('div');
+      body.style.cssText = 'padding:1.5rem;overflow-y:auto;font-size:0.85rem;color:#ddd;line-height:1.7;white-space:pre-wrap;font-family:"Inter",sans-serif;';
+      body.textContent = decoded;
+      box.appendChild(head);
+      box.appendChild(body);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      head.querySelector('#modal-close')?.addEventListener('click', () => overlay.remove());
+      // ESC key closes
+      const onKey = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
+      document.addEventListener('keydown', onKey);
+    }
+
+    /**
+     * The recut deck. Six NPGX-ported tools rendered as click-cards.
+     * Each card is a one-shot instruction to a specific specialist
+     * (or small group) to redo a piece of work. The click handler
+     * (wired in wireRecutDeck after innerHTML insertion) prefills the
+     * existing /api/feature/revise endpoint with the right step + note.
+     *
+     * Visual-first by design: this is the panel the PDF Chapter 03
+     * "Don't like the ending? Recut it" promise points at. Wiring the
+     * NPGX-equivalent edit canvas (timeline drag-reorder, frame
+     * inpainting, font picker) is Phase 2 work — what ships today is
+     * the click-to-revise affordance for every tool the PDF lists.
+     */
+    function renderRecutDeck(offer, artifacts) {
+      const ticker = esc(offer.token_ticker || '');
+      const tools = [
+        {
+          id: 'storyboard.editor',
+          tag: 'STORYBOARD EDITOR',
+          title: 'Regen any frame',
+          desc: 'Click any storyboard panel that doesn\'t land. The storyboard artist re-shoots that frame.',
+          step: 'storyboard.pack',
+          notePrompt: 'Which frame do you want regenerated? (e.g. "Frame 4 — make the lighthouse keeper look more haunted")',
+          role: 'Storyboard',
+        },
+        {
+          id: 'scene.reroll',
+          tag: 'SCENE REROLL',
+          title: 'Recut a scene',
+          desc: 'New direction for any scene. Director re-plans, editor re-cuts, composer re-scores.',
+          step: 'phase2.scene_loop',
+          notePrompt: 'Which scene and what should change? (e.g. "Scene 3 — feel like the opening of The Thing, ratchet the dread")',
+          role: 'Director · Editor · Composer',
+        },
+        {
+          id: 'title.designer',
+          tag: 'TITLE DESIGNER',
+          title: 'Re-render the poster',
+          desc: 'Swap fonts, palette, layout. Try ten poster variants before locking the final.',
+          step: 'storyboard.poster',
+          notePrompt: 'New poster direction? (e.g. "Cooler palette, bigger title, hand-drawn title font")',
+          role: 'Storyboard · Publicist',
+        },
+        {
+          id: 'sound.desk',
+          tag: 'SOUND DESK',
+          title: 'Swap the score',
+          desc: 'Reroll the theme. Composer drafts alternates; sound design re-mixes around the new cue.',
+          step: 'composer.themes',
+          notePrompt: 'New musical direction? (e.g. "Less orchestral, more synth and tension")',
+          role: 'Composer · Sound design',
+        },
+        {
+          id: 'cast.workshop',
+          tag: 'CAST WORKSHOP',
+          title: 'Recast a voice',
+          desc: 'Change a character\'s voice or tone. Casting director re-picks; the director re-paces.',
+          step: 'casting.cast_list',
+          notePrompt: 'Which character and what should change? (e.g. "Recast the keeper as older, gravelly, world-weary")',
+          role: 'Casting · Director',
+        },
+        {
+          id: 'movie.editor',
+          tag: 'MOVIE EDITOR',
+          title: 'Reorder & re-cut',
+          desc: 'Change scene order, cut a beat, add an extra. Editor produces a new rough-cut head version.',
+          step: 'editor.rough_cut',
+          notePrompt: 'How should the cut change? (e.g. "Open on scene 3, push the act-2 reveal earlier")',
+          role: 'Editor',
+        },
+      ];
+
+      const cardsHtml = tools.map(t => `
+        <div class="recut-card" data-tool-id="${t.id}" data-step="${t.step}" data-prompt="${esc(t.notePrompt)}">
+          <div class="recut-tag">${t.tag}</div>
+          <h3>${t.title}</h3>
+          <p>${t.desc}</p>
+          <div class="recut-role">${t.role}</div>
+          <button type="button" class="recut-btn">Apply →</button>
+        </div>
+      `).join('');
+
+      return `
+        <div class="recut-deck">
+          <div class="recut-deck-head">
+            <div class="recut-deck-eyebrow">The Recut Deck · NPGX-ported tools</div>
+            <h2>Don't like it? <span class="r">Recut it.</span></h2>
+            <p>One click per tool. Each click is a real revision request — your specialists redo the affected work and the new version becomes the head of its chain. Old versions stay browsable. Costs one of your remaining revisions per click.</p>
+          </div>
+          <div class="recut-grid">${cardsHtml}</div>
+        </div>
+      `;
+    }
+
+    function wireRecutDeck(offerId) {
+      document.querySelectorAll('.recut-card .recut-btn').forEach(btn => {
+        btn.addEventListener('click', async (ev) => {
+          const card = ev.currentTarget.closest('.recut-card');
+          if (!card) return;
+          const step = card.getAttribute('data-step');
+          const promptText = card.getAttribute('data-prompt') || 'Describe the change';
+          const note = window.prompt(promptText);
+          if (!note || !note.trim()) return;
+          btn.disabled = true;
+          btn.textContent = 'Queueing…';
+          try {
+            const res = await fetch('/api/feature/revise', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ offerId, step, note }),
+            });
+            const j = await res.json();
+            if (!res.ok || j.error) {
+              btn.textContent = '⚠ ' + (j.error || res.statusText);
+              setTimeout(() => { btn.disabled = false; btn.textContent = 'Apply →'; }, 4000);
+              return;
+            }
+            btn.textContent = '✓ Queued';
+            setTimeout(() => { window.location.reload(); }, 1500);
+          } catch (err) {
+            btn.textContent = '⚠ ' + (err.message || 'failed');
+            setTimeout(() => { btn.disabled = false; btn.textContent = 'Apply →'; }, 4000);
+          }
+        });
+      });
+    }
+
+    function renderListingsBlock(offer, listings) {
+      const open = listings.filter(l => l.status === 'open');
+      const sold = listings.filter(l => l.status === 'sold');
+      if (open.length === 0 && sold.length === 0) return '';
+
+      const fmtUsd = cents => '$' + (Number(cents) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtShares = n => Number(n).toLocaleString();
+      const pct = n => ((Number(n) / 1_000_000_000) * 100).toFixed(4) + '%';
+
+      const openHtml = open.length === 0
+        ? '<div style="color:#666;font-size:0.75rem;padding:1rem 0;">No open listings yet. The commissioner can list shares using the form above.</div>'
+        : open.map(l => `
+            <div style="display:grid;grid-template-columns:auto auto auto auto 1fr auto;gap:0.8rem;align-items:center;padding:0.7rem 0;border-bottom:1px solid #161616;font-family:'JetBrains Mono',monospace;font-size:0.7rem;">
+              <span style="color:#888;">#${l.id}</span>
+              <span style="color:#fff;font-weight:700;">${fmtShares(l.shares_offered)} shares</span>
+              <span style="color:#888;">${pct(l.shares_offered)}</span>
+              <span style="color:#888;">${fmtUsd(l.price_per_share_cents)}/share</span>
+              <span style="color:#6bff8a;font-weight:700;text-align:right;">${fmtUsd(l.total_price_cents)} total</span>
+              <button type="button" class="buy-listing-btn" data-listing="${l.id}" style="padding:0.5rem 1rem;background:#e50914;border:1px solid #e50914;color:#fff;font-family:inherit;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Buy</button>
+            </div>
+          `).join('');
+
+      const soldHtml = sold.length === 0
+        ? ''
+        : `<div style="margin-top:1rem;font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Recently sold</div>` +
+          sold.slice(0, 5).map(l => `
+            <div style="display:flex;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #161616;font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#666;">
+              <span>#${l.id}</span>
+              <span>${fmtShares(l.shares_offered)} shares</span>
+              <span>${pct(l.shares_offered)}</span>
+              <span style="margin-left:auto;">${fmtUsd(l.total_price_cents)}</span>
+            </div>
+          `).join('');
+
+      return `
+        <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid #1a1a1a;">
+          <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;margin-bottom:0.6rem;">Open listings · ${open.length}</div>
+          ${openHtml}
+          ${soldHtml}
+        </div>
+      `;
+    }
+
+    function render(offer, log, artifacts, listings) {
+      const stepStatuses = computeStepStatuses(offer, log);
+      const phaseProgress = computePhaseProgress(stepStatuses);
+      const isDraft = offer.status === 'draft';
+      const isPublished = offer.status === 'published' || offer.status === 'auto_published';
+
+      const phaseStrip = Object.keys(PHASE_LABELS).map(p => {
+        const meta = PHASE_LABELS[p];
+        const prog = phaseProgress[p] || { total: 0, done: 0, active: 0 };
+        const pct = prog.total > 0 ? Math.round((prog.done / prog.total) * 100) : 0;
+        const cls = prog.active > 0 ? 'active' : prog.done === prog.total && prog.total > 0 ? 'done' : '';
+        return `
+          <div class="phase ${cls}">
+            <div class="num">${meta.num}</div>
+            <div class="name">${meta.name}</div>
+            <div class="pct">${prog.done} / ${prog.total} steps · ${pct}%</div>
+          </div>
+        `;
+      }).join('');
+
+      const draftBanner = isDraft ? `
+        <div class="draft-banner">
+          <span class="label">Draft</span>
+          <span>Pipeline complete. Commissioner has ${offer.revisions_remaining} revisions remaining and can sell royalty shares to early investors. Auto-publishes at ${formatTime(offer.revision_deadline)}.</span>
+        </div>
+        <div style="border:1px solid #2a2a2a;background:#0a0a0a;padding:1.4rem;margin-bottom:1.5rem;">
+          <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Pre-publication royalty share market</div>
+          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#fff;margin-top:0.4rem;">Sell shares to early investors</h3>
+          <p style="font-size:0.78rem;color:#aaa;line-height:1.55;margin-top:0.4rem;max-width:760px;">
+            The <strong>$${esc(offer.token_ticker)}</strong> royalty shares are live. ${offer.commissioner_percent}% of the 1B supply (${(offer.commissioner_percent * 10).toFixed(0)}M shares) was issued to the commissioner at the start of production. Right now, while the film is in draft, the commissioner can list any portion of those shares for sale. Investors buying in early get to back the work before it premieres on /watch.html — once it's live, ticket revenue starts flowing to all holders proportionally.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-top:1rem;font-family:'JetBrains Mono',monospace;font-size:0.7rem;">
+            <div style="border:1px solid #1a1a1a;padding:0.7rem;">
+              <div style="color:#888;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;">Total supply</div>
+              <div style="color:#fff;font-weight:700;margin-top:0.3rem;">1,000,000,000</div>
+            </div>
+            <div style="border:1px solid #1a1a1a;padding:0.7rem;">
+              <div style="color:#888;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;">Commissioner holds</div>
+              <div style="color:#fff;font-weight:700;margin-top:0.3rem;">${(offer.commissioner_percent * 10).toFixed(0)}M (${offer.commissioner_percent}%)</div>
+            </div>
+            <div style="border:1px solid #1a1a1a;padding:0.7rem;">
+              <div style="color:#888;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;">Studio share</div>
+              <div style="color:#fff;font-weight:700;margin-top:0.3rem;">10M (1%)</div>
+            </div>
+            <div style="border:1px solid #1a1a1a;padding:0.7rem;">
+              <div style="color:#888;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;">Mint TX</div>
+              <div style="color:#888;font-weight:700;margin-top:0.3rem;font-size:0.6rem;">${offer.token_mint_txid ? esc(offer.token_mint_txid).slice(0, 20) + '…' : '—'}</div>
+            </div>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
+            <a href="/deck.html?id=${encodeURIComponent(offer.id)}" target="_blank" style="display:inline-block;padding:0.7rem 1.2rem;background:#e50914;border:1px solid #e50914;color:#fff;text-decoration:none;font-size:0.65rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;">Investor deck (printable PDF) →</a>
+            <a href="/film.html?id=${encodeURIComponent(offer.id)}" style="display:inline-block;padding:0.7rem 1.2rem;background:#1a1a1a;border:1px solid #444;color:#fff;text-decoration:none;font-size:0.65rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;">Public film page →</a>
+          </div>
+
+          <!-- Commissioner-only "list shares for sale" form. Posts to
+               /api/feature/list-shares?action=create which inserts a row
+               in bct_share_listings. The grid below renders every open
+               listing with a "Buy" button that opens Stripe checkout. -->
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid #1a1a1a;">
+            <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;margin-bottom:0.6rem;">List shares for sale (commissioner only)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:0.6rem;align-items:end;">
+              <div>
+                <label style="display:block;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;color:#666;">Shares to sell</label>
+                <input id="ls-shares" type="number" min="100000" step="100000" placeholder="10000000" style="width:100%;margin-top:0.3rem;padding:0.6rem;background:#000;border:1px solid #333;color:#fff;font-family:'JetBrains Mono',monospace;font-size:0.8rem;" />
+              </div>
+              <div>
+                <label style="display:block;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;color:#666;">Price per share (¢)</label>
+                <input id="ls-price" type="number" min="1" step="1" placeholder="1" style="width:100%;margin-top:0.3rem;padding:0.6rem;background:#000;border:1px solid #333;color:#fff;font-family:'JetBrains Mono',monospace;font-size:0.8rem;" />
+              </div>
+              <div>
+                <label style="display:block;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;color:#666;">Estimated total</label>
+                <div id="ls-total" style="margin-top:0.3rem;padding:0.6rem;background:#0a0a0a;border:1px solid #1a1a1a;color:#6bff8a;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;">$0.00</div>
+              </div>
+              <button id="ls-create" type="button" style="padding:0.6rem 1.2rem;background:#e50914;border:1px solid #e50914;color:#fff;font-family:inherit;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">List →</button>
+            </div>
+            <div id="ls-status" style="margin-top:0.6rem;font-size:0.7rem;color:#888;min-height:1em;"></div>
+          </div>
+
+          ${renderListingsBlock(offer, listings)}
+        </div>
+
+        <!-- ─── THE RECUT DECK ───
+             NPGX-ported recut tools. Each tool is a one-click instruction
+             to a specific specialist to redo a piece of work. The tools
+             post to /api/feature/revise with a pre-filled step + note,
+             same backend as the free-form "Re-run any step" textarea
+             below. The free-form one is the power-user mode; this is
+             the keep-it-simple mode. Visual scaffold for the PDF
+             promise: "Don't like the ending? Recut it." -->
+        ${renderRecutDeck(offer, artifacts)}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+          <div style="border:1px solid #2a2a2a;background:#0a0a0a;padding:1.4rem;">
+            <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Request a revision · power user</div>
+            <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#fff;margin-top:0.4rem;">Re-run any step with a note</h3>
+            <select id="rev-step" style="width:100%;margin-top:0.8rem;padding:0.6rem;background:#000;border:1px solid #333;color:#fff;font-family:inherit;font-size:0.8rem;">
+              ${PIPELINE_STEPS.filter(s => !s.id.startsWith('producer.token_mint') && !s.id.endsWith('.kickoff') && !s.id.endsWith('.draft_open')).map(s => `<option value="${esc(s.id)}">${esc(s.label)}</option>`).join('')}
+            </select>
+            <textarea id="rev-note" placeholder="e.g. Make the dialogue in scene 5 more menacing, push the score louder under the climax." style="width:100%;margin-top:0.6rem;padding:0.7rem;background:#000;border:1px solid #333;color:#fff;font-family:inherit;font-size:0.85rem;resize:vertical;min-height:80px;"></textarea>
+            <button id="rev-submit" type="button" style="margin-top:0.8rem;padding:0.8rem 1.4rem;background:#e50914;border:1px solid #e50914;color:#fff;font-family:inherit;font-size:0.7rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Queue revision (${offer.revisions_remaining} left) →</button>
+            <div id="rev-status" style="margin-top:0.8rem;font-size:0.75rem;color:#aaa;min-height:1em;"></div>
+          </div>
+          <div style="border:1px solid #2a2a2a;background:#0a0a0a;padding:1.4rem;">
+            <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Publish</div>
+            <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#fff;margin-top:0.4rem;">Ship the film</h3>
+            <p style="font-size:0.78rem;color:#aaa;line-height:1.55;margin-top:0.6rem;">When you click publish the film moves out of draft, the presale closes, and it appears on /watch.html. Ticket revenue starts flowing immediately to royalty shareholders. This is irreversible.</p>
+            <button id="pub-submit" type="button" style="margin-top:1rem;padding:0.9rem 1.6rem;background:#1f4d2a;border:1px solid #6bff8a;color:#6bff8a;font-family:inherit;font-size:0.7rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">Publish to /watch.html →</button>
+            <div id="pub-status" style="margin-top:0.8rem;font-size:0.75rem;color:#aaa;min-height:1em;"></div>
+            <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid #1a1a1a;font-size:0.7rem;color:#666;">
+              Auto-publishes at <strong style="color:#e8c46b;">${formatTime(offer.revision_deadline)}</strong> if you don't.
+            </div>
+          </div>
+        </div>
+      ` : '';
+
+      const stepsHtml = PIPELINE_STEPS.map(step => {
+        const st = stepStatuses[step.id] || 'pending';
+        const eventsForStep = log.filter(e => e.step_id === step.id);
+        const lastEvent = eventsForStep[0]; // log is desc
+        const tx = lastEvent?.payment_txid;
+        const ts = lastEvent ? formatTime(lastEvent.created_at) : '';
+        return `
+          <div class="step ${st}">
+            <div class="dot"></div>
+            <div class="info">
+              <div class="step-name">${esc(step.label)}</div>
+              <div class="step-meta">${esc(step.id)}${lastEvent?.agent_id ? ' · ' + esc(lastEvent.agent_id) : ''}</div>
+            </div>
+            <div class="right">${ts}${tx ? '<br>' + esc(shortTx(tx)) : ''}</div>
+          </div>
+        `;
+      }).join('');
+
+      const tailHtml = log.length === 0
+        ? '<div class="empty">No events yet. Worker will pick up the offer within ~30 seconds.</div>'
+        : log.slice(0, 30).map(ev => {
+            const cls = `status-${ev.status}`;
+            return `
+              <div class="event">
+                <span class="ts">${formatTime(ev.created_at)}</span>
+                · <span class="step">${esc(ev.step_id)}</span>
+                · <span class="${cls}">${esc(ev.status)}</span>
+                ${ev.agent_id ? '· ' + esc(ev.agent_id) : ''}
+                ${ev.message ? `<div class="msg">${esc(ev.message)}</div>` : ''}
+                ${ev.payment_txid ? `<div class="tx">tx ${esc(shortTx(ev.payment_txid))}</div>` : ''}
+              </div>
+            `;
+          }).join('');
+
+      const cumulativeTx = log.filter(e => e.payment_txid).length;
+
+      root.innerHTML = `
+        <div class="head">
+          <div class="kicker">Live production</div>
+          <h1>${esc(offer.title)}</h1>
+          <div class="ticker">$${esc(offer.token_ticker)} · ${esc((offer.tier || 'feature').toUpperCase())} tier · commissioner owns ${esc(offer.commissioner_percent)}%</div>
+          <div class="meta-row">
+            <div class="meta-cell">
+              <div class="label">Status</div>
+              <div class="value ${isPublished ? 'green' : isDraft ? 'red' : ''}">${esc(offer.status)}</div>
+            </div>
+            <div class="meta-cell">
+              <div class="label">Current step</div>
+              <div class="value">${esc(offer.current_step || '—')}</div>
+            </div>
+            <div class="meta-cell">
+              <div class="label">On-chain TXs</div>
+              <div class="value">${cumulativeTx}</div>
+            </div>
+            <div class="meta-cell">
+              <div class="label">${isDraft ? 'Revisions left' : 'Phase'}</div>
+              <div class="value">${isDraft ? offer.revisions_remaining : esc(offer.production_phase || '—')}</div>
+            </div>
+          </div>
+          <div class="phases">${phaseStrip}</div>
+        </div>
+
+        ${draftBanner}
+
+        <div class="layout">
+          <div class="timeline">
+            <h2>Pipeline · ${PIPELINE_STEPS.length} steps</h2>
+            ${stepsHtml}
+          </div>
+          <div class="tail">
+            <h2>Live tail</h2>
+            ${tailHtml}
+          </div>
+        </div>
+
+        ${renderRoughCutPlayer(artifacts)}
+
+        <div class="deliverables">
+          <h2>Deliverables · ${artifacts.length}</h2>
+          <div class="sub">Every artifact the swarm has produced so far. Older versions are kept on-chain; this view shows only the current head of each (offer, role, kind).</div>
+          ${artifacts.length === 0
+            ? '<div class="empty">No deliverables yet. Worker is still in early phase.</div>'
+            : `<div class="art-grid">${artifacts.map(renderArtifactCard).join('')}</div>`
+          }
+        </div>
+      `;
+
+      // Wire the rough cut player + draft-only action buttons after
+      // the innerHTML render. The rough cut player runs for every
+      // offer that has scene clips (in-progress or draft); the draft
+      // action buttons (revise / publish / list shares) only show in
+      // draft state.
+      wireRoughCutPlayer();
+      if (isDraft) {
+        wireDraftActions(offer);
+        wireRecutDeck(offer.id);
+      }
+
+      // Cache the current artifacts on window so the text-modal opener
+      // (called from .art-read-more click handlers) can look them up
+      // without re-fetching from Supabase.
+      window._lastArtifacts = artifacts;
+      document.querySelectorAll('.art-read-more').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-art-id');
+          if (id) openTextArtifactModal(id);
+        });
+      });
+    }
+
+    function wireDraftActions(offer) {
+      const revBtn = document.getElementById('rev-submit');
+      const revStep = document.getElementById('rev-step');
+      const revNote = document.getElementById('rev-note');
+      const revStatus = document.getElementById('rev-status');
+      if (revBtn && revStep && revNote && revStatus) {
+        revBtn.addEventListener('click', async () => {
+          const note = revNote.value.trim();
+          if (note.length < 4) {
+            revStatus.textContent = 'Tell the agents what to change first.';
+            revStatus.style.color = '#ff6464';
+            return;
+          }
+          revBtn.disabled = true;
+          revStatus.textContent = 'Queueing…';
+          revStatus.style.color = '#aaa';
+          try {
+            const res = await fetch('/api/feature/revise', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                offerId: offer.id,
+                stepId: revStep.value,
+                scope: 'scene',
+                note,
+              }),
+            });
+            const body = await res.json();
+            if (!res.ok) throw new Error(body.message || body.error || `HTTP ${res.status}`);
+            revStatus.style.color = '#6bff8a';
+            revStatus.textContent = `Queued. Worker will run "${revStep.value}" within ~30 sec. ${body.remainingBudget} revisions left.`;
+            revNote.value = '';
+            revBtn.disabled = false;
+          } catch (err) {
+            revStatus.style.color = '#ff6464';
+            revStatus.textContent = 'Failed: ' + (err.message || err);
+            revBtn.disabled = false;
+          }
+        });
+      }
+
+      // ─── Share listing form ───
+      const lsShares = document.getElementById('ls-shares');
+      const lsPrice = document.getElementById('ls-price');
+      const lsTotal = document.getElementById('ls-total');
+      const lsCreate = document.getElementById('ls-create');
+      const lsStatus = document.getElementById('ls-status');
+      function recomputeTotal() {
+        if (!lsShares || !lsPrice || !lsTotal) return;
+        const s = Math.floor(Number(lsShares.value || 0));
+        const p = Math.floor(Number(lsPrice.value || 0));
+        const totalCents = s * p;
+        lsTotal.textContent = isFinite(totalCents)
+          ? '$' + (totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : '$0.00';
+      }
+      lsShares?.addEventListener('input', recomputeTotal);
+      lsPrice?.addEventListener('input', recomputeTotal);
+      lsCreate?.addEventListener('click', async () => {
+        const sharesOffered = Math.floor(Number(lsShares?.value || 0));
+        const pricePerShareCents = Math.floor(Number(lsPrice?.value || 0));
+        if (sharesOffered < 100000 || pricePerShareCents < 1) {
+          lsStatus.textContent = 'Min 100,000 shares (0.01% of supply) and at least 1¢ per share.';
+          lsStatus.style.color = '#ff6464';
+          return;
+        }
+        lsCreate.disabled = true;
+        lsStatus.textContent = 'Creating listing…';
+        lsStatus.style.color = '#aaa';
+        try {
+          const res = await fetch('/api/feature/list-shares?action=create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ offerId: offer.id, sharesOffered, pricePerShareCents }),
+          });
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+          lsStatus.style.color = '#6bff8a';
+          lsStatus.textContent = `Listing #${body.listingId} created (${body.percent.toFixed(4)}% for $${(body.totalPriceCents / 100).toFixed(2)}).`;
+          if (lsShares) lsShares.value = '';
+          if (lsPrice) lsPrice.value = '';
+          recomputeTotal();
+          // Trigger an immediate refresh so the new listing appears
+          tick();
+        } catch (err) {
+          lsStatus.style.color = '#ff6464';
+          lsStatus.textContent = 'Failed: ' + (err.message || err);
+        } finally {
+          lsCreate.disabled = false;
+        }
+      });
+
+      // ─── Buy buttons on existing listings ───
+      document.querySelectorAll('.buy-listing-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const listingId = Number(btn.dataset.listing);
+          if (!listingId) return;
+          btn.disabled = true;
+          btn.textContent = 'Loading…';
+          try {
+            const res = await fetch('/api/feature/list-shares?action=buy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ listingId }),
+            });
+            const body = await res.json();
+            if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+            if (body.url) {
+              window.location.href = body.url;
+            } else {
+              throw new Error('no checkout URL');
+            }
+          } catch (err) {
+            btn.textContent = 'Buy';
+            btn.disabled = false;
+            alert('Buy failed: ' + (err.message || err));
+          }
+        });
+      });
+
+      const pubBtn = document.getElementById('pub-submit');
+      const pubStatus = document.getElementById('pub-status');
+      if (pubBtn && pubStatus) {
+        pubBtn.addEventListener('click', async () => {
+          if (!confirm('Publish this film to /watch.html? This is irreversible.')) return;
+          pubBtn.disabled = true;
+          pubStatus.textContent = 'Publishing…';
+          pubStatus.style.color = '#aaa';
+          try {
+            const res = await fetch('/api/feature/publish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ offerId: offer.id }),
+            });
+            const body = await res.json();
+            if (!res.ok) throw new Error(body.message || body.error || `HTTP ${res.status}`);
+            pubStatus.style.color = '#6bff8a';
+            pubStatus.textContent = 'Published. Redirecting to /watch.html…';
+            setTimeout(() => { window.location.href = body.watchUrl || '/watch.html'; }, 1200);
+          } catch (err) {
+            pubStatus.style.color = '#ff6464';
+            pubStatus.textContent = 'Failed: ' + (err.message || err);
+            pubBtn.disabled = false;
+          }
+        });
+      }
+    }
+
+    let lastTxCount = 0;
+    let lastRenderHash = '';
+    async function tick() {
+      const id = getOfferId();
+      if (!id) {
+        root.innerHTML = '<div class="empty"><h2 style="font-family:Bebas Neue;font-size:2rem;color:#888;">Missing ?id= parameter</h2></div>';
+        return;
+      }
+      const [offer, log, artifacts, listings] = await Promise.all([
+        loadOffer(id),
+        loadStepLog(id),
+        loadArtifacts(id),
+        loadShareListings(id),
+      ]);
+      if (!offer) {
+        root.innerHTML = `<div class="empty"><h2 style="font-family:Bebas Neue;font-size:2rem;color:#888;">Production not found</h2><p>${esc(id)}</p></div>`;
+        return;
+      }
+      // Skip the full re-render if nothing actually changed. Without
+      // this guard the rough cut video player gets destroyed every 5
+      // seconds (when innerHTML is replaced) and playback resets to
+      // the start of the current clip. The hash includes everything
+      // that affects the visible page so any real update still flows
+      // through.
+      const hash = [
+        offer.status,
+        offer.current_step,
+        offer.production_phase,
+        offer.revisions_remaining,
+        offer.token_mint_txid,
+        log.length,
+        artifacts.length,
+        listings.length,
+        listings.filter(l => l.status === 'open').length,
+      ].join('|');
+      if (hash === lastRenderHash) return;
+      lastRenderHash = hash;
+      render(offer, log, artifacts, listings);
+      // Pulse the TX counter when it grew
+      const txCount = log.filter(e => e.payment_txid).length;
+      if (txCount > lastTxCount) {
+        const nodes = document.querySelectorAll('.meta-cell');
+        for (const node of nodes) {
+          if (node.querySelector('.label')?.textContent === 'On-chain TXs') {
+            const v = node.querySelector('.value');
+            if (v) {
+              v.classList.remove('pulse');
+              void v.offsetWidth; // restart animation
+              v.classList.add('pulse');
+            }
+          }
+        }
+      }
+      lastTxCount = txCount;
+    }
+
+    tick();
+    setInterval(tick, 5000);
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

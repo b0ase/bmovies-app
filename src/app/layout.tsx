@@ -22,18 +22,18 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://app.bmovies.online"),
-  title: "bMovies — Your studio. Your films. Your royalties.",
+  metadataBase: new URL("https://bmovies.online"),
+  title: "bMovies — Commission an AI film. Own the royalty shares.",
   description:
-    "The authenticated creative suite for bMovies. Manage your studio, your commissioned films, your cap tables and investor packs. Edit scenes, design titles, write scripts, and ship films with a swarm of AI agents. Operated by The Bitcoin Corporation Ltd, registered in England & Wales.",
+    "Commission your movie. Sell royalty shares to finance it. Earn from every ticket sold. A swarm of AI agents makes feature films on demand — $0.99 for a pitch, $9.99 for a trailer, $99 for a short, $999 for a feature. You own 99% of the shares. Operated by The Bitcoin Corporation Ltd, registered in England & Wales.",
   keywords:
-    "bMovies, AI film, creative suite, movie editor, storyboard generator, title designer, script editor, pitch deck, royalty shares, BSV-21, Bitcoin SV, x402, BRC-100",
+    "bMovies, AI film, commission film, royalty shares, BSV-21, Bitcoin SV, x402, BRC-100",
   authors: [{ name: "The Bitcoin Corporation Ltd" }],
   openGraph: {
-    title: "bMovies — Your studio. Your films. Your royalties.",
+    title: "bMovies — Commission an AI film. Own the royalty shares.",
     description:
-      "The authenticated creative suite for bMovies. Manage your studio, commissioned films, cap tables and investor packs. Run the full production pipeline with AI agents.",
-    url: "https://app.bmovies.online",
+      "Commission your movie. Sell royalty shares to finance it. Earn from every ticket sold.",
+    url: "https://bmovies.online",
     siteName: "bMovies",
     images: [
       {
@@ -48,9 +48,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "bMovies — Your studio. Your films. Your royalties.",
+    title: "bMovies — Commission an AI film. Own the royalty shares.",
     description:
-      "Ship films with a swarm of AI agents. Own 99% of the royalty shares. From $0.99 for a pitch to $999 for a feature.",
+      "Commission your movie. Sell royalty shares to finance it. Earn from every ticket sold.",
     images: ["https://bmovies.online/bmovies_og.jpg"],
     creator: "@bMovies_Online",
   },

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Ponzinomics™ for would-be movie moguls</title>
+  <meta name="description" content="Gamble on bMovie productions. Pitch a film, back a financier, hold the token, collect streaming royalties. A tongue-in-cheek field guide to the bMovies swarm for aspiring movie moguls.">
+  <meta property="og:title" content="bMovies — Ponzinomics™">
+  <meta property="og:description" content="A tongue-in-cheek field guide for would-be movie moguls who want to gamble on new bMovie productions.">
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 3rem 3rem 5rem; }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 2rem 0 1rem;
+      border-bottom: 1px solid #1f1f1f;
+    }
+    .hero-eyebrow {
+      font-size: 0.65rem;
+      color: #E50914;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.6rem, 7vw, 5.4rem);
+      color: #fff;
+      margin: 0.5rem 0 0.8rem;
+      letter-spacing: 0.02em;
+      line-height: 0.95;
+    }
+    .hero h1 span { color: #E50914; }
+    .hero h1 sup {
+      font-size: 0.35em;
+      color: #E50914;
+      vertical-align: super;
+      letter-spacing: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    .hero .sub {
+      color: #aaa;
+      max-width: 780px;
+      margin: 0 auto;
+      font-size: 1.02rem;
+      line-height: 1.6;
+    }
+    .hero .sub b { color: #fff; }
+    .hero .flair {
+      display: inline-block;
+      margin-top: 1.4rem;
+      padding: 0.5rem 1rem;
+      border: 1px dashed #332a1a;
+      color: #e09b09;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+    }
+
+    /* Stat strip */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    @media (max-width: 900px) { .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+    .stat {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.4rem;
+      text-align: left;
+    }
+    .stat-label {
+      font-size: 0.55rem;
+      color: #888;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      color: #fff;
+      margin-top: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+    .stat.accent .stat-val { color: #E50914; }
+    .stat-sub {
+      font-size: 0.65rem;
+      color: #888;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 0.3rem;
+    }
+
+    /* Section scaffolding */
+    .section { margin-top: 4rem; }
+    .section-label {
+      font-size: 0.6rem;
+      color: #E50914;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: #fff;
+      margin: 0.5rem 0 1.4rem;
+      letter-spacing: 0.02em;
+      line-height: 1.05;
+    }
+    h2 span { color: #E50914; }
+    .lede {
+      color: #aaa;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      max-width: 780px;
+      margin: 0 0 1.5rem;
+    }
+    .lede b { color: #fff; }
+
+    /* Manifesto cards — "is this a ponzi?" */
+    .manifesto {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+    }
+    @media (max-width: 900px) { .manifesto { grid-template-columns: 1fr; } }
+    .mcard {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.6rem;
+    }
+    .mcard h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      color: #fff;
+      margin: 0 0 0.8rem;
+      letter-spacing: 0.03em;
+    }
+    .mcard.no h3::before { content: "NO — "; color: #ff4757; }
+    .mcard.yes h3::before { content: "YES — "; color: #6bff8a; }
+    .mcard p { color: #9a9a9a; font-size: 0.82rem; line-height: 1.6; margin: 0; }
+    .mcard p + p { margin-top: 0.6rem; }
+
+    /* Four roles players can occupy */
+    .roles {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.9rem;
+    }
+    @media (max-width: 1000px) { .roles { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .roles { grid-template-columns: 1fr; } }
+    .role {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.2rem;
+      position: relative;
+    }
+    .role .n {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.9rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #E50914;
+      opacity: 0.35;
+    }
+    .role h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      color: #fff;
+      margin: 0 0 0.6rem;
+      letter-spacing: 0.03em;
+    }
+    .role .tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #E50914;
+      border: 1px solid #2a1414;
+      padding: 0.15rem 0.45rem;
+      margin-bottom: 0.7rem;
+    }
+    .role p { color: #9a9a9a; font-size: 0.78rem; line-height: 1.6; margin: 0 0 0.6rem; }
+    .role .alloc {
+      margin-top: 0.5rem;
+      padding-top: 0.6rem;
+      border-top: 1px dashed #1a1a1a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #6bff8a;
+    }
+
+    /* Capital flow */
+    .flow {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.8rem 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #9a9a9a;
+      line-height: 1.85;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .flow .hot { color: #E50914; }
+    .flow .win { color: #6bff8a; }
+    .flow .dim { color: #555; }
+
+    /* Allocation table */
+    .tok {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.6rem 2rem;
+    }
+    .tok-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px dashed #1a1a1a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+    .tok-row:last-child { border-bottom: 0; }
+    .tok-row .l { color: #aaa; }
+    .tok-row .v { color: #fff; font-weight: 700; }
+    .tok-row.big .v { color: #E50914; font-size: 0.9rem; }
+
+    /* Scenario cards — "what happens if" */
+    .scenarios {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 900px) { .scenarios { grid-template-columns: 1fr; } }
+    .sc {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.4rem;
+    }
+    .sc .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.5rem;
+      display: inline-block;
+      margin-bottom: 0.7rem;
+    }
+    .sc.hit .tag { color: #6bff8a; border: 1px solid #14321e; }
+    .sc.mid .tag { color: #e09b09; border: 1px solid #332a1a; }
+    .sc.flop .tag { color: #ff4757; border: 1px solid #321414; }
+    .sc h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.35rem;
+      color: #fff;
+      margin: 0 0 0.6rem;
+      letter-spacing: 0.03em;
+    }
+    .sc p { color: #9a9a9a; font-size: 0.78rem; line-height: 1.6; margin: 0 0 0.5rem; }
+    .sc .math {
+      margin-top: 0.7rem;
+      padding: 0.6rem 0.8rem;
+      background: #000;
+      border: 1px solid #1a1a1a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #6bff8a;
+      line-height: 1.55;
+    }
+
+    /* Mogul tiers */
+    .tiers {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 900px) { .tiers { grid-template-columns: 1fr; } }
+    .tier {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.5rem;
+    }
+    .tier.feature { border-color: #E50914; background: linear-gradient(180deg, #120000 0%, #0a0a0a 100%); }
+    .tier h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      color: #fff;
+      margin: 0 0 0.2rem;
+      letter-spacing: 0.03em;
+    }
+    .tier .price {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #E50914;
+      margin-bottom: 0.9rem;
+    }
+    .tier ul { list-style: none; padding: 0; margin: 0; }
+    .tier li {
+      padding: 0.4rem 0;
+      border-top: 1px dashed #1a1a1a;
+      color: #9a9a9a;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+    .tier li:first-child { border-top: 0; }
+    .tier li::before { content: "→ "; color: #E50914; }
+
+    /* CTA */
+    .cta {
+      margin-top: 3rem;
+      border: 2px solid #E50914;
+      background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
+      padding: 2.6rem;
+      text-align: center;
+    }
+    .cta h2 {
+      margin: 0 0 0.5rem;
+      font-size: 2.6rem;
+    }
+    .cta p {
+      color: #aaa;
+      font-size: 0.9rem;
+      max-width: 640px;
+      margin: 0 auto 1.6rem;
+      line-height: 1.6;
+    }
+    .cta-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .cta-btn {
+      display: inline-block;
+      padding: 1.1rem 2rem;
+      background: #E50914;
+      color: #fff;
+      text-decoration: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 0.06em;
+    }
+    .cta-btn:hover { background: #c4070f; }
+    .cta-btn.ghost { background: transparent; border: 1px solid #E50914; }
+    .cta-btn.ghost:hover { background: #120000; }
+
+    /* Risk disclosure */
+    .risk {
+      border: 1px solid #332a1a;
+      background: rgba(229, 155, 9, 0.04);
+      padding: 1.4rem 1.6rem;
+    }
+    .risk h3 {
+      font-size: 0.65rem;
+      color: #e09b09;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin: 0 0 0.7rem;
+    }
+    .risk p {
+      color: #9a8a6a;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      margin: 0 0 0.5rem;
+    }
+    .risk p:last-child { margin-bottom: 0; }
+    .risk b { color: #e09b09; }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main class="wrap">
+    <div class="hero">
+      <div class="hero-eyebrow">Field Guide · Edition 01</div>
+      <h1>Ponzinomics<sup>™</sup><br>for would-be <span>movie moguls</span></h1>
+      <p class="sub">
+        A short honest guide for anyone who wants to <b>gamble on new bMovie productions</b>. No pretending this is passive income. No "revolutionary new asset class". Just a cheerfully degenerate loop: <b>pitch a film, back a production, hold the token, earn while it streams, flip it to the next sucker</b>. Every step is a real BSV mainnet transaction. Every rug pull is public.
+      </p>
+      <div class="flair">⚠ SELF-AWARE SPECULATIVE INSTRUMENT · NOT FINANCIAL ADVICE · MAY CONTAIN CINEMA</div>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat accent">
+        <div class="stat-label">Pitch to go live</div>
+        <div class="stat-val">1,000</div>
+        <div class="stat-sub">sats · one-shot · non-refundable</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Token supply per film</div>
+        <div class="stat-val">100M</div>
+        <div class="stat-sub">BSV-21 · fixed at mint · one per production</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Financier cap / sub</div>
+        <div class="stat-val">2,500</div>
+        <div class="stat-sub">sats · subscribe, get a slice of 40%</div>
+      </div>
+      <div class="stat accent">
+        <div class="stat-label">Platform cut on streaming</div>
+        <div class="stat-val">0%</div>
+        <div class="stat-sub">100% of piece budget → token holders</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 1 · Let's get this out of the way</div>
+      <h2>Is bMovies a <span>Ponzi scheme?</span></h2>
+      <p class="lede">
+        The word is on the tin for a reason. We're writing this brochure the way an honest bookie writes a betting slip — with the odds visible, the house edge stated, and no blue-chip cosplay. Here is the actual answer in two halves.
+      </p>
+      <div class="manifesto">
+        <div class="mcard no">
+          <h3>structurally, no</h3>
+          <p>A Ponzi pays old investors with new investors' money and invents the returns. bMovies doesn't. Revenue comes from <b>viewers paying to watch films</b> that real agents produced with real BSV-funded calls to real upstream providers — Grok for scripts, AtlasCloud for hero frames, Replicate for themes.</p>
+          <p>Every sat in the system has a real origin (pitch fee, financier subscription, viewer payment) and a real on-chain destination. There is no escrow, no off-chain ledger, no "future launch". The capital flow is a public ledger you can inspect at any time.</p>
+        </div>
+        <div class="mcard yes">
+          <h3>vibes-wise, totally</h3>
+          <p>You're buying a speculative token that pays out <b>only while people watch the film</b>. If nobody watches, the token earns nothing. If the film flops, the early financiers are left holding supply they bought hoping later buyers would push the price up.</p>
+          <p>That is exactly how a movie mogul has always operated — except on bMovies the fund is 100M tokens instead of a Delaware LLC, the producer is an agent instead of a coke-pile in Burbank, and the crew works for sats. Lean in. It's more honest than Hollywood's version.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 2 · Pick your chair at the table</div>
+      <h2>The four seats a mogul can occupy</h2>
+      <p class="lede">
+        Every production has a founders' cap table baked in at mint. 100M tokens split four ways. You can sit in any of these chairs — or more than one on the same film.
+      </p>
+      <div class="roles">
+        <div class="role">
+          <div class="n">01</div>
+          <div class="tag">THE PITCHER</div>
+          <h3>You bring the idea</h3>
+          <p>Pay the pitch fee. Describe the film in a sentence. If a financier swarm bites and a producer converts your pitch, a token gets minted and you walk away with a founder's slice.</p>
+          <div class="alloc">alloc · 10% (10M tokens)</div>
+        </div>
+        <div class="role">
+          <div class="n">02</div>
+          <div class="tag">THE FINANCIER</div>
+          <h3>You fund the shoot</h3>
+          <p>Subscribe to open offers. Your sats become the budget the producer splits across writer, director, storyboard and composer. Get tokens proportional to your subscription size.</p>
+          <div class="alloc">alloc · 40% (split pro-rata by subscription)</div>
+        </div>
+        <div class="role">
+          <div class="n">03</div>
+          <div class="tag">THE PRODUCER</div>
+          <h3>You dispatch the crew</h3>
+          <p>A producer agent you've funded collects the raised capital, splits it into four equal pots, and fires each pot at BSVAPI to produce a treatment, shot list, hero frame and theme. Real txids or it didn't happen.</p>
+          <div class="alloc">alloc · 30% (30M tokens)</div>
+        </div>
+        <div class="role">
+          <div class="n">04</div>
+          <div class="tag">THE HODLER</div>
+          <h3>You buy the token later</h3>
+          <p>Somebody else did the work. You show up on the secondary market, pick a token whose film you believe in, and collect streaming royalties per piece while other people watch. Classic degen move.</p>
+          <div class="alloc">alloc · however much you can buy</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 3 · Watch the money move</div>
+      <h2>The capital flow, in one diagram</h2>
+      <p class="lede">
+        Everything below is a real BSV mainnet transaction. No escrow, no promises, no "settlement in T+2". You can pull the txids out of WhatsOnChain and verify every hop yourself.
+      </p>
+      <div class="flow"><span class="hot">visitor</span> ──(1,000 sats)──▶ <span class="dim">bct_pitches</span>           <span class="dim"># pitch fee</span>
+                                  │
+                                  ▼
+                             PitchVerifier
+                                  │
+                                  ▼
+                          <span class="dim">bct_offers (open)</span>
+                                  │
+<span class="hot">financier</span> ──(≤2,500 sats)──▶   │                     <span class="dim"># subscription</span>
+<span class="hot">financier</span> ──(≤2,500 sats)──▶   │
+<span class="hot">financier</span> ──(≤2,500 sats)──▶   │
+                                  ▼
+                         <span class="dim">bct_offers (funded)</span>
+                                  │
+                                  ▼
+                    <span class="win">producer agent</span> splits pot 4 ways
+                                  │
+             ┌──────────┬─────────┼─────────┬──────────┐
+             ▼          ▼         ▼         ▼          ▼
+         <span class="win">writer</span>   <span class="win">director</span>  <span class="win">storyboard</span>  <span class="win">composer</span>
+             │          │         │          │
+             └─── BSVAPI x402 per role ──────┘
+                                  │
+                                  ▼
+                    <span class="win">bct_artifacts × 4</span>    <span class="dim"># real on-chain outputs</span>
+                                  │
+                                  ▼
+                          streaming loop
+                                  │
+                   ┌──────────────┴──────────────┐
+                   ▼                             ▼
+          <span class="hot">viewer pays (10 sats/piece)</span>    <span class="win">token holders collect</span>
+                                                 <span class="dim"># 100% of piece budget, no house cut</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 4 · The cap table</div>
+      <h2>Founder's allocation at mint</h2>
+      <p class="lede">
+        Every production's token has the same shape. 100M supply minted once, distributed once, never inflated. If a producer agent proposes the film autonomously (no human pitcher) the 10% pitcher slot folds into the financier pool.
+      </p>
+      <div class="tok">
+        <div class="tok-row big"><div class="l">Total supply</div><div class="v">100,000,000 per production</div></div>
+        <div class="tok-row"><div class="l">Producer allocation</div><div class="v">30% · 30,000,000</div></div>
+        <div class="tok-row"><div class="l">Crew allocation (writer + director + storyboard + composer)</div><div class="v">20% · 5,000,000 each</div></div>
+        <div class="tok-row"><div class="l">Pitcher allocation</div><div class="v">10% · 10,000,000</div></div>
+        <div class="tok-row"><div class="l">Financier pool</div><div class="v">40% · distributed pro-rata by subscription</div></div>
+        <div class="tok-row"><div class="l">Standard (BSV-21)</div><div class="v">non-rebaseable, non-mintable post-issuance</div></div>
+        <div class="tok-row"><div class="l">Redeemable for</div><div class="v">streaming royalties · viewing rights · literally nothing else</div></div>
+        <div class="tok-row"><div class="l">Platform cut on streaming</div><div class="v">0% · 100% of piece budget goes to holders</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 5 · Mogul maths</div>
+      <h2>What actually happens when you bet</h2>
+      <p class="lede">
+        Illustrative only. Streaming royalties depend on real viewership at 10 sats per piece, 5 pieces per second default. Secondary market price is whatever the next buyer is willing to pay — there is no bonded curve, no AMM, no buyback.
+      </p>
+      <div class="scenarios">
+        <div class="sc hit">
+          <div class="tag">★ the hit</div>
+          <h3>Film goes viral</h3>
+          <p>Pitched for 1k sats. Financier stack hits 50k sats. Viewers stream 10k pieces in week one. Secondary market bids 3× mint.</p>
+          <div class="math">pitcher 10M tokens · royalties so far ≈ 10k × 10 × (10/100) = 10k sats · paper gain on secondary 3×</div>
+        </div>
+        <div class="sc mid">
+          <div class="tag">≈ the cult classic</div>
+          <h3>Slow burn, small fans</h3>
+          <p>Film never trends but gets 500 viewers a month, steadily. You hold, collect dust-sized royalties, flip in year two when a niche discovers it.</p>
+          <div class="math">holder with 5M tokens · recurring ~500 × 100 × (5/100) = 2.5k sats/month · low but real</div>
+        </div>
+        <div class="sc flop">
+          <div class="tag">✖ the rug</div>
+          <h3>Production fails upstream</h3>
+          <p>Composer role can't reach Replicate. Producer still ships with three surviving artifacts, but the film is a mess. Viewers bounce. Your subscription is gone. Phase 3 will add a burn-and-refund path. Not yet.</p>
+          <div class="math">financier sub 2,500 sats · ships with degraded output · zero viewers · zero royalties · tokens still valid access licence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 6 · How the house rakes nothing</div>
+      <h2>Where the sats <span>actually</span> go</h2>
+      <p class="lede">
+        Two distinct revenue events. The pitch fee pays for server and gas and never gets redistributed. The streaming royalties have zero platform cut. The only way bMovies makes money is via $bMovies, the separate <a href="invest.html" style="color:#E50914;text-decoration:none;border-bottom:1px dashed #E50914;">platform share token</a> — which captures 1% of every film. That's on its own page, not this one.
+      </p>
+      <div class="tok">
+        <div class="tok-row"><div class="l">Pitch fee (1,000 sats)</div><div class="v">100% → operator (server, agent gas, BSVAPI float)</div></div>
+        <div class="tok-row"><div class="l">Financier subscription (≤2,500 sats)</div><div class="v">100% → producer wallet → 4 role budgets</div></div>
+        <div class="tok-row"><div class="l">Production spend</div><div class="v">100% → BSVAPI upstream providers (Grok / AtlasCloud / Replicate)</div></div>
+        <div class="tok-row"><div class="l">Streaming piece budget (10 sats/piece default)</div><div class="v">100% → pro-rata to every token holder at moment of broadcast</div></div>
+        <div class="tok-row big"><div class="l">Platform rake on streaming</div><div class="v">0%</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 7 · Pick your poison</div>
+      <h2>Mogul tiers</h2>
+      <div class="tiers">
+        <div class="tier">
+          <h3>The Runner</h3>
+          <div class="price">~1,000 sats</div>
+          <ul>
+            <li>One pitch, one film, one shot</li>
+            <li>10% founder's slice if it ships</li>
+            <li>You get to tell people you produced a movie</li>
+            <li>Odds of hitting: low</li>
+            <li>Odds of having fun: high</li>
+          </ul>
+        </div>
+        <div class="tier feature">
+          <h3>The Financier</h3>
+          <div class="price">~25,000 sats across 10 films</div>
+          <ul>
+            <li>Spray capital across ten open offers</li>
+            <li>Get a slice of each 40% financier pool</li>
+            <li>Diversified exposure to the swarm's catalog</li>
+            <li>If one film hits, it carries the other nine</li>
+            <li>Closest thing to a real mogul portfolio</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <h3>The Kingmaker</h3>
+          <div class="price">~250,000+ sats on one film</div>
+          <ul>
+            <li>Back one production to the wall</li>
+            <li>Dominate the financier pool · 30%+ of 40%</li>
+            <li>Top of the cap table, top of the payouts</li>
+            <li>If the film flops, you flop with it</li>
+            <li>For sharps with strong conviction</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Chapter 8 · Before you click anything</div>
+      <h2>Read this. It's the honest bit.</h2>
+      <div class="risk">
+        <h3>Please note — gambling disclosures the bookie should have given you</h3>
+        <p><b>Speculative.</b> A bMovie financing token is a licence to view and a licence to collect streaming royalties. It is not equity, not a security, not a currency, not a voucher. Returns depend entirely on whether anyone watches the finished film.</p>
+        <p><b>Failed productions.</b> If upstream providers fail, the production can still ship with degraded output. The token is still minted. Financiers are not currently refunded. A burn-and-refund path is planned for Phase 3 and does not exist yet. Do not subscribe sats you can't afford to lose.</p>
+        <p><b>No secondary market UI.</b> Tokens are BSV-21 and can be moved by any BSV-21 wallet, but bMovies does not ship a DEX, an AMM, a bonded curve, or any liquidity provision. Price is whatever a buyer and seller agree on.</p>
+        <p><b>No governance.</b> Holding a production token gives you no say in what gets produced next. The producer agent picks from its ideas pool and the pitch queue.</p>
+        <p><b>Operator risk.</b> bMovies runs agents, indexing, and payment rails. If any of these fail, royalties may be delayed or missing. Every piece served is a real mainnet tx but that doesn't mean the pipeline is infinitely robust.</p>
+        <p><b>Regulatory.</b> Token-as-licence is a legally cleaner construct than token-as-equity, but it is not a legal opinion. If you are in a jurisdiction where any of this looks like a security, act accordingly.</p>
+      </div>
+    </div>
+
+    <div class="cta">
+      <h2>Ready to gamble like a <span>grown-up</span>?</h2>
+      <p>
+        Pick a chair at the table. Pitch a film for a thousand sats. Subscribe to an open offer. Or sit back and wait for the secondary market to open. Nothing here will make you rich on its own — but the rails are real, the txids are public, and the swarm doesn't sleep.
+      </p>
+      <div class="cta-row">
+        <a href="pitch.html" class="cta-btn">Pitch a film →</a>
+        <a href="exchange.html" class="cta-btn ghost">Back an open offer →</a>
+        <a href="watch.html" class="cta-btn ghost">Watch what already shipped</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/nav-session.js"></script>
+</body>
+</html>

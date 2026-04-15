@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Cap table</title>
+  <meta name="description" content="Royalty share cap table for a bMovies film or the $bMovies platform token. Every holder, every share, every transaction — auditable on chain." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; }
+    main { max-width: 1200px; margin: 0 auto; padding: 3rem 3rem 6rem; }
+
+    .page-intro { padding-bottom: 2rem; border-bottom: 1px solid #222; margin-bottom: 2rem; }
+    .page-intro .kicker { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: #E50914; font-weight: 700; }
+    .page-intro h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: -0.01em; color: #fff; margin-top: 0.4rem; line-height: 1; }
+    .page-intro h1 .ticker { color: #E50914; }
+    .page-intro p { font-size: 0.85rem; color: #888; line-height: 1.6; margin-top: 0.8rem; max-width: 860px; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 2rem;
+    }
+    .stat {
+      border: 1px solid #1a1a1a; background: #0a0a0a; padding: 1rem 1.2rem;
+    }
+    .stat .label { font-size: 0.55rem; color: #666; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
+    .stat .value { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; color: #fff; font-weight: 700; margin-top: 0.3rem; line-height: 1; }
+    .stat .sub { font-size: 0.65rem; color: #666; margin-top: 0.3rem; font-family: 'JetBrains Mono', monospace; }
+
+    .allocation-bar {
+      height: 44px;
+      border: 1px solid #2a2a2a;
+      background: #0a0a0a;
+      margin: 1.6rem 0;
+      display: flex;
+      overflow: hidden;
+    }
+    .allocation-bar .segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #1a1a1a;
+      background: #050505;
+    }
+    .table thead th {
+      background: #0a0a0a;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0.9rem 1rem;
+      text-align: left;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      font-weight: 700;
+    }
+    .table tbody td {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid #1a1a1a;
+      font-size: 0.8rem;
+      color: #ccc;
+      vertical-align: top;
+    }
+    .table .rank { color: #666; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+    .table .holder { color: #fff; font-weight: 700; }
+    .table .addr { color: #888; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; word-break: break-all; }
+    .table .pct { color: #6bff8a; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; }
+    .table .shares { color: #ccc; font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .table .paid { color: #888; font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .empty { text-align: center; color: #666; padding: 2rem; font-style: italic; }
+
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.01em; color: #fff; margin-top: 2.4rem; margin-bottom: 0.8rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    .notice { margin-top: 2rem; padding: 1rem 1.2rem; border: 1px solid #222; background: #0a0a0a; font-size: 0.8rem; color: #888; line-height: 1.6; }
+    .notice strong { color: #fff; }
+    .links { margin-top: 1.6rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .links a { padding: 0.7rem 1.2rem; border: 1px solid #333; color: #ccc; text-decoration: none; font-size: 0.65rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+    .links a.primary { background: #E50914; border-color: #E50914; color: #fff; }
+    .links a:hover { border-color: #E50914; }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      main { max-width: none; padding: 1cm; }
+      h1, h2, strong, .table .holder, .pct { color: #000 !important; }
+      p, .table td, .stat .label, .addr { color: #333 !important; }
+      .stat, .allocation-bar, .table, .notice { background: #f5f5f5 !important; border-color: #ccc !important; }
+      footer, .site-header, .links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main id="root">
+    <div class="page-intro">
+      <div class="kicker">Cap table</div>
+      <h1>Loading…</h1>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 The Bitcoin Corporation Ltd. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const SUPABASE_URL = 'https://api.b0ase.com';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storageKey: 'bmovies-auth', lock: false } });
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const shortAddr = (a) => a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '—';
+    const fmtShares = (n) => Number(n || 0).toLocaleString();
+    const fmtPct = (n) => `${Number(n || 0).toFixed(2)}%`;
+    const fmtUsd = (cents) => `$${(Number(cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const root = document.getElementById('root');
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id') || '';
+
+    if (!id) {
+      root.innerHTML = `
+        <div class="page-intro">
+          <div class="kicker">Cap table</div>
+          <h1>No asset selected</h1>
+          <p>Open a cap table from any film page (e.g. <a href="film.html">/film.html?id=…</a>) or from the $bMovies page (<code>/captable.html?id=platform</code>).</p>
+        </div>
+      `;
+    } else if (id === 'platform') {
+      renderPlatformCapTable();
+    } else {
+      renderFilmCapTable(id);
+    }
+
+    // ─── Platform ($bMovies) cap table ───
+    async function renderPlatformCapTable() {
+      const { data: cfg } = await supabase
+        .from('bct_platform_config')
+        .select('*')
+        .eq('id', 'platform')
+        .maybeSingle();
+      const { data: investments } = await supabase
+        .from('bct_platform_investments')
+        .select('account_id, buyer_email, shares_bought, total_paid_cents, created_at')
+        .eq('status', 'completed')
+        .order('shares_bought', { ascending: false });
+
+      if (!cfg) {
+        root.innerHTML = '<div class="page-intro"><h1>Platform config not found</h1></div>';
+        return;
+      }
+
+      const totalSupply = Number(cfg.total_supply);
+      const soldSupply = Number(cfg.sold_supply);
+      const treasuryHeld = totalSupply - soldSupply;
+      const holders = investments || [];
+
+      const rowsHtml = holders.length > 0
+        ? holders.map((h, i) => {
+            const pct = (Number(h.shares_bought) / totalSupply) * 100;
+            const email = h.buyer_email ? esc(h.buyer_email) : `Holder ${h.account_id?.slice(0, 8) || '?'}`;
+            return `
+              <tr>
+                <td class="rank">${String(i + 1).padStart(2, '0')}</td>
+                <td class="holder">${email}</td>
+                <td class="shares">${fmtShares(h.shares_bought)}</td>
+                <td class="pct">${fmtPct(pct)}</td>
+                <td class="paid">${fmtUsd(h.total_paid_cents)}</td>
+              </tr>
+            `;
+          }).join('')
+        : '';
+
+      const treasuryPct = (treasuryHeld / totalSupply) * 100;
+      const mintTxid = cfg.token_mint_txid;
+
+      root.innerHTML = `
+        <div class="page-intro">
+          <div class="kicker">Cap table</div>
+          <h1>$<span class="ticker">bMovies</span> — platform token</h1>
+          <p>The platform royalty share. Every buyer owns a pro-rata slice of the 1% platform fee retained across every film commissioned on bMovies. Primary issuance on this page; secondary trading coming with the Runar non-custodial distribution contract.</p>
+        </div>
+
+        <div class="summary">
+          <div class="stat"><div class="label">Total supply</div><div class="value">${fmtShares(totalSupply)}</div><div class="sub">fixed, on chain</div></div>
+          <div class="stat"><div class="label">Sold</div><div class="value">${fmtShares(soldSupply)}</div><div class="sub">${fmtPct((soldSupply/totalSupply)*100)} of supply</div></div>
+          <div class="stat"><div class="label">Treasury</div><div class="value">${fmtShares(treasuryHeld)}</div><div class="sub">${fmtPct(treasuryPct)} reserved</div></div>
+          <div class="stat"><div class="label">Holders</div><div class="value">${holders.length}</div><div class="sub">with KYC</div></div>
+          <div class="stat"><div class="label">Tranche 1 price</div><div class="value">$${(Number(cfg.current_tranche_price_cents) / 100).toFixed(4)}</div><div class="sub">per share</div></div>
+        </div>
+
+        <div class="allocation-bar">
+          <div class="segment" style="flex:${treasuryPct};background:linear-gradient(90deg,#E50914,#b00610);">Treasury ${fmtPct(treasuryPct)}</div>
+          ${soldSupply > 0 ? `<div class="segment" style="flex:${100 - treasuryPct};background:#1f4d2a;color:#6bff8a;">Holders ${fmtPct(100 - treasuryPct)}</div>` : ''}
+        </div>
+
+        <h2>Holders</h2>
+        ${rowsHtml ? `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Holder</th>
+                <th style="text-align:right;">Shares</th>
+                <th style="text-align:right;">Percent</th>
+                <th style="text-align:right;">Paid</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        ` : '<div class="empty">No primary-market sales yet. The treasury holds the full 1B supply.</div>'}
+
+        <div class="notice">
+          <strong>Verify on chain.</strong>
+          ${mintTxid ? `
+            The $bMovies token is canonically minted as a BSV-21 1sat ordinal at txid
+            <a href="https://ordinals.gorillapool.io/api/bsv20/id/${esc(mintTxid)}_0" target="_blank" rel="noopener" style="color:#E50914;font-family:monospace;">${esc(mintTxid).slice(0,16)}…${esc(mintTxid).slice(-8)}</a>.
+            You can check the inscription, supply, and current holder addresses independently at GorillaPool or 1sat.market.
+          ` : 'The $bMovies token has not yet been minted on chain.'}
+        </div>
+
+        <div class="links">
+          <a href="invest.html" class="primary">Buy $bMovies</a>
+          <a href="legal/platform-token-prospectus.html">Prospectus</a>
+          <a href="legal/non-custodial-disclosure.html">Non-custodial disclosure</a>
+        </div>
+      `;
+    }
+
+    // ─── Per-film cap table ───
+    async function renderFilmCapTable(offerId) {
+      const { data: offer } = await supabase
+        .from('bct_offers')
+        .select('id, title, synopsis, tier, status, token_ticker, token_mint_txid, commissioner_percent, producer_address, parent_offer_id, created_at')
+        .eq('id', offerId)
+        .maybeSingle();
+
+      if (!offer) {
+        root.innerHTML = `
+          <div class="page-intro">
+            <div class="kicker">Cap table</div>
+            <h1>Film not found</h1>
+            <p>No offer with id <code>${esc(offerId)}</code>. <a href="watch.html">Browse films</a>.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const { data: shareSales } = await supabase
+        .from('bct_share_sales')
+        .select('*')
+        .eq('offer_id', offerId)
+        .order('created_at', { ascending: true });
+
+      // Parent work (for cascade display)
+      let parentLine = '';
+      if (offer.parent_offer_id) {
+        const { data: parent } = await supabase
+          .from('bct_offers')
+          .select('id, title, token_ticker, tier')
+          .eq('id', offer.parent_offer_id)
+          .maybeSingle();
+        if (parent) {
+          const cascadePct = offer.tier === 'feature' ? 10 : 10;
+          parentLine = `This film is derived from <a href="captable.html?id=${encodeURIComponent(parent.id)}" style="color:#E50914;">${esc(parent.title)}</a> ($${esc(parent.token_ticker || '')}, ${esc(parent.tier || '')}). ${cascadePct}% of this film's royalty payouts cascade to ${esc(parent.token_ticker || 'the parent')} holders forever.`;
+        }
+      }
+
+      const totalSupply = 1_000_000_000;
+      const commissionerPct = Number(offer.commissioner_percent || 99);
+      const commissionerShares = Math.floor((commissionerPct / 100) * totalSupply);
+      const studioShares = 10_000_000; // 1% flat
+
+      // Sold shares via primary market (bct_share_sales)
+      const totalSoldPct = (shareSales || []).reduce((sum, s) => sum + Number(s.percent_bought), 0);
+      const remainingCommissionerShares = Math.floor(((commissionerPct - totalSoldPct) / 100) * totalSupply);
+
+      const rowsHtml = [];
+
+      // Commissioner row (always)
+      rowsHtml.push(`
+        <tr>
+          <td class="rank">01</td>
+          <td class="holder">Commissioner</td>
+          <td class="addr">${shortAddr(offer.producer_address)}</td>
+          <td class="shares">${fmtShares(remainingCommissionerShares)}</td>
+          <td class="pct">${fmtPct(commissionerPct - totalSoldPct)}</td>
+          <td class="paid">—</td>
+        </tr>
+      `);
+
+      // Sales rows
+      (shareSales || []).forEach((s, i) => {
+        const shares = Math.floor((Number(s.percent_bought) / 100) * totalSupply);
+        const buyer = s.buyer_email ? esc(s.buyer_email) : `Tranche ${s.tranche} buyer`;
+        rowsHtml.push(`
+          <tr>
+            <td class="rank">${String(i + 2).padStart(2, '0')}</td>
+            <td class="holder">${buyer}</td>
+            <td class="addr">T${s.tranche}</td>
+            <td class="shares">${fmtShares(shares)}</td>
+            <td class="pct">${fmtPct(s.percent_bought)}</td>
+            <td class="paid">$${Number(s.price_usd).toFixed(2)}</td>
+          </tr>
+        `);
+      });
+
+      // Studio fee row
+      rowsHtml.push(`
+        <tr>
+          <td class="rank">—</td>
+          <td class="holder">Platform (bMovies)</td>
+          <td class="addr">1% infrastructure fee</td>
+          <td class="shares">${fmtShares(studioShares)}</td>
+          <td class="pct">1.00%</td>
+          <td class="paid">—</td>
+        </tr>
+      `);
+
+      const isOnChain = offer.token_mint_txid && /^[0-9a-f]{64}$/.test(offer.token_mint_txid);
+
+      root.innerHTML = `
+        <div class="page-intro">
+          <div class="kicker">Cap table · ${esc((offer.tier || 'feature').toUpperCase())}</div>
+          <h1>${esc(offer.title)} <span class="ticker">$${esc(offer.token_ticker || '')}</span></h1>
+          <p>${esc((offer.synopsis || '').slice(0, 240))}${(offer.synopsis || '').length > 240 ? '…' : ''}</p>
+          ${parentLine ? `<p style="color:#e8c46b;">${parentLine}</p>` : ''}
+        </div>
+
+        <div class="summary">
+          <div class="stat"><div class="label">Total supply</div><div class="value">${fmtShares(totalSupply)}</div><div class="sub">fixed, on chain</div></div>
+          <div class="stat"><div class="label">Commissioner</div><div class="value">${fmtPct(commissionerPct - totalSoldPct)}</div><div class="sub">${fmtShares(remainingCommissionerShares)}</div></div>
+          <div class="stat"><div class="label">Primary sold</div><div class="value">${fmtPct(totalSoldPct)}</div><div class="sub">${(shareSales || []).length} transactions</div></div>
+          <div class="stat"><div class="label">Platform fee</div><div class="value">1.00%</div><div class="sub">${fmtShares(studioShares)}</div></div>
+          <div class="stat"><div class="label">Status</div><div class="value" style="font-size:0.9rem;">${esc((offer.status || '').replace(/_/g,' '))}</div><div class="sub">${isOnChain ? 'on-chain ✓' : 'off-chain'}</div></div>
+        </div>
+
+        <div class="allocation-bar">
+          <div class="segment" style="flex:${commissionerPct - totalSoldPct};background:linear-gradient(90deg,#E50914,#b00610);">Commissioner ${fmtPct(commissionerPct - totalSoldPct)}</div>
+          ${totalSoldPct > 0 ? `<div class="segment" style="flex:${totalSoldPct};background:#1f4d2a;color:#6bff8a;">Primary ${fmtPct(totalSoldPct)}</div>` : ''}
+          <div class="segment" style="flex:1;background:#333;color:#aaa;">1%</div>
+        </div>
+
+        <h2>Holders</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Holder</th>
+              <th>Reference</th>
+              <th style="text-align:right;">Shares</th>
+              <th style="text-align:right;">Percent</th>
+              <th style="text-align:right;">Paid</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml.join('')}</tbody>
+        </table>
+
+        <div class="notice">
+          <strong>Verify on chain.</strong>
+          ${isOnChain ? `
+            This film is canonically minted as a BSV-21 1sat ordinal at txid
+            <a href="https://ordinals.gorillapool.io/api/bsv20/id/${esc(offer.token_mint_txid)}_0" target="_blank" rel="noopener" style="color:#E50914;font-family:monospace;">${esc(offer.token_mint_txid).slice(0,16)}…${esc(offer.token_mint_txid).slice(-8)}</a>.
+            The cap table above is the Platform's internal snapshot. The on-chain token balance is the authoritative source for who owns what.
+          ` : 'This film has not yet been canonically minted on chain. The cap table above reflects the Platform\'s internal record.'}
+        </div>
+
+        <div class="links">
+          <a href="film.html?id=${encodeURIComponent(offerId)}" class="primary">Film page</a>
+          <a href="production.html?id=${encodeURIComponent(offerId)}">Production timeline</a>
+          <a href="offer.html?id=${encodeURIComponent(offerId)}">Investor view</a>
+          <a href="deck.html?id=${encodeURIComponent(offerId)}">Investor pack</a>
+          <a href="legal/film-token-risk-disclosure.html">Risk disclosure</a>
+        </div>
+      `;
+    }
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

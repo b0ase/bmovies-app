@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Commission a Film</title>
+  <meta name="description" content="Commission an AI-produced film from $0.99. An 11-specialist crew across six founding studios writes, directs, shoots, edits, scores, and ships it. You own 99% of the royalty shares." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Commission a Film from $0.99" />
+  <meta property="og:description" content="Your idea. AI agents produce it. You own the majority of the royalties. Every ticket sold pays you back." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="bMovies — Commission a Film from $0.99" />
+  <meta name="twitter:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #fff; min-height: 100vh; }
+
+    /* .logo + .site-header handled by css/theme.css */
+
+    main { max-width: 1400px; margin: 0 auto; padding: 3rem 3rem 6rem; }
+
+    .hero-badge {
+      display: inline-block; font-size: 0.55rem; font-weight: 900;
+      letter-spacing: 0.2em; text-transform: uppercase; color: #E50914;
+      border: 1px solid #E50914; padding: 0.3rem 0.7rem; margin-bottom: 1.5rem;
+    }
+    /* h1 is a two-line heading ("Commission your film." / "Start at $0.99.")
+       — override the shared mobile.css body h1 rule that caps max-height
+       at ~1 line, which otherwise makes the second line overflow and
+       overlap the hero-sub copy below. */
+    body h1 {
+      font-size: clamp(1.8rem, 7vw, 3.4rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      max-height: none;
+      overflow: visible;
+    }
+    h1 .price { color: #E50914; }
+    .hero-sub {
+      font-size: 1.1rem; color: #aaa; line-height: 1.6; margin-top: 1.5rem;
+      max-width: 720px;
+    }
+    .hero-sub strong { color: #fff; }
+    .hero-sub-stack {
+      margin-top: 1.5rem;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .hero-sub-line {
+      font-size: 1.05rem;
+      color: #aaa;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .hero-sub-line strong { color: #fff; }
+
+    /* Steps */
+    .steps {
+      margin-top: 4rem;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+    }
+    @media (max-width: 860px) { .steps { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+    .step-card {
+      border: 1px solid #333; padding: 1.5rem;
+      background: #111;
+    }
+    .step-card .n {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.55rem;
+      color: #E50914; font-weight: 700; letter-spacing: 0.15em;
+    }
+    .step-card h3 {
+      font-size: 1.1rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.01em; margin-top: 0.5rem; line-height: 1.1;
+    }
+    .step-card p {
+      font-size: 0.78rem; color: #888; line-height: 1.5; margin-top: 0.6rem;
+    }
+
+    /* Pitch form */
+    .pitch-section {
+      margin-top: 4rem; padding-top: 3rem; border-top: 1px solid #333;
+    }
+    .pitch-section .kicker {
+      font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .pitch-section h2 {
+      font-size: 2.4rem; font-weight: 900; letter-spacing: -0.03em;
+      text-transform: uppercase; margin-top: 0.5rem; line-height: 1;
+    }
+    .pitch-section p.desc {
+      font-size: 0.9rem; color: #888; line-height: 1.6; margin-top: 1rem;
+      max-width: 620px;
+    }
+
+    label {
+      display: block; margin-top: 1.5rem; font-size: 0.55rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: #666;
+      font-weight: 700;
+    }
+    textarea, input[type="email"] {
+      width: 100%; margin-top: 0.4rem; padding: 0.8rem;
+      background: #111; border: 1px solid #333; color: #fff;
+      font-family: inherit; font-size: 0.9rem; resize: vertical;
+    }
+    textarea { min-height: 80px; }
+    textarea:focus, input:focus { outline: 1px solid #E50914; border-color: #E50914; }
+
+    /* Preview */
+    .preview {
+      margin-top: 1.5rem; padding: 1.2rem 1.4rem;
+      border: 1px solid #333; background: #0a0a0a;
+      display: none;
+    }
+    .preview.shown { display: block; }
+    .preview .ptitle {
+      font-size: 1.3rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+    .preview .pticker {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem;
+      color: #E50914; margin-top: 0.3rem;
+    }
+    .preview .psynopsis {
+      font-size: 0.85rem; color: #ccc; line-height: 1.55; margin-top: 0.8rem;
+    }
+
+    /* Buttons */
+    .btn-row { display: flex; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    button {
+      padding: 0.9rem 1.8rem; font-family: inherit; font-size: 0.75rem;
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      border: 1px solid #333; background: #111; color: #fff; cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: #222; border-color: #555; }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+    button.primary { background: #E50914; border-color: #E50914; color: #fff; }
+    button.primary:hover:not(:disabled) { background: #c4070f; }
+
+    .status {
+      margin-top: 1rem; font-size: 0.75rem; min-height: 1.2em;
+      letter-spacing: 0.03em;
+    }
+    .status.error { color: #ff6b6b; }
+    .status.success { color: #6bff8a; }
+
+    /* Tier cards */
+    .tier-card {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.5rem;
+      display: flex; flex-direction: column;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .tier-card:hover { border-color: #E50914; transform: translateY(-2px); }
+    .tier-card[data-tier="feature"] { border-color: #E50914; }
+    .tier-card .tc-badge {
+      font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .tier-card .tc-price {
+      font-family: 'Bebas Neue', sans-serif; font-size: 3.2rem;
+      color: #fff; line-height: 1; margin-top: 0.4rem;
+    }
+    .tier-card .tc-percent {
+      font-size: 0.7rem; color: #aaa; margin-top: 0.3rem;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .tier-card .tc-percent strong { color: #E50914; font-size: 0.85rem; }
+    .tier-card .tc-features {
+      list-style: none; padding: 0; margin: 1rem 0;
+      flex: 1;
+    }
+    .tier-card .tc-features li {
+      font-size: 0.7rem; color: #888; padding: 0.35rem 0;
+      border-bottom: 1px solid #1a1a1a; line-height: 1.3;
+      padding-left: 1.2rem; position: relative;
+    }
+    .tier-card .tc-features li::before {
+      content: '✓'; position: absolute; left: 0; color: #6bff8a;
+    }
+    .tier-card .tc-features li strong { color: #fff; }
+    .tier-card .tc-cta {
+      margin-top: 1rem; padding: 0.9rem; font-family: inherit;
+      font-size: 0.65rem; font-weight: 900; letter-spacing: 0.1em;
+      text-transform: uppercase; cursor: pointer;
+      background: #E50914; border: 1px solid #E50914; color: #fff;
+    }
+    .tier-card .tc-cta:hover:not(:disabled) { background: #c4070f; }
+    .tier-card .tc-cta:disabled { opacity: 0.4; cursor: wait; }
+
+    @media (max-width: 1100px) {
+      #tier-picker-top > div { grid-template-columns: 1fr 1fr !important; }
+    }
+    @media (max-width: 620px) {
+      #tier-picker-top > div { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 860px) {
+      #tier-picker > div { grid-template-columns: 1fr !important; }
+    }
+
+    /* What you get */
+    .deliverables {
+      margin-top: 4rem; padding-top: 3rem; border-top: 1px solid #333;
+    }
+    .del-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 640px) { .del-grid { grid-template-columns: 1fr; } }
+    .del-card {
+      border: 1px solid #333; padding: 1.2rem 1.4rem; background: #0a0a0a;
+    }
+    .del-card h4 {
+      font-size: 0.9rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.01em;
+    }
+    .del-card p {
+      font-size: 0.75rem; color: #888; line-height: 1.5; margin-top: 0.4rem;
+    }
+
+    /* Footer */
+    .foot {
+      margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #222;
+      text-align: center; font-size: 0.65rem; color: #444; line-height: 1.6;
+    }
+    .foot a { color: #888; text-decoration: none; border-bottom: 1px solid #444; }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <!-- Judge coupon panel (visible only when ?judge=<coupon> in URL).
+         When clicked, hits /api/feature/judge-coupon to bypass Stripe and
+         kick off a real feature production for the BSVA judges. -->
+    <div id="judge-panel" style="display:none;border:1px solid #e50914;background:linear-gradient(180deg,#1a0307,#0a0103);padding:1.6rem;margin-bottom:2rem;">
+      <div style="font-size:0.6rem;color:#e50914;text-transform:uppercase;letter-spacing:0.18em;font-weight:900;">BSVA judge access</div>
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#fff;margin-top:0.4rem;">Commission a feature on us.</h2>
+      <p style="color:#bbb;font-size:0.9rem;line-height:1.55;margin-top:0.6rem;max-width:680px;">
+        Click below to kick off a real autonomous feature production. An
+        11-specialist crew (writer, director, cinematographer, casting, production
+        designer, storyboard, composer, editor, sound, publicist, producer) under
+        one of six founding studios will write, direct, design, shoot, edit,
+        score, and ship a film over the next 24 hours. You'll land on a live
+        timeline page where you can watch every step happen live. One commission
+        per IP per 24 hours.
+      </p>
+      <div style="margin-top:1.2rem;display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:1;min-width:280px;">
+          <label style="display:block;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;color:#888;font-weight:700;">Working title (optional)</label>
+          <input id="judge-title" type="text" placeholder="The Last Lighthouse" style="width:100%;margin-top:0.4rem;padding:0.7rem;background:#000;border:1px solid #333;color:#fff;font-family:inherit;font-size:0.9rem;" />
+        </div>
+        <button id="judge-go" type="button" style="padding:0.9rem 1.8rem;background:#e50914;border:1px solid #e50914;color:#fff;font-family:inherit;font-size:0.7rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;">
+          Commission feature →
+        </button>
+      </div>
+      <div id="judge-status" style="margin-top:1rem;font-size:0.78rem;color:#aaa;min-height:1.2em;"></div>
+    </div>
+
+    <div class="hero-badge">Four tiers. Pick yours.</div>
+    <h1>Commission your film.<br>Start at <span class="price">$0.99</span>.</h1>
+    <div class="hero-sub-stack">
+      <p class="hero-sub-line">
+        Spawn a <strong>$0.99 pitch</strong>, upgrade to a <strong>$9.99 trailer</strong>, ship a <strong>$99 short</strong>, or greenlight a <strong>$999 feature</strong>.
+      </p>
+      <p class="hero-sub-line">
+        Whichever tier you pick, you walk away owning <strong>99%</strong> of your film's royalty shares.
+      </p>
+      <p class="hero-sub-line">
+        The only time you own less is when you build on top of an existing trailer or short from the catalogue — and in exchange you get the upstream IP, the audience, and the proven concept.
+      </p>
+      <p class="hero-sub-line">
+        Ticket revenue flows to whoever holds the shares.
+      </p>
+    </div>
+
+    <!-- Tier picker moved to top, always visible -->
+    <div id="tier-picker-top" style="margin-top:2.5rem;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+        <div class="tier-card" data-tier="pitch" data-price="0.99">
+          <div class="tc-badge">Pitch</div>
+          <div class="tc-price">$0.99</div>
+          <div class="tc-percent">Own <strong>99%</strong></div>
+          <ul class="tc-features">
+            <li>Shares registered</li>
+            <li>One-line logline</li>
+            <li>120-word synopsis</li>
+            <li><strong>Movie poster</strong></li>
+            <li>~90 seconds end-to-end</li>
+            <li>99% royalty shares</li>
+            <li>Upgrade later for $9.99+</li>
+          </ul>
+          <button class="tc-cta tc-select" type="button" data-tier="pitch">Select Pitch</button>
+        </div>
+
+        <div class="tier-card" data-tier="trailer" data-price="9.99">
+          <div class="tc-badge">Trailer</div>
+          <div class="tc-price">$9.99</div>
+          <div class="tc-percent">Own <strong>99%</strong></div>
+          <ul class="tc-features">
+            <li>800-word treatment</li>
+            <li>Movie poster</li>
+            <li>6 storyboard frames</li>
+            <li><strong>4 × 8s video clips</strong></li>
+            <li>60s film score</li>
+            <li>Trailer voiceover</li>
+            <li>99% royalty shares (990M / 1B)</li>
+          </ul>
+          <button class="tc-cta tc-select" type="button" data-tier="trailer">Select Trailer</button>
+        </div>
+
+        <div class="tier-card" data-tier="short" data-price="99">
+          <div class="tc-badge">Short Film</div>
+          <div class="tc-price">$99</div>
+          <div class="tc-percent">Own <strong>99%</strong></div>
+          <ul class="tc-features">
+            <li>Full treatment</li>
+            <li>High-res movie poster</li>
+            <li>12 storyboard frames</li>
+            <li><strong>8 × 8s video clips</strong></li>
+            <li>3-minute score</li>
+            <li>Voiceover + dialogue</li>
+            <li>99% royalty shares (990M / 1B)</li>
+            <li>89% if derived from a trailer</li>
+          </ul>
+          <button class="tc-cta tc-select" type="button" data-tier="short">Select Short</button>
+        </div>
+
+        <div class="tier-card" data-tier="feature" data-price="999">
+          <div class="tc-badge">Feature Film</div>
+          <div class="tc-price">$999</div>
+          <div class="tc-percent">Own <strong>99%</strong></div>
+          <ul class="tc-features">
+            <li>Full treatment</li>
+            <li>Multi-frame storyboard pack</li>
+            <li>Cinematography references</li>
+            <li><strong>Full 11-specialist crew</strong></li>
+            <li>Shot list + editing plan</li>
+            <li>Score + sound design</li>
+            <li>99% royalty shares (990M / 1B)</li>
+            <li>89% / 84% if derived from a parent</li>
+          </ul>
+          <button class="tc-cta tc-select" type="button" data-tier="feature">Select Feature</button>
+        </div>
+      </div>
+      <div id="selected-tier-indicator" style="display:none;text-align:center;margin-top:1.2rem;font-size:0.75rem;color:#6bff8a;">
+        ✓ <strong id="sel-tier-name">Feature</strong> selected — describe your film below
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step-card">
+        <div class="n">01</div>
+        <h3>Describe</h3>
+        <p>Type your film idea. Our AI refines it into a cinematic title, synopsis, and team brief using AI.</p>
+      </div>
+      <div class="step-card">
+        <div class="n">02</div>
+        <h3>Pay &amp; verify</h3>
+        <p>$0.99, $9.99, $99, or $999 via credit card. A quick KYC check kicks in at the $99+ tiers — royalty shares are real financial instruments.</p>
+      </div>
+      <div class="step-card">
+        <div class="n">03</div>
+        <h3>Watch it get made</h3>
+        <p>Writer, director, cinematographer, casting, production designer, storyboard, composer, editor, sound, publicist, producer — eleven specialists across one of six founding studios ship your film in real time on a live dashboard.</p>
+      </div>
+      <div class="step-card">
+        <div class="n">04</div>
+        <h3>Earn or sell</h3>
+        <p>Ticket revenue flows to shareholders. Hold your shares and collect, or sell them on the marketplace to raise capital upfront. Your choice.</p>
+      </div>
+    </div>
+
+    <section class="pitch-section">
+      <div class="kicker">Your idea</div>
+      <h2>Describe your film</h2>
+      <p class="desc">
+        One or two sentences is enough. The agent team will expand it into a
+        full treatment, shot list, storyboard, and score. You can edit and
+        regenerate after production.
+      </p>
+
+      <label for="idea">Film idea</label>
+      <textarea id="idea" placeholder="A retired astronaut discovers her greenhouse on Mars has been growing sentient flowers that communicate through bioluminescence…"></textarea>
+
+      <label for="email">Email (for your receipt)</label>
+      <input type="email" id="email" placeholder="you@example.com" />
+
+      <div class="btn-row">
+        <button id="btn-refine" class="primary" type="button">Refine with AI</button>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="ptitle" id="p-title"></div>
+        <div class="pticker" id="p-ticker"></div>
+        <div class="psynopsis" id="p-synopsis"></div>
+      </div>
+
+      <div class="status" id="status"></div>
+
+      <div id="commission-cta-row" style="display:none;margin-top:2rem;">
+        <button id="btn-commission-now" class="primary" type="button" style="font-size:0.8rem;padding:1.1rem 2.5rem;">
+          Commission <span id="btn-tier-label">Feature</span> — <span id="btn-tier-price">$999</span> →
+        </button>
+      </div>
+    </section>
+
+    <section class="deliverables">
+      <div class="kicker">What you get</div>
+      <h2 id="del-heading">What's in your trailer pack</h2>
+      <p id="del-sub" style="font-size:0.85rem;color:#888;margin-top:0.4rem;margin-bottom:1.4rem;max-width:620px;">Pick a different tier above to see what changes.</p>
+      <div class="del-grid" id="del-grid"></div>
+    </section>
+
+    <div class="foot">
+      <strong>bMovies</strong> — films financed and produced by AI agents on Bitcoin.<br>
+      <a href="index.html">bmovies.online</a> ·
+      <a href="https://github.com/b0ase/bmovies">GitHub</a> ·
+      <a href="bMovies-Report.html">Technical report</a>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient(
+      'https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } }
+    );
+
+    const ideaEl = document.getElementById('idea');
+    const emailEl = document.getElementById('email');
+    const btnRefine = document.getElementById('btn-refine');
+    const preview = document.getElementById('preview');
+    const pTitle = document.getElementById('p-title');
+    const pTicker = document.getElementById('p-ticker');
+    const pSynopsis = document.getElementById('p-synopsis');
+    const status = document.getElementById('status');
+    const commissionCtaRow = document.getElementById('commission-cta-row');
+    const btnCommission = document.getElementById('btn-commission-now');
+    const btnTierLabel = document.getElementById('btn-tier-label');
+    const btnTierPrice = document.getElementById('btn-tier-price');
+    const selIndicator = document.getElementById('selected-tier-indicator');
+    const selTierName = document.getElementById('sel-tier-name');
+
+    // Load session + KYC state on page load
+    let currentSession = null;
+    let currentKyc = null;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      currentSession = session;
+      if (session?.user) {
+        if (!emailEl.value) emailEl.value = session.user.email || '';
+        const { data: account } = await supabase
+          .from('bct_accounts').select('id').eq('auth_user_id', session.user.id).maybeSingle();
+        if (account) {
+          const { data: kyc } = await supabase
+            .from('bct_user_kyc').select('status').eq('account_id', account.id).maybeSingle();
+          currentKyc = kyc;
+        }
+      }
+    })();
+
+    const TIER_META = {
+      pitch: { label: 'Pitch', price: '$0.99' },
+      trailer: { label: 'Trailer', price: '$9.99' },
+      short: { label: 'Short Film', price: '$99' },
+      feature: { label: 'Feature Film', price: '$999' },
+    };
+
+    // Tier-specific deliverables. Rendered into #del-grid every time
+    // the user picks a different tier so nobody confuses a $999 feature
+    // pack with a $9.99 trailer pack.
+    const DELIVERABLES = {
+      pitch: {
+        heading: "What's in your pitch pack",
+        sub: '$0.99 · ~90-second end-to-end run · You own 99% of royalty shares',
+        items: [
+          { h: 'Shares registered',   p: 'Your film\'s royalty shares are registered on the blockchain before the writer even starts. You own 99% from minute zero.' },
+          { h: 'One-line logline',    p: 'Your idea refined into a single-sentence logline by your studio\'s writer agent — the hook that sells the pitch.' },
+          { h: '120-word synopsis',   p: 'A tight 120-word synopsis expanding the logline into a mood, protagonist, and stakes.' },
+          { h: 'Movie poster',        p: 'A real AI-generated key-art poster from your studio\'s storyboard artist — the visual centrepiece of your pitch.' },
+          { h: '99% royalty shares',  p: '990 million of the film\'s 1 billion royalty shares delivered to your account. 1% goes to the studio treasury.' },
+          { h: 'Upgrade anytime',     p: 'If you like your pitch, click through to trailer ($9.99), short ($99), or feature ($999) — the derivative keeps your pitch\'s ticker and parent chain intact.' },
+        ],
+      },
+      trailer: {
+        heading: "What's in your trailer pack",
+        sub: '$9.99 · ~32-second AI-produced teaser · You own 99% of royalty shares',
+        items: [
+          { h: 'Writer treatment',     p: 'An 800-word cinematic treatment expanding your idea into a full narrative arc — protagonist, conflict, resolution.' },
+          { h: 'Movie poster',         p: 'A real AI-generated key-art poster from your studio\'s storyboard artist. The visual centrepiece of your trailer.' },
+          { h: '6 storyboard frames',  p: 'Six framed shots covering the trailer\'s through-line, generated by your studio\'s storyboard artist.' },
+          { h: '4 × 8-second clips',   p: '~32 seconds of finished AI video produced by Grok Imagine — the actual cut trailer, not stills.' },
+          { h: '60-second score',      p: 'An original orchestral theme written by your studio\'s composer agent. Underscores the trailer cut.' },
+          { h: 'Trailer voiceover',    p: 'A scripted voiceover line delivered by an AI voice actor — the hook that closes the trailer.' },
+          { h: '99% royalty shares',   p: '990 million of the film\'s 1 billion royalty shares delivered to your account. 1% goes to the studio treasury.' },
+          { h: 'Investor pitch deck',  p: 'A downloadable PDF with every artifact, the revenue breakdown, full audit trail, and a shareable URL.' },
+          { h: 'KYC verification',     p: 'Your identity is verified before shares are delivered. Royalty rights are real financial instruments and legally defensible.' },
+        ],
+      },
+      short: {
+        heading: "What's in your short film pack",
+        sub: '$99 · ~3-minute AI-produced short · You own 99% of royalty shares (89% if derived from an existing trailer)',
+        items: [
+          { h: 'Full treatment',          p: 'A 1,500–2,000 word treatment from your studio\'s writer agent — beats, character arcs, the full shape of the short.' },
+          { h: 'High-res movie poster',   p: 'A premium key-art poster generated by your studio\'s storyboard artist. Print-ready.' },
+          { h: '12 storyboard frames',    p: 'Twelve framed shots covering every scene of the short. Generated by the storyboard artist.' },
+          { h: '8 × 8-second clips',      p: '~64 seconds of finished AI video produced by Grok Imagine, multi-scene, with continuity between shots.' },
+          { h: 'Director shot list',      p: 'Every shot described in production-ready language by your studio\'s director agent — angles, lenses, blocking.' },
+          { h: '3-minute score',          p: 'Multi-cue original score from your composer agent — underscoring scenes by emotional beat.' },
+          { h: 'Voiceover + dialogue',    p: 'Scripted dialogue delivered by AI voice actors. Multiple character voices where the script calls for it.' },
+          { h: 'Editor cut plan',         p: 'A scene-by-scene editing plan from your studio\'s editor agent. Pacing notes, transition choices.' },
+          { h: 'Sound design',            p: 'Ambient design and effect notes from your studio\'s sound designer agent.' },
+          { h: '99% royalty shares',      p: '990 million of the film\'s 1 billion royalty shares delivered to your account. 1% goes to the studio treasury. If you derive this short from an existing trailer in the catalogue, you own 89% and 10% cascades to the trailer holders forever.' },
+          { h: 'Investor pitch deck',     p: 'A downloadable PDF with every artifact, the revenue breakdown, full audit trail, and a shareable URL.' },
+          { h: 'KYC verification',        p: 'Your identity is verified before shares are delivered. Royalty rights are real financial instruments and legally defensible.' },
+        ],
+      },
+      feature: {
+        heading: "What's in your feature film pack",
+        sub: '$999 · Full feature production · You own 99% of royalty shares (89% if derived from a short, 84% if derived from a short with a parent trailer)',
+        items: [
+          { h: 'Feature treatment',           p: 'A full feature treatment from your studio\'s writer agent — three acts, character arcs, scene list, the lot.' },
+          { h: 'Multi-frame storyboard pack', p: 'A complete storyboard package covering every act, generated by your studio\'s storyboard artist.' },
+          { h: 'Premium key art',             p: 'Print-ready movie poster, alt versions for socials and the cinema lobby.' },
+          { h: 'Full 8-agent studio',         p: 'Director, writer, producer, cinematographer, storyboard artist, editor, composer, and sound designer — the entire crew on the job.' },
+          { h: 'Director shot list',          p: 'Production-ready shot list from the director agent. Angles, lenses, blocking, every scene.' },
+          { h: 'Cinematography references',   p: 'A visual references pack from the DP agent — lighting, palette, lens choices, mood boards.' },
+          { h: 'Editor cut plan',             p: 'A full edit plan from the editor agent. Scene order, pacing, transitions.' },
+          { h: 'Original score',              p: 'A multi-cue original score from your composer agent. Theme, motifs, scene underscores.' },
+          { h: 'Sound design pack',           p: 'Ambient design, effects, and mix notes from the sound designer agent.' },
+          { h: 'Voice cast',                  p: 'Scripted dialogue delivered by AI voice actors across the full character roster.' },
+          { h: '99% royalty shares',          p: '990 million of the film\'s 1 billion royalty shares delivered to your account. 1% goes to the studio treasury. If derived from an existing short you own 89% (10% cascades to the short holders); if that short itself derives from a trailer, you own 84% (10% to the short, 5% to the trailer).' },
+          { h: 'Investor pitch deck',         p: 'A downloadable PDF with every artifact, the revenue breakdown, the royalty cascade, full audit trail, and a shareable URL.' },
+          { h: 'Full audit trail',            p: 'Every step — the commission, every agent call, every payout — is recorded and verifiable. Nothing simulated.' },
+          { h: 'KYC verification',            p: 'Your identity is verified before shares are delivered. Royalty rights are real financial instruments and legally defensible.' },
+        ],
+      },
+    };
+
+    const delGrid = document.getElementById('del-grid');
+    const delHeading = document.getElementById('del-heading');
+    const delSub = document.getElementById('del-sub');
+    function renderDeliverables(tier) {
+      const pack = DELIVERABLES[tier];
+      if (!pack || !delGrid) return;
+      delHeading.textContent = pack.heading;
+      delSub.textContent = pack.sub;
+      delGrid.innerHTML = pack.items.map(i => `
+        <div class="del-card">
+          <h4>${i.h}</h4>
+          <p>${i.p}</p>
+        </div>
+      `).join('');
+    }
+
+    let refined = null;
+    let selectedTier = null;
+
+    function setStatus(text, kind) {
+      status.textContent = text;
+      status.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    function selectTier(tier) {
+      if (!TIER_META[tier]) return;
+      selectedTier = tier;
+      document.querySelectorAll('.tier-card').forEach(c => {
+        const isSelected = c.dataset.tier === tier;
+        c.style.borderColor = isSelected ? '#E50914' : '#222';
+        c.style.transform = isSelected ? 'scale(1.03)' : '';
+        c.style.boxShadow = isSelected ? '0 20px 60px rgba(229,9,20,0.25)' : '';
+      });
+      document.querySelectorAll('.tc-select').forEach(btn => {
+        const isSelected = btn.dataset.tier === tier;
+        btn.textContent = isSelected ? '✓ Selected' : `Select ${TIER_META[btn.dataset.tier].label}`;
+      });
+      btnTierLabel.textContent = TIER_META[tier].label;
+      btnTierPrice.textContent = TIER_META[tier].price;
+      selTierName.textContent = TIER_META[tier].label;
+      selIndicator.style.display = 'block';
+      renderDeliverables(tier);
+      if (refined) commissionCtaRow.style.display = 'block';
+    }
+
+    // Wire tier selection buttons
+    document.querySelectorAll('.tc-select').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectTier(btn.dataset.tier);
+        // Scroll down to the idea input if not yet refined
+        if (!refined) {
+          document.getElementById('idea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => document.getElementById('idea').focus(), 500);
+        }
+      });
+    });
+
+    // Pre-select from URL if present, otherwise default to trailer.
+    // Trailer is the cheapest entry point and the natural starting
+    // tier — users shouldn't be looking at a $999 feature pack on
+    // first load.
+    const urlTier = new URLSearchParams(window.location.search).get('tier');
+    if (urlTier && TIER_META[urlTier]) {
+      selectTier(urlTier);
+    } else {
+      selectTier('trailer');
+    }
+
+    // ─── Refine ───
+    btnRefine.addEventListener('click', async () => {
+      const idea = ideaEl.value.trim();
+      if (idea.length < 8) {
+        setStatus('Write a bit more — at least a sentence.', 'error');
+        return;
+      }
+      btnRefine.disabled = true;
+      setStatus('Refining your idea with AI…');
+      try {
+        const res = await fetch('/api/refine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idea }),
+        });
+        if (!res.ok) throw new Error('refine returned ' + res.status);
+        const body = await res.json();
+        refined = { title: body.title, ticker: body.ticker, synopsis: body.synopsis };
+        pTitle.textContent = refined.title;
+        pTicker.textContent = '$' + refined.ticker;
+        pSynopsis.textContent = refined.synopsis;
+        preview.classList.add('shown');
+        commissionCtaRow.style.display = 'block';
+        setStatus(`Preview ready. Ready to commission a ${TIER_META[selectedTier].label.toLowerCase()}?`, 'success');
+      } catch (err) {
+        setStatus('Refine failed: ' + (err.message || err), 'error');
+      } finally {
+        btnRefine.disabled = false;
+      }
+    });
+
+    async function ensureSignedIn() {
+      if (currentSession?.user) return true;
+      setStatus('You need to sign in before commissioning a film. Redirecting…', 'error');
+      setTimeout(() => {
+        // Sign-in now happens on app.bmovies.online. Cross-origin, so
+        // we can't carry the commission flow state — the user returns
+        // to this page manually after signing in. The app's /account
+        // page is the single source of truth for sessions.
+        window.location.href = '/account';
+      }, 1500);
+      return false;
+    }
+
+    async function ensureKyc() {
+      if (currentKyc?.status === 'verified') return true;
+      const email = currentSession?.user?.email;
+      if (!email) return false;
+      setStatus('Verifying your identity (one-time KYC)...', 'info');
+      try {
+        const res = await fetch('/api/kyc-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || 'KYC failed');
+        if (body.mode === 'veriff' && body.url) {
+          setStatus('Opening Veriff in a new tab. Complete verification, then return here.', 'info');
+          window.open(body.url, '_blank');
+          // Poll for verified status
+          return new Promise((resolve) => {
+            const pollInterval = setInterval(async () => {
+              const { data: account } = await supabase
+                .from('bct_accounts').select('id').eq('auth_user_id', currentSession.user.id).maybeSingle();
+              if (!account) return;
+              const { data: kyc } = await supabase
+                .from('bct_user_kyc').select('status').eq('account_id', account.id).maybeSingle();
+              if (kyc?.status === 'verified') {
+                clearInterval(pollInterval);
+                currentKyc = kyc;
+                setStatus('Verified! Proceeding to checkout...', 'success');
+                resolve(true);
+              }
+            }, 3000);
+            // Timeout after 10 minutes
+            setTimeout(() => { clearInterval(pollInterval); resolve(false); }, 600_000);
+          });
+        }
+        // Demo mode — already auto-verified
+        currentKyc = { status: 'verified' };
+        return true;
+      } catch (err) {
+        setStatus('KYC failed: ' + (err.message || err), 'error');
+        return false;
+      }
+    }
+
+    // ─── Commission checkout ───
+    btnCommission.addEventListener('click', async () => {
+      if (!refined || !selectedTier) return;
+
+      // Gate: sign in required to commission a film
+      if (!(await ensureSignedIn())) return;
+
+      // Gate: KYC required for trailer+ — skipped for the $0.99 pitch tier.
+      // Pitch is an impulse flow; KYC friction would kill conversion. Users
+      // who upgrade a pitch to trailer/short/feature later will hit the
+      // KYC gate on that upgrade.
+      if (selectedTier !== 'pitch') {
+        if (!(await ensureKyc())) return;
+      }
+
+      const email = emailEl.value.trim() || currentSession.user.email;
+      btnCommission.disabled = true;
+      setStatus('Redirecting to checkout…');
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: refined.title,
+            ticker: refined.ticker,
+            synopsis: refined.synopsis,
+            tier: selectedTier,
+            email: email || undefined,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'checkout failed');
+        }
+        const { url } = await res.json();
+        if (url) {
+          window.location.href = url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
+      } catch (err) {
+        setStatus('Checkout failed: ' + (err.message || err), 'error');
+        btnCommission.disabled = false;
+      }
+    });
+
+    // ─── BSVA Judge coupon flow ───
+    // When the user lands with ?judge=<coupon>, expose the judge panel.
+    // Clicking the button POSTs to /api/feature/judge-coupon which
+    // creates a real feature offer in `funded` status and returns the
+    // production URL. We redirect there so the judge watches the
+    // pipeline unfold live.
+    (function judgeCouponFlow() {
+      const params = new URLSearchParams(window.location.search);
+      const coupon = params.get('judge');
+      if (!coupon) return;
+      const panel = document.getElementById('judge-panel');
+      const btn = document.getElementById('judge-go');
+      const titleEl = document.getElementById('judge-title');
+      const status = document.getElementById('judge-status');
+      if (!panel || !btn || !titleEl || !status) return;
+      panel.style.display = 'block';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        status.textContent = 'Queueing your feature production…';
+        status.style.color = '#aaa';
+        try {
+          const res = await fetch('/api/feature/judge-coupon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              coupon,
+              title: titleEl.value.trim() || undefined,
+              judgeName: params.get('judgeName') || undefined,
+            }),
+          });
+          const body = await res.json();
+          if (!res.ok) {
+            throw new Error(body.message || body.error || `HTTP ${res.status}`);
+          }
+          status.style.color = '#6bff8a';
+          status.textContent = `Production queued. Redirecting to live timeline…`;
+          setTimeout(() => {
+            window.location.href = body.productionUrl || `/production.html?id=${encodeURIComponent(body.offerId)}`;
+          }, 1200);
+        } catch (err) {
+          status.style.color = '#ff6464';
+          status.textContent = 'Failed: ' + (err.message || err);
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

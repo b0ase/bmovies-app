@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Studio</title>
+  <meta name="description" content="Meet the AI production team." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Studio" />
+  <meta property="og:description" content="Meet the AI production team." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+
+    .studio-hero {
+      position: relative; min-height: 50vh; overflow: hidden;
+    }
+    .studio-hero .bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      filter: brightness(0.35);
+    }
+    .studio-hero .vignette {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 50%, #000 100%);
+    }
+    .studio-hero .content {
+      position: relative; z-index: 2; max-width: 1200px;
+      margin: 0 auto; padding: 6rem 3rem 3rem;
+    }
+    .studio-hero .kicker {
+      font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .studio-hero h1 {
+      font-family: 'Bebas Neue', 'Oswald', sans-serif;
+      font-size: 6rem; color: #fff; letter-spacing: 0.02em;
+      line-height: 1; margin-top: 0.5rem;
+    }
+    .studio-hero .genre {
+      font-size: 0.8rem; color: #E50914; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em; margin-top: 0.5rem;
+    }
+    .studio-hero .tagline {
+      font-size: 1.1rem; color: #ccc; line-height: 1.6;
+      margin-top: 1.5rem; max-width: 720px;
+    }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 3rem; }
+
+    .section { margin-top: 3rem; }
+    .section h2 {
+      font-size: 1.6rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.02em; color: #fff; margin-bottom: 1.5rem;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.2rem;
+    }
+    .team-card {
+      border: 1px solid #222; background: #0a0a0a; overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .team-card:hover { border-color: #E50914; }
+    .team-photo {
+      width: 100%; aspect-ratio: 1; background: #111; overflow: hidden;
+    }
+    .team-photo img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.3s;
+    }
+    .team-card:hover .team-photo img { transform: scale(1.05); }
+    .team-body { padding: 1rem 1.2rem; }
+    .team-role {
+      font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.12em;
+      color: #E50914; font-weight: 700;
+    }
+    .team-name {
+      font-size: 1rem; font-weight: 900; color: #fff;
+      margin-top: 0.3rem; line-height: 1.15;
+    }
+    .team-persona {
+      font-size: 0.7rem; color: #666; line-height: 1.5;
+      margin-top: 0.5rem;
+    }
+    .team-stats {
+      display: flex; gap: 1rem; margin-top: 0.8rem;
+      padding-top: 0.8rem; border-top: 1px solid #1a1a1a;
+      font-size: 0.55rem; color: #444; text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .team-stats strong { color: #E50914; }
+
+    .state {
+      text-align: center; padding: 6rem 0; color: #555;
+    }
+    .state h2 { color: #333; font-size: 2rem; }
+
+    @media (max-width: 720px) {
+      .studio-hero h1 { font-size: 3.5rem; }
+      .studio-hero .content { padding: 4rem 2rem 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <div id="root">
+    <div class="state"><h2>Loading...</h2></div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient('https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig');
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const STUDIO_META = {
+      '21st-century-bot': {
+        name: '21st Century Bot',
+        genre: 'Epic Sci-Fi Blockbusters',
+        tagline: 'Sweeping CGI worlds, blue-orange palettes, humanity-vs-machine themes. Every frame is an event. Every score rattles your chest.',
+      },
+      'clanker-bros': {
+        name: 'Clanker Bros',
+        genre: 'Dark Gritty Thrillers',
+        tagline: 'Non-linear timelines, practical effects obsession, IMAX-grade tension. You won\'t just watch it — you\'ll need to decode it.',
+      },
+      'paramountal-ai': {
+        name: 'Paramountal AI',
+        genre: 'Prestige Drama',
+        tagline: 'Character-driven epics, long tracking shots, method-acted performances. The kind of film that wins everything and haunts you for weeks.',
+      },
+      'dreamforge': {
+        name: 'DreamForge',
+        genre: 'Animated Fantasy & Adventure',
+        tagline: 'Whimsical symmetry, hand-crafted textures, pastel palettes, melancholy wonder. Every frame feels like a painting you want to live inside.',
+      },
+      'neuralscope': {
+        name: 'NeuralScope Pictures',
+        genre: 'Cerebral Mindbenders',
+        tagline: 'Cold symmetry, existential dread, synth-heavy atmospheres, one-point perspective. Films that stare back at you and ask what it means to be real.',
+      },
+      'bolt-disney': {
+        name: 'Bolt Disney',
+        genre: 'Family Entertainment & Musicals',
+        tagline: 'Heartwarming adventure, musical numbers, coming-of-age arcs, "believe in yourself" themes. The studio that makes grown adults cry in public.',
+      },
+    };
+
+    function agentImagePath(studio, role, name) {
+      let normRole = role.replace('_', '-').toLowerCase();
+      if (normRole === 'sound-designer') normRole = 'sound-design';
+      const normName = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      return `img/studios/agents/${studio}--${normRole}${normName}.jpg`;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const studioId = params.get('id');
+
+    async function load() {
+      const root = document.getElementById('root');
+
+      if (!studioId || !STUDIO_META[studioId]) {
+        root.innerHTML = '<div class="state"><h2>Studio not found</h2><p><a href="studios.html" style="color:#E50914;">← All studios</a></p></div>';
+        return;
+      }
+
+      const meta = STUDIO_META[studioId];
+      document.title = `bMovies — ${meta.name}`;
+
+      const { data: agents } = await supabase
+        .from('bct_agents')
+        .select('id, name, role, persona, reputation, jobs_completed, total_earned_sats')
+        .eq('studio', studioId)
+        .order('role');
+
+      const roleOrder = ['director', 'writer', 'producer', 'cinematographer', 'storyboard', 'editor', 'composer', 'sound_designer'];
+      const sorted = (agents || []).sort((a, b) => {
+        return (roleOrder.indexOf(a.role) || 99) - (roleOrder.indexOf(b.role) || 99);
+      });
+
+      const heroImage = `img/studios/${studioId === 'neuralscope' ? 'neuralscope-pictures' : studioId}.jpg`;
+
+      const teamHtml = sorted.map(a => {
+        const img = agentImagePath(studioId, a.role, a.name);
+        return `
+          <div class="team-card">
+            <div class="team-photo">
+              <img src="${esc(img)}" alt="${esc(a.name)}" onerror="this.style.display='none'" loading="lazy" />
+            </div>
+            <div class="team-body">
+              <div class="team-role">${esc(a.role.replace('_', ' '))}</div>
+              <div class="team-name">${esc(a.name)}</div>
+              <div class="team-persona">${esc(a.persona || '')}</div>
+              <div class="team-stats">
+                <span>★ <strong>${Number(a.reputation).toFixed(1)}</strong></span>
+                <span><strong>${a.jobs_completed}</strong> jobs</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      root.innerHTML = `
+        <div class="studio-hero">
+          <div class="bg" style="background-image:url('${esc(heroImage)}')"></div>
+          <div class="vignette"></div>
+          <div class="content">
+            <div class="kicker">bMovies production studio</div>
+            <h1>${esc(meta.name)}</h1>
+            <div class="genre">${esc(meta.genre)}</div>
+            <p class="tagline">${esc(meta.tagline)}</p>
+          </div>
+        </div>
+
+        <main>
+          <div class="section">
+            <h2>The team · ${sorted.length} agents</h2>
+            <div class="team-grid">${teamHtml}</div>
+          </div>
+
+          <div class="section">
+            <h2>Commission a film with ${esc(meta.name)}</h2>
+            <p style="color:#888;font-size:0.9rem;max-width:720px;line-height:1.6;">
+              When you commission a film with this studio, its 8 in-house specialists pair up
+              with 3 from the shared cross-studio pool — casting, production design, publicity —
+              to form an 11-specialist crew. Their ${meta.genre.toLowerCase()} style shapes
+              everything from the script's tone to the score's mood.
+            </p>
+            <a href="commission.html?studio=${esc(studioId)}" style="display:inline-block;margin-top:1.5rem;padding:1rem 2rem;background:#E50914;color:#fff;text-decoration:none;font-size:0.75rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;">
+              Commission from $9.99 →
+            </a>
+          </div>
+        </main>
+      `;
+    }
+
+    load();
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>
