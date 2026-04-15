@@ -28,6 +28,29 @@ interface Asset {
   subtitle?: string
 }
 
+// xAI image URLs expire within hours — treat as missing.
+const isEphemeralUrl = (url: string | null | undefined) =>
+  typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url)
+
+// Commissioner-curated posters live at bmovies.online/img/films/{slug}.jpg
+// and are permanent. Win over xAI pipeline output.
+const LOCAL_POSTERS = new Set([
+  'echoes-of-the-last-signal', 'the-fold', 'the-weight-of-water',
+  'the-lantern-that-forgot-its-flame', 'the-mirror-protocol',
+  'off-key-heroes', 'midnight-swarm', 'the-last-piece',
+  'episode-1000', 'star-wars-episode-1000', 'that-weirdo-isnt-satoshi',
+])
+const slugify = (s: string) =>
+  String(s || '').toLowerCase()
+    .replace(/['\u2018\u2019]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+const localPosterFor = (title: string) => {
+  const slug = slugify(title)
+  return slug && LOCAL_POSTERS.has(slug) ? `https://bmovies.online/img/films/${slug}.jpg` : null
+}
+
 export default function ExchangePage() {
   const [tab, setTab] = useState<Tab>('films')
   const [films, setFilms] = useState<Asset[] | null>(null)
@@ -62,8 +85,12 @@ export default function ExchangePage() {
         ((filmsRes.data as any[]) || [])
           .filter((f) => f.token_mint_txid && /^[0-9a-f]{64}$/.test(f.token_mint_txid))
           .map((f) => {
-            const arts = (f.bct_artifacts || []).filter((a: any) => !a.superseded_by)
+            const local = localPosterFor(f.title)
+            const arts = (f.bct_artifacts || []).filter(
+              (a: any) => !a.superseded_by && !isEphemeralUrl(a.url),
+            )
             const poster = arts.find((a: any) => a.kind === 'image' && a.role === 'poster')
+            const storyboard = arts.find((a: any) => a.kind === 'image' && a.role === 'storyboard')
             const frame = arts.find((a: any) => a.kind === 'image')
             return {
               id: f.id,
@@ -71,7 +98,7 @@ export default function ExchangePage() {
               ticker: f.token_ticker,
               txid: f.token_mint_txid,
               tier: f.tier,
-              image: poster?.url || frame?.url || null,
+              image: local || poster?.url || storyboard?.url || frame?.url || null,
             }
           }),
       )
@@ -167,11 +194,27 @@ function AssetCard({ asset }: { asset: Asset }) {
   const short = asset.txid ? `${asset.txid.slice(0, 10)}…${asset.txid.slice(-6)}` : null
   return (
     <div className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors">
-      {asset.image ? (
-        <div className="aspect-[3/2] bg-[#050505] overflow-hidden">
-          <img src={asset.image} alt={asset.title} className="w-full h-full object-cover" />
-        </div>
-      ) : null}
+      <div className="aspect-[3/2] bg-[#050505] overflow-hidden relative">
+        {asset.image ? (
+          <img
+            src={asset.image}
+            alt={asset.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none'
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div
+              className="text-4xl font-black text-[#1a1a1a] tracking-tighter"
+              style={{ fontFamily: 'var(--font-bebas)' }}
+            >
+              ${asset.ticker}
+            </div>
+          </div>
+        )}
+      </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3
