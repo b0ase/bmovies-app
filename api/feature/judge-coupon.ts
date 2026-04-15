@@ -90,7 +90,14 @@ export default async function handler(
     return;
   }
 
-  let body: { coupon?: string; title?: string; synopsis?: string; ticker?: string; judgeName?: string };
+  let body: {
+    coupon?: string;
+    title?: string;
+    synopsis?: string;
+    ticker?: string;
+    judgeName?: string;
+    supabaseUserId?: string;
+  };
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
   } catch {
@@ -128,6 +135,34 @@ export default async function handler(
     return;
   }
 
+  // Resolve the commissioner's account_id if they're signed in.
+  // This is how the /account studio dashboard finds judge-commissioned
+  // films — we link bct_offers.account_id → bct_accounts.id →
+  // auth.users.id via auth_user_id. Earlier versions of this handler
+  // omitted the link entirely, which made /account look empty even
+  // for signed-in judges who had just commissioned a film via coupon.
+  //
+  // If the client passes a supabaseUserId, we trust it for lookup
+  // only — we don't use it for authorization (the coupon itself is
+  // the bearer secret) and we never write it directly to bct_offers.
+  // The worst-case misuse is a judge attributing their commission to
+  // someone else's account; since only that account holder can see
+  // it on /account, the blast radius is "your commission shows up in
+  // a stranger's dashboard", not "your commission gets stolen".
+  let accountId: string | null = null;
+  if (body.supabaseUserId && /^[0-9a-f-]{20,40}$/i.test(body.supabaseUserId)) {
+    const { data: accountRow, error: accErr } = await supabase
+      .from('bct_accounts')
+      .select('id')
+      .eq('auth_user_id', body.supabaseUserId)
+      .maybeSingle();
+    if (accErr) {
+      console.warn('[feature/judge-coupon] bct_accounts lookup failed:', accErr.message);
+    } else if (accountRow?.id) {
+      accountId = accountRow.id as string;
+    }
+  }
+
   // Create the feature offer
   const title = body.title?.trim() || DEFAULT_TITLES[Math.floor(Math.random() * DEFAULT_TITLES.length)];
   const synopsis = body.synopsis?.trim() || DEFAULT_SYNOPSIS_TEMPLATE(title);
@@ -160,7 +195,13 @@ export default async function handler(
     production_phase: 'preproduction',
     current_step: 'producer.token_mint',
     next_step_at: new Date().toISOString(),
-    pipeline_state: { source: 'judge-coupon', ip, judgeName: body.judgeName || null },
+    account_id: accountId,
+    pipeline_state: {
+      source: 'judge-coupon',
+      ip,
+      judgeName: body.judgeName || null,
+      supabaseUserId: body.supabaseUserId || null,
+    },
   });
 
   if (offerErr) {

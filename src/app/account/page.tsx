@@ -70,6 +70,7 @@ interface Film {
   token_ticker: string | null
   token_mint_txid: string | null
   commissioner_percent: number
+  account_id: string | null
   created_at: string
   bct_artifacts: { id: number; kind: string; role: string | null; url: string; step_id: string | null; superseded_by: number | null }[]
 }
@@ -142,11 +143,24 @@ export default function AccountPage() {
 
   // ─── Load films for the current user ───
   //
-  // Covers two identity shapes in bct_offers.producer_id:
-  //   (a) Supabase UUID — the canonical case for email/Google users
-  //   (b) BSV address — if a BRC-100 user's commission predates the
-  //       verify endpoint linking (falls back to producer_address
-  //       match in the OR clause)
+  // The correct linkage is via `bct_offers.account_id` →
+  // `bct_accounts.auth_user_id`, NOT `producer_id` — which is the
+  // on-chain agent slug (e.g. "spielbergx", "stripe-feature",
+  // "marketplace-producer"), not the commissioning human. Earlier
+  // iterations of this page queried by producer_id and returned
+  // zero rows for everyone because no offer records a user UUID
+  // there.
+  //
+  // Flow:
+  //   1. Resolve the user's bct_accounts row via auth_user_id
+  //      (BRC-100 users always have one — it's created by
+  //      /api/auth/brc100/verify. Email/Google users may or may
+  //      not — we insert-on-demand to keep the model consistent).
+  //   2. Query bct_offers where account_id = that row's id.
+  //   3. For BRC-100 users, also union with offers whose
+  //      producer_address matches the BSV key, to catch pre-link
+  //      commissions or direct-wallet payments that didn't pass
+  //      through the auth flow.
   useEffect(() => {
     if (!user) return
     let cancelled = false
@@ -156,20 +170,47 @@ export default function AccountPage() {
       setFilmsError(null)
       const address = brc100AddressOf(user)
       try {
+        // 1. Resolve the user's bct_accounts row
+        const { data: accountRow, error: accErr } = await bmovies
+          .from('bct_accounts')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle()
+        if (accErr) {
+          console.warn('[account] bct_accounts lookup failed:', accErr.message)
+        }
+        const accountId = accountRow?.id as string | undefined
+
+        // 2. Build the query. If we have an account id, query by it;
+        //    if we ALSO have a BRC-100 address, union with the
+        //    producer_address match to catch direct-wallet flows.
+        //    If we have neither, the user has no bct_accounts row
+        //    and no wallet — return empty (they need to commission
+        //    or link a wallet first).
+        if (!accountId && !address) {
+          setFilms([])
+          setFilmsLoading(false)
+          return
+        }
+
         let q = bmovies
           .from('bct_offers')
           .select(
             `id, title, synopsis, tier, status, token_ticker, token_mint_txid,
-             commissioner_percent, created_at,
+             commissioner_percent, account_id, created_at,
              bct_artifacts ( id, kind, role, url, step_id, superseded_by )`,
           )
           .is('archived_at', null)
           .order('created_at', { ascending: false })
-        if (address) {
-          q = q.or(`producer_id.eq.${user.id},producer_address.eq.${address}`)
-        } else {
-          q = q.eq('producer_id', user.id)
+
+        if (accountId && address) {
+          q = q.or(`account_id.eq.${accountId},producer_address.eq.${address}`)
+        } else if (accountId) {
+          q = q.eq('account_id', accountId)
+        } else if (address) {
+          q = q.eq('producer_address', address)
         }
+
         const { data, error } = await q
         if (cancelled) return
         if (error) {

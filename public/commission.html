@@ -757,6 +757,25 @@
     // creates a real feature offer in `funded` status and returns the
     // production URL. We redirect there so the judge watches the
     // pipeline unfold live.
+    //
+    // If the judge is already signed in (Supabase session in
+    // localStorage), we pass their user id so judge-coupon.ts can
+    // link the resulting offer to their bct_accounts row — that's
+    // how /account's "My Films" tab finds judge-commissioned films.
+    function getSignedInSupabaseUserId() {
+      try {
+        const raw = localStorage.getItem('bmovies-auth');
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const expiresAt = parsed?.expires_at || parsed?.currentSession?.expires_at;
+        if (!expiresAt || Date.now() / 1000 >= Number(expiresAt)) return null;
+        const userId = parsed?.user?.id || parsed?.currentSession?.user?.id;
+        return typeof userId === 'string' ? userId : null;
+      } catch {
+        return null;
+      }
+    }
+
     (function judgeCouponFlow() {
       const params = new URLSearchParams(window.location.search);
       const coupon = params.get('judge');
@@ -779,6 +798,7 @@
               coupon,
               title: titleEl.value.trim() || undefined,
               judgeName: params.get('judgeName') || undefined,
+              supabaseUserId: getSignedInSupabaseUserId() || undefined,
             }),
           });
           const body = await res.json();
