@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { href: '/title-designer', label: 'Titles' },
   { href: '/music-studio', label: 'Music' },
   { href: '/pitch-deck', label: 'Deck' },
+  { href: '/studio', label: 'Studios' },
   { href: '/exchange', label: 'Exchange' },
   { href: '/marketplace', label: 'Marketplace' },
 ]

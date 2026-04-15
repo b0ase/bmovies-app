@@ -10,6 +10,7 @@ import {
   BriefcaseIcon,
   BuildingStorefrontIcon,
   UsersIcon,
+  BuildingLibraryIcon,
 } from '@heroicons/react/24/outline'
 
 // bMovies app landing page. This is the page a signed-in user lands
@@ -55,6 +56,12 @@ const TOOLS = [
     label: 'Music studio',
     desc: 'Compose scores, mix themes, attach to films.',
     icon: <MusicalNoteIcon className="h-6 w-6" />,
+  },
+  {
+    href: '/studio',
+    label: 'Studios',
+    desc: 'The six founding studios — each a tradeable BSV-21 token.',
+    icon: <BuildingLibraryIcon className="h-6 w-6" />,
   },
   {
     href: '/exchange',
