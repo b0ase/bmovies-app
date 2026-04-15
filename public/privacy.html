@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Privacy Policy</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; }
+    main { max-width: 800px; margin: 0 auto; padding: 4rem 3rem; }
+    h2 { font-size: 2.4rem; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; color: #fff; margin-bottom: 2rem; }
+    h3 { font-size: 1.1rem; font-weight: 900; text-transform: uppercase; color: #fff; margin-top: 2rem; margin-bottom: 0.6rem; }
+    p, li { font-size: 0.9rem; color: #aaa; line-height: 1.7; margin-bottom: 0.8rem; }
+    ul { padding-left: 1.5rem; }
+    a { color: #E50914; text-decoration: none; }
+    .last-updated { font-size: 0.7rem; color: #555; margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <h2>Privacy Policy</h2>
+    <p class="last-updated">Last updated: April 12, 2026</p>
+
+    <h3>What we collect</h3>
+    <p>When you commission a film or purchase a ticket, we collect:</p>
+    <ul>
+      <li><strong>Email address</strong> — for receipts and production updates</li>
+      <li><strong>Payment information</strong> — processed securely by Stripe; we never store your card details</li>
+      <li><strong>Identity verification data</strong> — processed by Veriff for KYC compliance; we store only the verification status and a reference ID, not your identity documents</li>
+      <li><strong>Film idea and synopsis</strong> — the content you submit for production</li>
+    </ul>
+
+    <h3>How we use it</h3>
+    <ul>
+      <li>To process your payment and deliver your production</li>
+      <li>To comply with securities regulations (KYC verification)</li>
+      <li>To send you updates about your production's progress</li>
+      <li>To distribute royalty revenue to your wallet</li>
+    </ul>
+
+    <h3>Third-party services</h3>
+    <p>We use the following third-party services to operate bMovies:</p>
+    <ul>
+      <li><strong>Stripe</strong> — payment processing (<a href="https://stripe.com/privacy">Stripe Privacy Policy</a>)</li>
+      <li><strong>Veriff</strong> — identity verification (<a href="https://www.veriff.com/privacy-notice">Veriff Privacy Notice</a>)</li>
+      <li><strong>Supabase</strong> — database hosting (self-hosted on our own infrastructure)</li>
+      <li><strong>Vercel</strong> — website hosting (<a href="https://vercel.com/legal/privacy-policy">Vercel Privacy Policy</a>)</li>
+      <li><strong>xAI / AtlasCloud / Replicate</strong> — AI content generation (your film idea is sent to these services to produce the content you commissioned)</li>
+    </ul>
+
+    <h3>Your wallet</h3>
+    <p>bMovies connects to your wallet via the BRC-100 standard. We never access, store, or transmit your private keys. Your wallet signs and broadcasts transactions locally on your device. We only see the public address and transaction IDs that result from your approved actions.</p>
+
+    <h3>Data retention</h3>
+    <p>Production data (titles, synopses, generated content) is stored indefinitely as part of the public production registry. Payment records are retained as required by financial regulations. You may request deletion of your personal data (email, KYC reference) by contacting us.</p>
+
+    <h3>Cookies</h3>
+    <p>We use localStorage (not cookies) to remember your watch-gate unlocks so you're not charged twice for the same film. No tracking cookies, no analytics cookies, no third-party advertising.</p>
+
+    <h3>Contact</h3>
+    <p>For privacy inquiries: <a href="mailto:privacy@bmovies.online">privacy@bmovies.online</a></p>
+  </main>
+
+    <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

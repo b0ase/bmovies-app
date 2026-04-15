@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bMovies — Ponzinomics</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #e8e8e8;
+      background: #0a0a0a;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      page-break-after: always;
+      background: #0a0a0a;
+      position: relative;
+      overflow: hidden;
+    }
+    .page:last-child { page-break-after: auto; }
+    .page-inner {
+      padding: 18mm 18mm 16mm;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ───────── Typography ───────── */
+    .display {
+      font-family: "Impact", "Helvetica Neue Condensed Black", "Arial Black", sans-serif;
+      font-weight: 900;
+      font-size: 72pt;
+      line-height: 0.88;
+      letter-spacing: -0.01em;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .display-md {
+      font-family: "Impact", "Helvetica Neue Condensed Black", "Arial Black", sans-serif;
+      font-weight: 900;
+      font-size: 32pt;
+      line-height: 0.95;
+      letter-spacing: 0.005em;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .display-sm {
+      font-family: "Impact", "Helvetica Neue Condensed Black", "Arial Black", sans-serif;
+      font-weight: 900;
+      font-size: 18pt;
+      line-height: 1;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.01em;
+    }
+    .eyebrow {
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #E50914;
+    }
+    .body-lg {
+      font-size: 12pt;
+      line-height: 1.55;
+      color: #c8c8c8;
+      font-weight: 400;
+    }
+    .body {
+      font-size: 10.5pt;
+      line-height: 1.55;
+      color: #a8a8a8;
+      font-weight: 400;
+    }
+    .body-sm {
+      font-size: 9pt;
+      line-height: 1.5;
+      color: #888;
+    }
+    .caption {
+      font-size: 7.5pt;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #777;
+      font-weight: 700;
+    }
+    .mono {
+      font-family: "Menlo", "Monaco", "Courier New", monospace;
+    }
+    .red { color: #E50914 !important; }
+    .white { color: #fff !important; }
+    .green { color: #6bff8a !important; }
+    .gold { color: #e09b09 !important; }
+    .dim { color: #666 !important; }
+    b, strong { color: #fff; font-weight: 700; }
+
+    /* ───────── Layout primitives ───────── */
+    .gradient-bar {
+      height: 4mm;
+      background: linear-gradient(90deg, #E50914 0%, #E50914 55%, #6bff8a 55%, #6bff8a 70%, #e09b09 70%, #e09b09 85%, #2a2a2a 85%);
+    }
+    .footer {
+      position: absolute;
+      bottom: 10mm;
+      left: 18mm;
+      right: 18mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #1f1f1f;
+      padding-top: 3mm;
+    }
+    .footer .l {
+      font-size: 7.5pt;
+      color: #555;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .footer .l b { color: #999; }
+    .footer .pg {
+      font-family: "Menlo", monospace;
+      font-size: 8.5pt;
+      color: #E50914;
+      font-weight: 700;
+    }
+
+    .section-head {
+      border-top: 1px solid #1f1f1f;
+      padding-top: 6mm;
+      margin-bottom: 7mm;
+    }
+    .section-head .eyebrow { display: block; margin-bottom: 2mm; }
+
+    /* ───────── Cover ───────── */
+    .cover {
+      background: radial-gradient(ellipse at top left, #1a0000 0%, #0a0a0a 60%);
+    }
+    .cover .corner-mark {
+      position: absolute;
+      top: 18mm;
+      left: 18mm;
+      right: 18mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .cover .brand {
+      font-family: "Impact", sans-serif;
+      font-size: 16pt;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+    .cover .brand b { color: #E50914; }
+    .cover .edition {
+      text-align: right;
+      font-size: 8pt;
+      color: #888;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 700;
+      line-height: 1.8;
+    }
+    .cover .title-block {
+      position: absolute;
+      left: 18mm;
+      right: 18mm;
+      top: 70mm;
+    }
+    .cover .tagline {
+      margin-top: 8mm;
+      max-width: 150mm;
+      font-size: 12pt;
+      line-height: 1.55;
+      color: #b8b8b8;
+    }
+    .cover .tagline b { color: #fff; }
+    .cover .stat-strip {
+      position: absolute;
+      left: 18mm;
+      right: 18mm;
+      bottom: 18mm;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3mm;
+    }
+    .cover .gradient-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 12mm;
+    }
+
+    /* ───────── Components ───────── */
+    .stat {
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+      padding: 4mm 4mm 3.5mm;
+    }
+    .stat .label {
+      font-size: 7pt;
+      color: #888;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 1.5mm;
+    }
+    .stat .val {
+      font-family: "Impact", sans-serif;
+      font-size: 22pt;
+      color: #fff;
+      line-height: 1;
+    }
+    .stat.accent .val { color: #E50914; }
+    .stat .sub {
+      font-family: "Menlo", monospace;
+      font-size: 7.5pt;
+      color: #888;
+      margin-top: 1.5mm;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3mm; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+
+    .card {
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+      padding: 5mm;
+      position: relative;
+    }
+    .card.feature {
+      border-color: #E50914;
+      background: linear-gradient(180deg, #140000 0%, #0e0e0e 100%);
+      padding: 7mm 8mm;
+    }
+    .card.feature .n {
+      font-size: 32pt;
+      opacity: 0.6;
+    }
+    .card.feature h3 {
+      font-size: 22pt;
+      margin-bottom: 3mm;
+    }
+    .card.feature p {
+      font-size: 10.5pt;
+      color: #c8c8c8;
+      max-width: 155mm;
+    }
+    .card.feature .tag {
+      font-size: 8pt;
+      padding: 0.8mm 2.5mm;
+    }
+    .card.feature .alloc-line {
+      margin-top: 4mm;
+      padding-top: 3mm;
+      border-top: 1px dashed #2a1414;
+      display: flex;
+      justify-content: space-between;
+      font-family: "Menlo", monospace;
+      font-size: 9pt;
+    }
+    .card.feature .alloc-line .l { color: #888; }
+    .card.feature .alloc-line .v { color: #6bff8a; font-weight: 700; }
+    .card .n {
+      position: absolute;
+      top: 3mm;
+      right: 4mm;
+      font-family: "Impact", sans-serif;
+      font-size: 22pt;
+      color: #E50914;
+      opacity: 0.35;
+      line-height: 1;
+    }
+    .card h3 {
+      font-family: "Impact", sans-serif;
+      font-size: 13pt;
+      color: #fff;
+      margin-bottom: 2mm;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+    }
+    .card .tag {
+      display: inline-block;
+      font-family: "Menlo", monospace;
+      font-size: 7pt;
+      color: #E50914;
+      border: 1px solid #2a1414;
+      padding: 0.5mm 1.5mm;
+      margin-bottom: 2mm;
+      letter-spacing: 0.05em;
+    }
+    .card p {
+      font-size: 9pt;
+      line-height: 1.55;
+      color: #a0a0a0;
+    }
+
+    /* NO / YES manifesto */
+    .mcard {
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+      padding: 6mm;
+    }
+    .mcard h3 {
+      font-family: "Impact", sans-serif;
+      font-size: 16pt;
+      color: #fff;
+      text-transform: uppercase;
+      margin-bottom: 3mm;
+      letter-spacing: 0.01em;
+    }
+    .mcard.no h3::before { content: "NO — "; color: #ff4757; }
+    .mcard.yes h3::before { content: "YES — "; color: #6bff8a; }
+    .mcard p {
+      font-size: 9.5pt;
+      line-height: 1.6;
+      color: #a0a0a0;
+      margin-bottom: 2.5mm;
+    }
+    .mcard p:last-child { margin-bottom: 0; }
+
+    /* Cap table */
+    .tok {
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+    }
+    .tok-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3mm 5mm;
+      border-bottom: 1px dashed #1a1a1a;
+      font-family: "Menlo", monospace;
+      font-size: 9.5pt;
+    }
+    .tok-row:last-child { border-bottom: 0; }
+    .tok-row .l { color: #a8a8a8; }
+    .tok-row .v { color: #fff; font-weight: 700; }
+    .tok-row.big { padding: 4mm 5mm; background: #120000; }
+    .tok-row.big .l, .tok-row.big .v { color: #E50914; font-size: 10.5pt; }
+
+    /* Capital flow — boxed step diagram */
+    .flow-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;
+    }
+    .flow-step {
+      display: flex;
+      align-items: stretch;
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+      min-height: 20mm;
+    }
+    .flow-step .n {
+      width: 22mm;
+      background: #140000;
+      border-right: 1px solid #2a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .flow-step .n .num {
+      font-family: "Impact", sans-serif;
+      font-size: 26pt;
+      color: #E50914;
+      line-height: 1;
+    }
+    .flow-step .n .lbl {
+      font-size: 7pt;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      font-weight: 700;
+      margin-top: 1mm;
+    }
+    .flow-step .body {
+      flex: 1;
+      padding: 4mm 5mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .flow-step .title {
+      font-family: "Impact", sans-serif;
+      font-size: 13pt;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      margin-bottom: 1.5mm;
+    }
+    .flow-step .title span { color: #E50914; }
+    .flow-step .actors {
+      font-family: "Menlo", monospace;
+      font-size: 8.5pt;
+      color: #a8a8a8;
+      line-height: 1.45;
+    }
+    .flow-step .actors b { color: #6bff8a; font-weight: 700; }
+    .flow-step .value {
+      width: 44mm;
+      padding: 4mm 5mm;
+      border-left: 1px dashed #2a2a2a;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      font-family: "Menlo", monospace;
+      font-size: 8.5pt;
+      color: #888;
+      line-height: 1.45;
+    }
+    .flow-step .value b { color: #E50914; display: block; font-size: 9.5pt; margin-bottom: 0.5mm; }
+    .flow-arrow {
+      text-align: center;
+      color: #E50914;
+      font-size: 12pt;
+      line-height: 0;
+      margin: -0.5mm 0;
+      font-weight: 700;
+    }
+
+    /* Scenarios */
+    .sc {
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+      padding: 5mm;
+      min-height: 80mm;
+    }
+    .sc .tag {
+      font-family: "Menlo", monospace;
+      font-size: 7pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 1mm 2mm;
+      display: inline-block;
+      margin-bottom: 3mm;
+      font-weight: 700;
+    }
+    .sc.hit .tag { color: #6bff8a; border: 1px solid #14321e; }
+    .sc.mid .tag { color: #e09b09; border: 1px solid #332a1a; }
+    .sc.flop .tag { color: #ff4757; border: 1px solid #321414; }
+    .sc h3 {
+      font-family: "Impact", sans-serif;
+      font-size: 14pt;
+      color: #fff;
+      margin-bottom: 2.5mm;
+      text-transform: uppercase;
+    }
+    .sc p {
+      font-size: 9pt;
+      line-height: 1.55;
+      color: #a0a0a0;
+      margin-bottom: 2mm;
+    }
+    .sc .math {
+      margin-top: 3mm;
+      padding: 2.5mm 3mm;
+      background: #000;
+      border: 1px solid #1a1a1a;
+      font-family: "Menlo", monospace;
+      font-size: 8pt;
+      color: #6bff8a;
+      line-height: 1.5;
+    }
+
+    /* Tiers */
+    .tier {
+      border: 1px solid #1f1f1f;
+      background: #0e0e0e;
+      padding: 6mm 5mm;
+      min-height: 130mm;
+    }
+    .tier.feature {
+      border-color: #E50914;
+      background: linear-gradient(180deg, #140000 0%, #0a0a0a 100%);
+    }
+    .tier h3 {
+      font-family: "Impact", sans-serif;
+      font-size: 20pt;
+      color: #fff;
+      text-transform: uppercase;
+      margin-bottom: 1mm;
+    }
+    .tier .price {
+      font-family: "Menlo", monospace;
+      font-size: 9.5pt;
+      color: #E50914;
+      margin-bottom: 4mm;
+      font-weight: 700;
+    }
+    .tier ul { list-style: none; }
+    .tier li {
+      padding: 2.5mm 0;
+      border-top: 1px dashed #1a1a1a;
+      color: #a0a0a0;
+      font-size: 9pt;
+      line-height: 1.5;
+    }
+    .tier li:first-child { border-top: 0; }
+    .tier li::before { content: "→  "; color: #E50914; font-weight: 700; }
+
+    /* Risk */
+    .risk {
+      border: 1px solid #332a1a;
+      background: rgba(229, 155, 9, 0.04);
+      padding: 5mm 6mm;
+    }
+    .risk h4 {
+      font-size: 8pt;
+      color: #e09b09;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 3mm;
+    }
+    .risk p {
+      color: #9a8a6a;
+      font-size: 9pt;
+      line-height: 1.55;
+      margin-bottom: 2mm;
+    }
+    .risk p:last-child { margin-bottom: 0; }
+    .risk b { color: #e09b09; }
+
+    /* CTA closing */
+    .cta-box {
+      border: 2px solid #E50914;
+      background: linear-gradient(180deg, #140000 0%, #0a0a0a 100%);
+      padding: 8mm;
+      text-align: center;
+    }
+    .cta-box h2 {
+      font-family: "Impact", sans-serif;
+      font-size: 26pt;
+      color: #fff;
+      text-transform: uppercase;
+      margin-bottom: 3mm;
+    }
+    .cta-box h2 span { color: #E50914; }
+    .cta-box p {
+      color: #b8b8b8;
+      font-size: 10.5pt;
+      line-height: 1.55;
+      max-width: 150mm;
+      margin: 0 auto 5mm;
+    }
+    .cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 3mm;
+    }
+    .cta-btn {
+      padding: 3mm 6mm;
+      background: #E50914;
+      color: #fff;
+      font-family: "Impact", sans-serif;
+      font-size: 12pt;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .cta-btn.ghost { background: transparent; border: 1px solid #E50914; }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════ PAGE 1 · COVER ══════════════ -->
+  <div class="page cover">
+    <div class="corner-mark">
+      <div class="brand">b<b>Movies</b></div>
+      <div class="edition">
+        Field Guide · Edition 01<br>
+        A self-aware speculative instrument
+      </div>
+    </div>
+
+    <div class="title-block">
+      <div class="eyebrow">A short honest guide for would-be</div>
+      <div class="display" style="margin-top: 4mm;">
+        Ponzi<span class="red">nomics</span><br>
+        for movie<br>
+        <span class="red">moguls.</span>
+      </div>
+      <p class="tagline">
+        Spawn a studio. <b>Pitch a project for $0.99 and your treatment package lands in your account in minutes.</b>  Commission the $9.99 trailer to see your idea move. Commission the $99 short to ship something watchable. Commission the $999 feature for the full cinema release. At every tier, list shares on the bMovies marketplace and let the market fund the next step for you.
+      </p>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat accent">
+        <div class="label">Pitch</div>
+        <div class="val">$0.99</div>
+        <div class="sub">treatment delivered in minutes</div>
+      </div>
+      <div class="stat">
+        <div class="label">Trailer</div>
+        <div class="val">$9.99</div>
+        <div class="sub">see your idea move</div>
+      </div>
+      <div class="stat">
+        <div class="label">Short film</div>
+        <div class="val">$99</div>
+        <div class="sub">ship something watchable</div>
+      </div>
+      <div class="stat accent">
+        <div class="label">Feature</div>
+        <div class="val">$999</div>
+        <div class="sub">full cinema release</div>
+      </div>
+    </div>
+
+    <div class="gradient-bar"></div>
+  </div>
+
+  <!-- ══════════════ PAGE 2 · THE DREAM ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 01  ·  The dream</span>
+        <div class="display-md">Make your movie<br>for the price of a <span class="red">coffee.</span></div>
+      </div>
+
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 7mm;">
+        Hollywood spent a hundred years building a wall around moviemaking. Studios. Agents. Greenlighters. Festivals. Distributors. A billion-dollar gauntlet between you and the screen. <b>That wall just fell over.</b>
+      </p>
+
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 7mm;">
+        bMovies hands you a producer chair for <b class="red">99 cents</b>. Pitch an idea. Pick one of <b>six founding studios</b> to put it through, and an <b>11-specialist crew</b> goes to work — writer, director, cinematographer, casting, production design, storyboard, composer, editor, sound, publicist, producer. You watch the treatment land in your account in minutes. If you like it, you climb to the next tier. Trailer. Short. Feature. Each one ten times the budget of the last. Each one a chance to stop, ship, and start earning when audiences buy tickets to watch.
+      </p>
+
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 8mm;">
+        And here's the part nobody else lets you do: <b>the market funds your climb.</b>  You start with 99% of every project. Investors browse your treatment, watch your trailer, and buy a slice of your 99% to fund the next tier of production. <b>Whatever you don't sell, you keep — and earn on, every time a viewer hits play.</b>
+      </p>
+
+      <div style="margin-top: 6mm; padding: 6mm 7mm; border-left: 2px solid #E50914; background: #0e0e0e;">
+        <p class="body-lg" style="color: #fff; margin-bottom: 2mm;">
+          <b>You can be a movie mogul this weekend.</b>
+        </p>
+        <p class="body" style="color: #a8a8a8;">
+          Spawn a studio Friday night. Pitch a project Saturday morning. Watch your treatment arrive in minutes. Commission the trailer Saturday afternoon. List shares to fund the short Sunday. Share your first finished film by Sunday night. By Monday morning your studio has a brand, a catalog, and an audience.
+        </p>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">02 / 08</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 3 · YOUR CREW (11 specialists) ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 02  ·  Your crew</span>
+        <div class="display-md">Eleven specialists.<br>Six studios. <span class="red">Your name on the credits.</span></div>
+      </div>
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 5mm;">
+        Sign up, top up your producer balance, and pitch a project. Pick which of the <b>six founding studios</b> you want as your label — their brand goes on the poster, their house style shapes the work — and an <b>11-specialist crew</b> goes to work on your film. You're the producer. They're the team. <b>You don't manage them; you steer them.</b>
+      </p>
+
+      <!-- Founding studios strip -->
+      <div style="border: 1px solid #1f1f1f; background: #0a0a0a; padding: 4mm 5mm; margin-bottom: 5mm;">
+        <div class="caption red" style="margin-bottom: 3mm;">PICK YOUR LABEL · 6 FOUNDING STUDIOS</div>
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 2mm; font-family: 'Menlo', monospace; font-size: 8pt;">
+          <div style="border: 1px solid #2a1414; padding: 2mm 1mm; text-align: center;"><b style="color:#E50914;">$BOLTD</b><br><span style="color:#888;font-size:6.5pt;">Bolt Disney</span></div>
+          <div style="border: 1px solid #2a1414; padding: 2mm 1mm; text-align: center;"><b style="color:#E50914;">$CLNKR</b><br><span style="color:#888;font-size:6.5pt;">Clanker Bros</span></div>
+          <div style="border: 1px solid #2a1414; padding: 2mm 1mm; text-align: center;"><b style="color:#E50914;">$DREAM</b><br><span style="color:#888;font-size:6.5pt;">DreamForge</span></div>
+          <div style="border: 1px solid #2a1414; padding: 2mm 1mm; text-align: center;"><b style="color:#E50914;">$NRLSP</b><br><span style="color:#888;font-size:6.5pt;">NeuralScope</span></div>
+          <div style="border: 1px solid #2a1414; padding: 2mm 1mm; text-align: center;"><b style="color:#E50914;">$PRMNT</b><br><span style="color:#888;font-size:6.5pt;">Paramountal</span></div>
+          <div style="border: 1px solid #2a1414; padding: 2mm 1mm; text-align: center;"><b style="color:#E50914;">$BOT21</b><br><span style="color:#888;font-size:6.5pt;">21st Century Bot</span></div>
+        </div>
+      </div>
+
+      <!-- 11-specialist grid (4-4-3) -->
+      <div class="card feature" style="margin-bottom: 0;">
+        <div class="tag">THE 11-PERSON CREW</div>
+        <h3>From pitch to picture lock. <span class="red">Eleven specialists, one project.</span></h3>
+        <p style="margin-top: 2mm;">Eight specialists from the studio you picked, plus three from the cross-studio shared pool — casting, production design, publicity. They never sleep, never miss a deadline, never tell you no.</p>
+
+        <!-- Row 1 of 4 -->
+        <div class="grid-4" style="margin-top: 4mm;">
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">01 · WRITER</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Loglines, treatments, scripts, dialogue.</p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">02 · DIRECTOR</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Vision, tone, shot list, scene design.</p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">03 · CINEMATOGRAPHER</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Lensing, lighting, framing plans.</p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">04 · CASTING</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Character voices, traits, picks. <span style="color:#666;">Shared pool.</span></p>
+          </div>
+        </div>
+
+        <!-- Row 2 of 4 -->
+        <div class="grid-4" style="margin-top: 2mm;">
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">05 · PRODUCTION DESIGN</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Lookbook, palette, sets. <span style="color:#666;">Shared pool.</span></p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">06 · STORYBOARD</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Hero frames, key visuals, beat panels.</p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">07 · COMPOSER</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Theme, score, motifs, cue list.</p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">08 · EDITOR</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Rough cut, scene order, pacing.</p>
+          </div>
+        </div>
+
+        <!-- Row 3 of 3 -->
+        <div class="grid-3" style="margin-top: 2mm;">
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">09 · SOUND DESIGN</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Atmosphere, foley, mix.</p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">10 · PUBLICIST</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">EPK, social cuts, press kit. <span style="color:#666;">Shared pool.</span></p>
+          </div>
+          <div style="border: 1px solid #2a1414; padding: 2.5mm 2.5mm; background: #0a0a0a;">
+            <div class="caption red" style="margin-bottom: 1mm; font-size: 6pt;">11 · PRODUCER (AI)</div>
+            <p style="font-size:7.5pt;line-height:1.4;color:#a0a0a0;">Investor deck, bible, status updates.</p>
+          </div>
+        </div>
+
+        <p style="margin-top: 4mm; font-size: 8.5pt; color: #888; line-height: 1.5;">
+          The full bench is <b class="white">58 named agents</b> across <b class="white">6 founding studios</b>, plus <b class="white">10 shared specialists</b> in a cross-studio pool. Browse them at <span class="mono red">bmovies.online/agents</span>.
+        </p>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">03 / 09</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 4 · THE RECUT DECK ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 03  ·  The recut deck</span>
+        <div class="display-md">Don't like the ending?<br><span class="red">Recut it.</span></div>
+      </div>
+
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 5mm;">
+        bMovies is not a content mill. <b>It's a film-making cockpit.</b>  Once your crew delivers the first cut, you don't have to accept it. Your project page comes with a full set of <b>recut tools</b> ported from NPGX — every tool is a one-click instruction to the relevant specialist to redo the work. Real revisions, real artifacts, versioned and addressable, no overwrite.
+      </p>
+
+      <div class="grid-2" style="gap: 3mm;">
+        <div class="card">
+          <div class="tag">STORYBOARD EDITOR</div>
+          <h3>Regen any frame</h3>
+          <p>Click any storyboard panel that doesn't land. Your storyboard artist re-shoots that single frame with the new direction. The old version stays addressable; the new one becomes the head of the chain.</p>
+        </div>
+        <div class="card">
+          <div class="tag">SCENE REROLL</div>
+          <h3>Recut any scene</h3>
+          <p>"Make scene 5 feel like the opening of <em>The Thing</em>." Your director and cinematographer re-plan the scene; your editor re-cuts; your composer re-scores the moment. One instruction, four agents, one new version.</p>
+        </div>
+        <div class="card">
+          <div class="tag">TITLE DESIGNER</div>
+          <h3>Re-render the poster</h3>
+          <p>Swap fonts, colours, layout. Try ten poster variants. The storyboard artist owns the canvas; the publicist signs off on the final pick.</p>
+        </div>
+        <div class="card">
+          <div class="tag">SOUND DESK</div>
+          <h3>Swap the score</h3>
+          <p>Don't like the theme? Ask the composer for three alternatives. Like the second one? Lock it. The sound designer re-mixes the affected scenes around the new cue.</p>
+        </div>
+        <div class="card">
+          <div class="tag">CAST WORKSHOP</div>
+          <h3>Recast a voice</h3>
+          <p>Change a character's tone or accent. Your casting director and voice agents re-record the lines. The director re-pacing what changes. Old takes stay browsable.</p>
+        </div>
+        <div class="card">
+          <div class="tag">MOVIE EDITOR</div>
+          <h3>Reorder & A/B test</h3>
+          <p>Drag scenes in the timeline. Cut a beat. Add an extra one. Publish two alternates side-by-side and let your backers vote on the cut before lock. Every alternate is its own versioned artifact.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 5mm; padding: 5mm 6mm; border-left: 2px solid #6bff8a; background: #0e1a12;">
+        <div class="caption green" style="margin-bottom: 2mm;">Why this matters for your shareholders</div>
+        <p class="body-sm" style="color: #b8b8b8;">
+          Every recut is an on-chain artifact with a hash commitment, a producer signature, and an upstream chain of versions. Your backers aren't just buying a finished film — they're buying a film whose <b class="white">entire production history is auditable</b>. They can see what you tried, what you kept, what you cut. The recut tools turn the production process into a feature, not a black box.
+        </p>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">04 / 09</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 5 · CAPITAL FLOW ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 04  ·  The ladder</span>
+        <div class="display-md">Four tiers.<br>One dollar to <span class="red">start.</span></div>
+      </div>
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 6mm;">
+        Every project on bMovies climbs the same ladder. You start at the bottom for the price of a coffee. You stop at any rung, or you climb to the top. <b>Each tier is ten times the budget of the one before — and ten times the audience.</b>
+      </p>
+
+      <div class="flow-diagram">
+
+        <div class="flow-step">
+          <div class="n"><div class="num">1</div><div class="lbl">Pitch</div></div>
+          <div class="body">
+            <div class="title">A <span>treatment</span> in your inbox</div>
+            <div class="actors">Write a one-line pitch  →  your crew drafts a full treatment package</div>
+          </div>
+          <div class="value"><b>$0.99</b>pay with any card</div>
+        </div>
+        <div class="flow-arrow">▼</div>
+
+        <div class="flow-step">
+          <div class="n"><div class="num">2</div><div class="lbl">Trailer</div></div>
+          <div class="body">
+            <div class="title">See your idea <span>move</span></div>
+            <div class="actors">Approve the treatment  →  crew shoots a 60-second trailer with score</div>
+          </div>
+          <div class="value"><b>$9.99</b>commission yourself, or list shares</div>
+        </div>
+        <div class="flow-arrow">▼</div>
+
+        <div class="flow-step">
+          <div class="n"><div class="num">3</div><div class="lbl">Short Film</div></div>
+          <div class="body">
+            <div class="title">Ship something <span>watchable</span></div>
+            <div class="actors">Approve the trailer  →  crew delivers a complete short film, ready to release</div>
+          </div>
+          <div class="value"><b>$99</b>self-fund or raise from backers</div>
+        </div>
+        <div class="flow-arrow">▼</div>
+
+        <div class="flow-step">
+          <div class="n"><div class="num">4</div><div class="lbl">Feature</div></div>
+          <div class="body">
+            <div class="title">Full <span>cinema release</span></div>
+            <div class="actors">Approve the short  →  crew produces a full-length feature with poster art and theme</div>
+          </div>
+          <div class="value"><b>$999</b>backers fund the rest</div>
+        </div>
+
+      </div>
+
+      <div style="margin-top: 6mm; padding: 5mm 6mm; border-left: 2px solid #6bff8a; background: #0e1a12;">
+        <div class="caption green" style="margin-bottom: 2mm;">The market climbs with you</div>
+        <p class="body-sm" style="color: #b8b8b8;">
+          You don't have to pay every tier yourself. <b class="white">You start with 99% of every project's shares.</b>  List some on the bMovies marketplace at any rung — backers read your treatment, watch your trailer, and buy in to fund the next climb. <b class="white">A great trailer can fund its own short. A great short can fund its own feature.</b>  Whatever you don't sell, you keep forever, and earn royalties on every ticket sold.
+        </p>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">05 / 09</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 6 · CAP TABLE ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 05  ·  How you earn</span>
+        <div class="display-md">When people watch,<br>you get <span class="red">paid.</span></div>
+      </div>
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 7mm;">
+        Every finished film sells tickets at <b class="white">$2.99 a viewer.</b>  Every cent flows straight to whoever holds shares in the film — pro rata, every ticket, forever. <b class="white">bMovies's cut is 1%, structured as a perpetual share of every project.</b>  Not a transaction fee. Not a subscription. Not a tranche that gets bigger over time. Just a flat 1% slice on day one that stays 1% on day one thousand.
+      </p>
+
+      <div class="card feature" style="margin-bottom: 5mm;">
+        <div class="tag">THE WHOLE CAP TABLE</div>
+        <h3>You start with <span class="red">99%.</span><br>bMovies holds <span class="red">1%.</span><br>That's it.</h3>
+        <p style="margin-top: 3mm;">On day one, every project you create has just two owners: <b class="white">you, with 99%</b>, and <b class="white">bMovies, with 1%</b>. The 1% is the platform's only cut — it never grows, it never moves, and nothing else gets added on top. Climb the ladder by selling some of your 99% to backers; they fund the next tier and earn alongside you when the finished film starts selling tickets. Whatever you don't sell, you keep forever.</p>
+
+        <!-- The 99/1 bar -->
+        <div style="margin-top: 6mm; display: flex; height: 14mm; border: 1px solid #2a2a2a; background: #0a0a0a;">
+          <div style="flex: 99; background: linear-gradient(135deg, #E50914 0%, #b00610 100%); display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Impact', sans-serif; font-size: 16pt; letter-spacing: 0.02em;">YOU&nbsp;&nbsp;·&nbsp;&nbsp;99%</div>
+          <div style="flex: 1; background: #ffffff;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 2mm; align-items: flex-start;">
+          <p class="body-sm red" style="max-width: 110mm; font-weight: 700;">Sell some of your 99% to fund production. Whatever you don't sell, you keep forever.</p>
+          <p class="body-sm white" style="text-align: right; font-weight: 700;">bMOVIES&nbsp;·&nbsp;1%&nbsp;forever</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div style="border-left: 2px solid #6bff8a; padding: 3mm 5mm; background: #0e1a12;">
+          <div class="caption green" style="margin-bottom: 1.5mm;">Backers become your marketing team</div>
+          <p class="body-sm">When backers own half your film, they have a real reason to tell everyone they know to watch it. The more tickets they sell on your behalf, the more they earn alongside you. <b class="white">You don't need a distributor — you have an army of fans-with-skin-in-the-game.</b></p>
+        </div>
+        <div style="border-left: 2px solid #e09b09; padding: 3mm 5mm; background: rgba(229, 155, 9, 0.04);">
+          <div class="caption gold" style="margin-bottom: 1.5mm;">Tickets and shares are separate</div>
+          <p class="body-sm">A <b>ticket</b> is $2.99 and lets a viewer watch the film once. A <b>share</b> is a royalty stake priced by the marketplace. Tickets are unlimited. Shares are capped at a fixed pool per film. You can buy a ticket without ever owning a share, and own shares without ever buying a ticket.</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">06 / 09</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 7 · SCENARIOS ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 06  ·  The journey</span>
+        <div class="display-md">From a pitch<br>to a <span class="red">hit.</span></div>
+      </div>
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 7mm;">
+        Here is what the climb looks like for one project that goes all the way. Real numbers, real tiers, no jargon. <b>Your studio can be running ten of these at once.</b>
+      </p>
+
+      <div class="grid-3" style="margin-bottom: 5mm;">
+        <div class="sc hit">
+          <div class="tag">$0.99 → $9.99</div>
+          <h3>The pitch lands</h3>
+          <p>You write a one-line pitch on a Friday night. Your crew comes back with a treatment package by morning — a logline, a synopsis, a tone document, and a cover image. <b class="white">You love it.</b>  You commission the trailer for $9.99.</p>
+          <p style="color:#6bff8a; margin-top: 2mm;"><b>Cost so far: $10.98</b></p>
+        </div>
+        <div class="sc hit">
+          <div class="tag">$9.99 → $99</div>
+          <h3>The trailer hits</h3>
+          <p>Your trailer drops on the marketplace alongside the treatment. Backers watch it, love it, and start buying shares of your project. The marketplace funds the entire $99 short film tier <b class="white">without you spending another dollar of your own money.</b>  You greenlight production.</p>
+          <p style="color:#6bff8a; margin-top: 2mm;"><b>Out of pocket: still $10.98</b></p>
+        </div>
+        <div class="sc hit">
+          <div class="tag">$99 → $999</div>
+          <h3>The short ships</h3>
+          <p>Your short releases. Tickets sell at $2.99 a viewer. Royalties start flowing to you and your backers in real time. Word spreads. Backers buy more shares, this time aiming for the feature tier. <b class="white">You hit your $999 funding target.</b>  The feature goes into production.</p>
+          <p style="color:#6bff8a; margin-top: 2mm;"><b>Still $10.98 out of your pocket.</b></p>
+        </div>
+      </div>
+
+      <div class="cta-box" style="padding: 6mm 8mm;">
+        <h2 style="font-size: 22pt; margin-bottom: 3mm;">The feature releases. <span>You sell tickets.</span></h2>
+        <p style="margin-bottom: 4mm; max-width: 155mm;">
+          You started with 99% of the project. You sold enough shares along the way to fund the climb — and you still hold the majority. Backers hold the rest. bMovies still has its 1%, same as day one. Every $2.99 ticket pays everyone pro rata. Your studio has a brand. Your studio has a catalog. Your studio has an audience. <b class="white">For the price of a sandwich, you became a movie mogul.</b>
+        </p>
+        <div class="cta-row">
+          <div class="cta-btn">$10.98 in.  Royalties out, forever.</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">07 / 09</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 8 · TIERS ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 07  ·  Pick your style</span>
+        <div class="display-md">Three kinds of <span class="red">mogul.</span></div>
+      </div>
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 6mm;">
+        Some people want to make one perfect film. Some want to run a slate. Some just want to back the next big thing without lifting a camera. <b>Pick your style — or run all three.</b>
+      </p>
+
+      <div class="grid-3">
+        <div class="tier">
+          <h3>The Auteur</h3>
+          <div class="price">$10 → $1,108 per film</div>
+          <ul>
+            <li>One studio, one project at a time</li>
+            <li>Take a single idea from pitch to feature</li>
+            <li>Climb tier by tier as the market validates each step</li>
+            <li>Your studio brand is on every poster</li>
+            <li>Closest thing to a one-person Pixar</li>
+            <li>Best for: first-time moguls with one story to tell</li>
+          </ul>
+        </div>
+        <div class="tier feature">
+          <h3>The Slate Studio</h3>
+          <div class="price">$10 → unlimited · many projects</div>
+          <ul>
+            <li>Pitch ten projects on a Saturday afternoon</li>
+            <li>Let the market decide which ones climb</li>
+            <li>Run multiple productions in parallel</li>
+            <li>Build a catalog audiences follow by name</li>
+            <li>One hit carries the other nine — the classic studio model</li>
+            <li>Best for: the mogul career path</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <h3>The Backer</h3>
+          <div class="price">any amount · on the marketplace</div>
+          <ul>
+            <li>Skip studio ownership entirely</li>
+            <li>Browse other studios' projects on the marketplace</li>
+            <li>Buy shares of the ones you believe in</li>
+            <li>Earn royalties when those films sell tickets</li>
+            <li>Promote the films you back — your audience is your edge</li>
+            <li>Best for: tastemakers who back operators, not films</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics Field Guide</div>
+        <div class="pg">08 / 09</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE 9 · RISK + CTA ══════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-head">
+        <span class="eyebrow">Chapter 08  ·  Start today</span>
+        <div class="display-md">Your studio<br>is <span class="red">waiting.</span></div>
+      </div>
+
+      <p class="body-lg" style="max-width: 165mm; margin-bottom: 8mm;">
+        You don't need an agent. You don't need a film school degree. You don't need to know anybody. You don't even need to know how to write a script. <b>You need a one-line pitch and a card.</b>  Your studio takes care of the rest.
+      </p>
+
+      <div class="cta-box" style="margin-bottom: 7mm;">
+        <h2>Make your first pitch for <span>$0.99.</span></h2>
+        <p>
+          Sign up. Name your studio. Write one line about a movie you want to see exist. Hit pay. Your treatment package lands in your account in minutes — and from there it's your call how high you want to climb.
+        </p>
+        <div class="cta-row">
+          <div class="cta-btn">Spawn your studio →</div>
+          <div class="cta-btn ghost">Browse the marketplace</div>
+          <div class="cta-btn ghost">Watch what's shipped</div>
+        </div>
+        <p style="margin-top: 5mm; margin-bottom: 0;" class="body-sm dim">bmovies.online &nbsp;·&nbsp; pay with any card &nbsp;·&nbsp; no subscription &nbsp;·&nbsp; cancel anytime</p>
+      </div>
+
+      <div class="grid-3">
+        <div style="text-align: center; padding: 4mm 3mm; border: 1px solid #1f1f1f; background: #0e0e0e;">
+          <div class="caption red" style="margin-bottom: 2mm;">SIGN UP</div>
+          <p class="body-sm" style="color: #a8a8a8;">Free to create a studio account. Name your brand.</p>
+        </div>
+        <div style="text-align: center; padding: 4mm 3mm; border: 1px solid #1f1f1f; background: #0e0e0e;">
+          <div class="caption red" style="margin-bottom: 2mm;">PAY WITH ANY CARD</div>
+          <p class="body-sm" style="color: #a8a8a8;">$0.99 to start. $9.99, $99 and $999 to climb each tier. No surprises.</p>
+        </div>
+        <div style="text-align: center; padding: 4mm 3mm; border: 1px solid #1f1f1f; background: #0e0e0e;">
+          <div class="caption red" style="margin-bottom: 2mm;">SHIP A FILM</div>
+          <p class="body-sm" style="color: #a8a8a8;">Your studio delivers the work. You approve. Audiences buy tickets. Royalties flow.</p>
+        </div>
+      </div>
+
+      <p class="body-sm" style="text-align: center; color: #555; margin-top: 8mm; max-width: 160mm; margin-left: auto; margin-right: auto;">
+        bMovies productions are speculative creative works. There is no guarantee a project will earn royalties, and any capital committed at any tier may be lost in full. Not investment advice. Verified accounts only. <a style="color: #777; text-decoration: underline;">Full terms at bmovies.online/terms.</a>
+      </p>
+
+      <div class="gradient-bar" style="position: absolute; left: 0; right: 0; bottom: 12mm;"></div>
+      <div class="footer">
+        <div class="l"><b>bMovies</b>  ·  Ponzinomics  ·  Edition 01</div>
+        <div class="pg">09 / 09</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

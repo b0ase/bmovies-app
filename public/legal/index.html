@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="../js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Legal documents</title>
+  <link rel="icon" type="image/png" href="../bmovies_OG.png" />
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; }
+    main { max-width: 860px; margin: 0 auto; padding: 4rem 3rem 6rem; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: -0.01em; color: #fff; margin-bottom: 0.4rem; line-height: 1; }
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.01em; color: #fff; margin-top: 2.6rem; margin-bottom: 0.8rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    p { font-size: 0.9rem; color: #bbb; line-height: 1.7; margin-bottom: 0.8rem; }
+    strong { color: #fff; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { font-size: 0.7rem; color: #555; margin-bottom: 1.6rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+    .doc-card {
+      display: block;
+      border: 1px solid #222;
+      background: #0a0a0a;
+      padding: 1.2rem 1.4rem;
+      margin: 0.8rem 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .doc-card:hover {
+      border-color: #E50914;
+      background: #120103;
+      text-decoration: none;
+    }
+    .doc-card .title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      letter-spacing: 0.01em;
+      color: #fff;
+      margin-bottom: 0.3rem;
+    }
+    .doc-card .desc {
+      font-size: 0.8rem;
+      color: #888;
+      line-height: 1.5;
+    }
+    .doc-card .doc-meta {
+      font-size: 0.55rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      margin-top: 0.6rem;
+    }
+    @media print {
+      body { background: #fff; color: #000; }
+      main { max-width: none; padding: 1cm; }
+      h1, h2, strong, .doc-card .title { color: #000 !important; }
+      p, .doc-card .desc { color: #333 !important; }
+      .doc-card { background: #f8f8f8 !important; border-color: #ccc !important; }
+      footer, .site-header { display: none; }
+      a { color: #000 !important; text-decoration: underline !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <h1>Legal documents</h1>
+    <p class="meta">bMovies Platform · The Bitcoin Corporation Ltd</p>
+
+    <div style="border: 1px solid #222; background: #0a0a0a; padding: 1rem 1.2rem; margin: 1.2rem 0 1.8rem; font-size: 0.78rem; color: #aaa; line-height: 1.55;">
+      <strong style="color:#fff;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:0.4rem;">Issuer</strong>
+      The Bitcoin Corporation Ltd, a private company limited by shares registered in England &amp; Wales · Company number <strong style="color:#fff;">16735102</strong> · Registered office Flat 6, 315 Barking Road, London, E13 8EE, United Kingdom · <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>
+    </div>
+
+    <p>The documents below describe how the bMovies Platform works, what you are buying when you commission a film or buy royalty shares, what rights and risks attach to those shares, and how the Platform's non-custodial architecture protects your tokens. Every document is a plain-English disclosure intended to be read before committing money; the Issuer's view is that an informed buyer is a better buyer.</p>
+
+    <p>All documents are drafts pending review by regulated counsel. Lawyer-reviewed editions will replace them before the Platform is marketed to unaccredited retail buyers.</p>
+
+    <h2>Platform &amp; token disclosures</h2>
+
+    <a class="doc-card" href="platform-token-prospectus.html">
+      <div class="title">$bMovies platform token prospectus</div>
+      <div class="desc">
+        What the $bMovies platform token is, how it is issued, what right it gives the holder, what risks it carries, and how the offering relates to UK financial services law (FSMA 2000).
+      </div>
+      <div class="doc-meta">Prospectus · primary disclosure</div>
+    </a>
+
+    <a class="doc-card" href="film-token-risk-disclosure.html">
+      <div class="title">Film token risk disclosure</div>
+      <div class="desc">
+        The risks specific to individual film royalty tokens &mdash; per-project pitches, trailers, shorts, and features. Execution risk, market risk, regulatory risk, technical risk, and the limits of the revenue model.
+      </div>
+      <div class="doc-meta">Risk disclosure · required reading before commissioning</div>
+    </a>
+
+    <h2>Architecture disclosures</h2>
+
+    <a class="doc-card" href="non-custodial-disclosure.html">
+      <div class="title">Non-custodial disclosure</div>
+      <div class="desc">
+        What "non-custodial" means on the bMovies Platform, how your BSV keys are provisioned depending on sign-in method, how ticket revenue flows back to royalty shareholders via on-chain covenant, and your responsibilities as the party holding your own key material.
+      </div>
+      <div class="doc-meta">Architecture · custody model</div>
+    </a>
+
+    <a class="doc-card" href="runar-covenant-design.html">
+      <div class="title">Runar covenant design</div>
+      <div class="desc">
+        The non-custodial dividend distribution path. Technical design for the Runar-compiled BSV smart contract that takes ticket revenue as input and fans out pro-rata payments to the current royalty shareholder set, without the Platform ever touching the funds.
+      </div>
+      <div class="doc-meta">Technical design · distribution covenant</div>
+    </a>
+
+    <h2>Terms</h2>
+
+    <a class="doc-card" href="../terms.html">
+      <div class="title">Terms of Service</div>
+      <div class="desc">
+        The contractual terms under which you use the bMovies Platform. Covers commissioning, royalty share ownership, the relationship between the Platform and the Operator, dispute resolution, and refund eligibility.
+      </div>
+      <div class="doc-meta">Contractual · binding</div>
+    </a>
+
+    <a class="doc-card" href="../privacy.html">
+      <div class="title">Privacy policy</div>
+      <div class="desc">
+        What personal data the Platform collects, why, how long it is retained, and how you exercise your rights under UK GDPR.
+      </div>
+      <div class="doc-meta">Privacy · UK GDPR</div>
+    </a>
+
+    <h2>Contact</h2>
+    <p>Questions on any of the documents above, or requests for additional disclosure, can be sent to <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>. The Issuer commits to respond substantively within five working days.</p>
+
+    <p style="margin-top:3rem;font-size:0.7rem;color:#555;text-align:center;">
+      <a href="../index.html">← Back to bMovies</a>
+    </p>
+  </main>
+
+  <script type="module" src="../js/nav-session.js"></script>
+</body>
+</html>

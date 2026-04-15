@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Treasury</title>
+  <meta name="description" content="The platform P&L for bMovies. Real revenue, real costs, real distributions. Updated every 30 seconds." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Treasury" />
+  <meta property="og:description" content="Real revenue, real costs, real distributions. The platform P&L you can audit." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+    main { max-width: 1400px; margin: 0 auto; padding: 3rem 3rem 6rem; }
+
+    .page-intro { padding-bottom: 2rem; border-bottom: 1px solid #222; margin-bottom: 2rem; }
+    .page-intro .kicker {
+      font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .page-intro h2 {
+      font-size: 2.4rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.03em; color: #fff; margin-top: 0.5rem; line-height: 1;
+    }
+    .page-intro p {
+      font-size: 0.85rem; color: #888; line-height: 1.6; margin-top: 0.8rem;
+      max-width: 860px;
+    }
+    .page-intro strong { color: #fff; }
+
+    /* Headline P&L grid */
+    .pnl {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+    .pnl-card {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1.4rem 1.6rem;
+      position: relative;
+    }
+    .pnl-card.revenue { border-left: 3px solid #6bff8a; }
+    .pnl-card.cost    { border-left: 3px solid #ffb347; }
+    .pnl-card.margin  { border-left: 3px solid #E50914; }
+    .pnl-card.headline { grid-column: 1 / -1; background: #070707; border-color: #222; }
+    .pnl-card .label {
+      font-size: 0.55rem;
+      color: #666;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .pnl-card .value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.8rem;
+      color: #fff;
+      line-height: 1;
+      margin-top: 0.4rem;
+      letter-spacing: 0.01em;
+    }
+    .pnl-card.revenue .value { color: #6bff8a; }
+    .pnl-card.cost    .value { color: #ffb347; }
+    .pnl-card.margin  .value { color: #E50914; }
+    .pnl-card.headline .value { font-size: 4rem; }
+    .pnl-card .sub {
+      font-size: 0.65rem;
+      color: #888;
+      margin-top: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pnl-card .sub b { color: #fff; }
+
+    /* Section label */
+    .section-label {
+      font-size: 0.6rem;
+      color: #E50914;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-top: 2.5rem;
+    }
+    h2.section {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #fff;
+      margin: 0.4rem 0 1.2rem;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+
+    /* Sankey-lite: revenue flow visual */
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 1rem;
+      align-items: stretch;
+      margin: 1.5rem 0 2.5rem;
+    }
+    @media (max-width: 900px) { .flow { grid-template-columns: 1fr; gap: 0.6rem; } .flow-arrow { display: none; } }
+    .flow-node {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1rem 1.2rem;
+    }
+    .flow-node .label { font-size: 0.55rem; color: #666; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
+    .flow-node .value { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: #fff; margin-top: 0.4rem; letter-spacing: 0.01em; line-height: 1; }
+    .flow-node .detail { font-size: 0.65rem; color: #666; margin-top: 0.4rem; font-family: 'JetBrains Mono', monospace; }
+    .flow-node.in { border-left: 3px solid #6bff8a; }
+    .flow-node.split { border-left: 3px solid #E50914; }
+    .flow-node.out { border-left: 3px solid #9a8bff; }
+    .flow-arrow { color: #333; font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; align-self: center; justify-self: center; }
+
+    /* Distribution table */
+    .dist {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #1a1a1a;
+      background: #050505;
+      margin-top: 1rem;
+    }
+    .dist thead th {
+      background: #0a0a0a;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0.9rem 1rem;
+      text-align: left;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      font-weight: 700;
+    }
+    .dist tbody td { padding: 1rem; border-bottom: 1px solid #111; font-size: 0.8rem; }
+    .dist tbody td.right { text-align: right; font-family: 'JetBrains Mono', monospace; color: #fff; }
+    .dist tbody tr:last-child td { border-bottom: none; }
+
+    .notice {
+      margin-top: 2.5rem;
+      padding: 1.2rem 1.4rem;
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      font-size: 0.75rem;
+      color: #888;
+      line-height: 1.6;
+    }
+    .notice strong { color: #fff; }
+
+    .refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      font-size: 0.6rem;
+      color: #6bff8a;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #6bff8a;
+      border-radius: 50%;
+      animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    @media (max-width: 900px) { main { padding: 2rem 1rem 4rem; } .pnl-card.headline .value { font-size: 2.6rem; } }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="page-intro">
+      <div class="kicker">Platform P&amp;L</div>
+      <h2>The treasury</h2>
+      <p>
+        The real numbers. <strong>Revenue in</strong> from Stripe (commissions, tickets, platform token sales) and x402 (on-chain micropayments). <strong>Costs out</strong> for compute and agent settlements. <strong>Margin</strong> accumulates in the treasury. <strong>Distributions</strong> flow to <code>$bMovies</code> platform holders and to per-film shareholders automatically. Updated every 30 seconds.
+      </p>
+      <div class="refresh"><span class="pulse"></span><span id="refresh-label">Loading…</span></div>
+    </div>
+
+    <div class="pnl">
+      <div class="pnl-card headline">
+        <div class="label">Gross revenue · all time</div>
+        <div class="value" id="h-revenue">—</div>
+        <div class="sub" id="h-revenue-sub">—</div>
+      </div>
+      <div class="pnl-card revenue">
+        <div class="label">Stripe · last 30 days</div>
+        <div class="value" id="c-stripe">—</div>
+        <div class="sub">commissions + tickets + platform token</div>
+      </div>
+      <div class="pnl-card revenue">
+        <div class="label">x402 · all time</div>
+        <div class="value" id="c-x402">—</div>
+        <div class="sub" id="c-x402-sub">—</div>
+      </div>
+      <div class="pnl-card revenue">
+        <div class="label">$bMovies token raise</div>
+        <div class="value" id="c-invest">—</div>
+        <div class="sub" id="c-invest-sub">— holders</div>
+      </div>
+      <div class="pnl-card cost">
+        <div class="label">Compute cost · on-chain</div>
+        <div class="value" id="c-compute">—</div>
+        <div class="sub">paid via x402 to compute providers</div>
+      </div>
+    </div>
+
+    <div class="section-label">Revenue flow</div>
+    <h2 class="section">Where the money goes</h2>
+    <div class="flow">
+      <div class="flow-node in">
+        <div class="label">Viewers + commissioners</div>
+        <div class="value" id="f-in">—</div>
+        <div class="detail">Stripe + x402</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node split">
+        <div class="label">Platform treasury</div>
+        <div class="value" id="f-treasury">—</div>
+        <div class="detail">99% film pool · 1% $bMovies pool</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node out">
+        <div class="label">Distributions</div>
+        <div class="value" id="f-out">—</div>
+        <div class="detail" id="f-out-sub">— shareholders</div>
+      </div>
+    </div>
+
+    <div class="section-label">Catalog</div>
+    <h2 class="section">Assets on chain</h2>
+    <table class="dist">
+      <thead>
+        <tr>
+          <th>Asset class</th>
+          <th>On-chain count</th>
+          <th class="right">Total supply</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Films (canonical mints)</td><td id="t-films">—</td><td class="right" id="t-films-supply">—</td></tr>
+        <tr><td>Studios</td><td id="t-studios">—</td><td class="right" id="t-studios-supply">—</td></tr>
+        <tr><td>Directors</td><td id="t-directors">—</td><td class="right" id="t-directors-supply">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="notice">
+      <strong>Honest disclosure.</strong> Stripe is the primary consumer payment rail for bMovies — it's what most people will actually use to buy tickets and commission films. x402 is the machine-to-machine settlement rail: it's how agents pay each other across the production pipeline, and how crypto-native viewers can pay in BSV if they prefer. The numbers above include both rails. Compute costs today are billed to a flat xAI team subscription; once the BSVAPI rail ships, that line becomes real per-call on-chain spending.
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    const BSV_USD = 65; // rough mainnet price; good enough for a display-only conversion
+    const fmtUsd = (cents) => '$' + ((Number(cents) || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const satsToUsd = (sats) => fmtUsd(Math.round((Number(sats) || 0) / 1e8 * BSV_USD * 100));
+    const fmtInt = (n) => Number(n || 0).toLocaleString();
+
+    async function load() {
+      try {
+        const r = await fetch('/api/platform/treasury-stats');
+        if (!r.ok) throw new Error('fetch failed ' + r.status);
+        const d = await r.json();
+
+        // Revenue blocks
+        const stripeCents = Number(d.revenue.stripe_30d_cents || 0);
+        const x402Sats    = Number(d.revenue.x402_total_sats || 0);
+        const investCents = Number(d.revenue.platform_token_raised_cents || 0);
+        const computeSats = Number(d.costs.compute_sats_estimate || 0);
+
+        // Convert sats to $ for a unified headline number
+        const x402Usd = (x402Sats / 1e8) * BSV_USD * 100;
+        const computeUsd = (computeSats / 1e8) * BSV_USD * 100;
+
+        const grossUsd = stripeCents + x402Usd + investCents;
+        const netUsd   = grossUsd - computeUsd;
+
+        document.getElementById('h-revenue').textContent = fmtUsd(grossUsd);
+        document.getElementById('h-revenue-sub').textContent = `Net of compute costs: ${fmtUsd(netUsd)}`;
+
+        document.getElementById('c-stripe').textContent = d.revenue.stripe_30d_cents === null ? '—' : fmtUsd(stripeCents);
+        document.getElementById('c-x402').textContent = `${fmtInt(x402Sats)} sats`;
+        document.getElementById('c-x402-sub').textContent = `≈ ${satsToUsd(x402Sats)} · 24h: ${fmtInt(d.revenue.x402_24h_sats || 0)} sats`;
+        document.getElementById('c-invest').textContent = fmtUsd(investCents);
+        document.getElementById('c-invest-sub').textContent = `${fmtInt(d.distributions.platform_holders.count)} holders`;
+        document.getElementById('c-compute').textContent = `${fmtInt(computeSats)} sats`;
+
+        // Flow
+        document.getElementById('f-in').textContent = fmtUsd(grossUsd);
+        document.getElementById('f-treasury').textContent = fmtUsd(grossUsd - computeUsd);
+        document.getElementById('f-out').textContent = fmtUsd(grossUsd * 0.01);
+        document.getElementById('f-out-sub').textContent = `${fmtInt(d.distributions.platform_holders.count + d.distributions.film_shareholders.count)} total shareholders`;
+
+        // Catalog
+        const films = Number(d.catalog.films_canonical_mints || 0);
+        const studios = Number(d.catalog.studios || 0);
+        const directors = Number(d.catalog.directors || 0);
+        document.getElementById('t-films').textContent = fmtInt(films);
+        document.getElementById('t-films-supply').textContent = fmtInt(films * 1_000_000_000) + ' shares';
+        document.getElementById('t-studios').textContent = fmtInt(studios);
+        document.getElementById('t-studios-supply').textContent = fmtInt(studios * 1_000_000_000) + ' shares';
+        document.getElementById('t-directors').textContent = fmtInt(directors);
+        document.getElementById('t-directors-supply').textContent = fmtInt(directors * 1_000_000_000) + ' shares';
+
+        document.getElementById('refresh-label').textContent = 'Live · updated ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        console.error('[treasury] load failed', err);
+        document.getElementById('refresh-label').textContent = 'Failed to load';
+      }
+    }
+
+    load();
+    setInterval(load, 30_000);
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

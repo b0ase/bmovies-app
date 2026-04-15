@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="../js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Non-custodial disclosure</title>
+  <link rel="icon" type="image/png" href="../bmovies_OG.png" />
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; }
+    main { max-width: 860px; margin: 0 auto; padding: 4rem 3rem 6rem; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; letter-spacing: -0.01em; color: #fff; margin-bottom: 0.4rem; line-height: 1; }
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.01em; color: #fff; margin-top: 2.6rem; margin-bottom: 0.8rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    p, li { font-size: 0.9rem; color: #bbb; line-height: 1.7; margin-bottom: 0.8rem; }
+    ul, ol { padding-left: 1.5rem; }
+    strong { color: #fff; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { font-size: 0.7rem; color: #555; margin-bottom: 1.6rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+    .draft-warn {
+      border: 1px solid #5a4a0e; background: linear-gradient(90deg, #2a2206, #1a1404);
+      padding: 0.9rem 1.2rem; margin: 1.2rem 0 2rem;
+      font-size: 0.78rem; color: #e8c46b; line-height: 1.6;
+    }
+    .draft-warn strong { color: #ffd84d; }
+    .callout {
+      border: 1px solid #1f4d2a; background: rgba(107, 255, 138, 0.04);
+      padding: 1rem 1.4rem; margin: 1.2rem 0;
+      font-size: 0.88rem; color: #ccc;
+    }
+    .callout strong { color: #6bff8a; }
+    .hard-line {
+      border: 1px solid #333; background: #0a0a0a;
+      padding: 1rem 1.4rem; margin: 1.2rem 0;
+      font-size: 0.85rem; color: #ddd;
+    }
+    .hard-line strong { color: #fff; }
+    @media print {
+      body { background: #fff; color: #000; }
+      main { max-width: none; padding: 1cm; }
+      h1, h2, strong { color: #000 !important; }
+      p, li { color: #333 !important; }
+      .callout { background: #e8fae8 !important; border-color: #0a6 !important; }
+      .hard-line { background: #f4f4f4 !important; border-color: #666 !important; }
+      .draft-warn { background: #fff5e0 !important; border-color: #d4a800 !important; color: #5a4400 !important; }
+      footer, .site-header { display: none; }
+      a { color: #000 !important; text-decoration: underline !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <h1>Non-custodial disclosure</h1>
+    <p class="meta">Version 2 · Effective 2026-04-15</p>
+
+    <div style="border: 1px solid #222; background: #0a0a0a; padding: 1rem 1.2rem; margin: 1.2rem 0 1.8rem; font-size: 0.78rem; color: #aaa; line-height: 1.55;">
+      <strong style="color:#fff;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:0.4rem;">Issuer</strong>
+      The Bitcoin Corporation Ltd, a private company limited by shares registered in England &amp; Wales · Company number <strong style="color:#fff;">16735102</strong> · Registered office Flat 6, 315 Barking Road, London, E13 8EE, United Kingdom · <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>
+    </div>
+
+    <div class="draft-warn">
+      <strong>Draft document — not yet reviewed by regulated counsel.</strong> This is a working draft. A lawyer-reviewed edition will replace it before the Platform is marketed to unaccredited retail buyers.
+    </div>
+
+    <p>This document explains what <strong>"non-custodial"</strong> means on the bMovies Platform and what responsibilities that places on you. It sits alongside the <a href="platform-token-prospectus.html">$bMovies prospectus</a>, the <a href="film-token-risk-disclosure.html">film token risk disclosure</a>, and the <a href="runar-covenant-design.html">Runar covenant design</a>, and forms part of the <a href="../terms.html">Terms of Service</a>.</p>
+
+    <h2>1. What non-custodial means on bMovies</h2>
+    <p>"Non-custodial" on this Platform refers to <strong>your wallet and your keys</strong>, not to the commercial transaction by which you buy a film commission. Specifically:</p>
+    <ul>
+      <li><strong>The Platform never holds your private key.</strong> Every sign-in method the Platform supports results in a BSV wallet whose private key is controlled only by you. The server sees your public address only.</li>
+      <li><strong>Royalty share tokens are delivered to an address you control.</strong> $bMovies platform shares, individual film royalty shares, studio-equity tokens, and director-royalty tokens are all BSV-21 tokens on the Bitcoin SV blockchain, sent directly to your address.</li>
+      <li><strong>The Platform cannot freeze, claw back, or reissue a share</strong> that has been delivered. The tokens are bearer instruments on the blockchain; only your key can spend them.</li>
+      <li><strong>The Platform does not operate a wallet balance or deposit account on your behalf.</strong> There is nothing to withdraw because the Platform is not holding anything for you to withdraw.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>In one sentence:</strong> the Platform hands you a bearer instrument on the blockchain, and once delivered, neither the Platform nor anyone else (except someone with your private key) can move it.
+    </div>
+
+    <h2>2. What you are buying when you commission a film</h2>
+    <p>When you pay $0.99 / $9.99 / $99 / $999 to commission a pitch, trailer, short, or feature, you are not making a deposit with the Platform. You are <strong>buying a product</strong>:</p>
+
+    <ol>
+      <li>The creative output itself — logline, synopsis, treatment, beat sheet, screenplay, lookbook, storyboard frames, scene clips, poster, music bible, investor deck, and every other artifact generated for your project.</li>
+      <li>A <strong>BSV-21 royalty share token</strong> minted specifically for your project, with 99% of the supply delivered to your address at mint time. That token is yours from minute one of the 24-hour production window, not at the end.</li>
+    </ol>
+
+    <div class="hard-line">
+      <strong>This is a purchase, not a deposit.</strong> Once you pay, the fiat becomes Platform revenue &mdash; it is consideration for the product the Platform delivers. The Platform does not offer a withdrawal mechanism for the money you have paid, because the money you have paid is no longer yours &mdash; it is the Platform's, in exchange for the creative work and the royalty share token you receive. This is the same commercial framing as buying anything else: you pay for a thing, you receive the thing, the merchant keeps the money.
+    </div>
+
+    <p>What the Platform does guarantee:</p>
+    <ul>
+      <li><strong>You receive what you paid for.</strong> The tier-specific deliverables (see <a href="../commission.html">commission.html</a>) are minted within the advertised production window. If the Platform fails to deliver, the commissioner is entitled to a refund under the Terms of Service.</li>
+      <li><strong>You own 99% of the royalty shares</strong> from the moment they are minted (typically minute 1 of the 24-hour production window). The 1% retained is the Platform fee.</li>
+      <li><strong>You can sell those shares at any time</strong>, to anyone, via the secondary market on 1sat.market. The Platform does not gate or delay secondary trading.</li>
+    </ul>
+
+    <h2>3. How your BSV keys get provisioned</h2>
+    <p>The bMovies Platform's commitment is that, whatever method you use to sign in, the BSV private key controlling your royalty shares is one only you can access. The current implementation satisfies this commitment as follows:</p>
+
+    <p><strong>BRC-100 wallet sign-in (BSV Desktop, Yours Wallet).</strong> Live today. You run a BRC-100 wallet on your own machine; it is the single source of truth for your private key; the Platform only ever sees the public address you authorize it to see. This is the reference implementation of the non-custodial commitment.</p>
+
+    <p><strong>Google sign-in / email + password.</strong> At account creation, the Platform creates a BSV keypair for you using client-side derivation &mdash; the private key is generated in your browser, the Platform server sees only the derived public address. You are presented with a one-time seed phrase at account creation; writing it down is your only path to recovering the wallet on another device. The Platform cannot regenerate this seed, and cannot recover the funds if you lose it.</p>
+
+    <div class="callout">
+      <strong>What this means if you use Google or email sign-in:</strong> The Platform cannot see your BSV private key. We also cannot help you recover it if you lose your seed phrase. If you want belt-and-braces control of your key material, use BRC-100 sign-in and hold the wallet yourself.
+    </div>
+
+    <h2>4. How ticket revenue flows back to royalty shareholders</h2>
+    <p>When a published film earns ticket revenue, the distribution to royalty shareholders is handled by a <strong>Runar-compiled Bitcoin SV smart contract</strong> &mdash; a covenant that holds the ticket revenue in a UTXO that can only be spent by a transaction fanning out the total amount pro-rata to the current holder set. See the <a href="runar-covenant-design.html">Runar covenant design</a> document for the full construction.</p>
+
+    <p>Concretely, under the covenant path:</p>
+    <ol>
+      <li>Viewer pays for a ticket to watch a film.</li>
+      <li>The ticket fee lands on the film's dividend covenant UTXO.</li>
+      <li>The covenant can only be spent by a transaction that pays every current royalty shareholder in proportion to their holdings, as read from the canonical BSV-21 indexers at a snapshot block height.</li>
+      <li>The Platform never holds or touches the distributed funds. Ticket fiat flows from the viewer through the covenant to holder addresses in a single atomic on-chain transaction.</li>
+    </ol>
+
+    <p><strong>Deployment status.</strong> The Runar covenant is designed and documented; the bMovies agent layer, the BSV-21 token layer, and the per-film royalty schema that the covenant reads from are all live on mainnet today. The covenant contract itself is the last mile and is in active development. Until it is deployed on mainnet, ticket-revenue distributions flow through direct fan-out transactions constructed by the Platform using the same pro-rata math the covenant enforces &mdash; during this period the Platform temporarily holds ticket revenue for an accumulation window, and under English law holds those funds as a <strong>bailee and trustee</strong> for the benefit of royalty-share holders. The Issuer does not market this as a customer-deposit product and does not rehypothecate. The goal of the covenant work is to eliminate even this short window.</p>
+
+    <h2>5. Your responsibilities</h2>
+    <p>Non-custodial delivery means <strong>you are the last line of defence for your own tokens</strong>.</p>
+    <ul>
+      <li><strong>Back up your wallet.</strong> Whether it is a BRC-100 wallet on your desktop or a browser-derived keypair for a Google/email account, the Platform cannot regenerate your key. Export the seed phrase and store it offline.</li>
+      <li><strong>Keep your device secure.</strong> Anyone who gains access to the machine holding your key can move your tokens. Block-explorer evidence of a theft is not sufficient for the Issuer to reverse it.</li>
+      <li><strong>Update your delivery address if you change wallets.</strong> New royalty share mints and (once the covenant is live) dividend distributions are sent to the address recorded on your account at that time. A stale address means tokens go to a stale address.</li>
+      <li><strong>Understand that lost keys = lost tokens.</strong> Not on a goodwill basis, not on a KYC-verified reissue, not at all.</li>
+    </ul>
+
+    <h2>6. If the Platform shuts down</h2>
+    <p>Your tokens continue to exist on the Bitcoin SV blockchain. They can be transferred, sold, and (via any deployed Runar covenants) collected against future revenue, without any involvement from the Platform or its operator. The Platform does not control:</p>
+    <ul>
+      <li>The on-chain registry of which wallets hold which tokens.</li>
+      <li>The BSV-21 token indexers (GorillaPool, 1sat-api) that track balances.</li>
+      <li>The 1sat.market secondary venue where peer-to-peer trades can happen.</li>
+      <li>The ability of any third party to continue rendering film content from the blockchain-anchored artifacts.</li>
+    </ul>
+
+    <p>What the Platform does control &mdash; and what would stop if it were to shut down &mdash; is the production pipeline that runs new commissions, the user interface at <code>bmovies.online</code>, and the ticket-sale collection infrastructure (until the Runar covenant is deployed, at which point ticket-sale distribution also becomes Platform-independent). A buyer who cares about continuity after a Platform shutdown should, realistically, expect to hold tokens that no longer receive ticket revenue from new viewers &mdash; the same risk profile as any private-company equity.</p>
+
+    <h2>7. Contact</h2>
+    <p>Questions to <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>.</p>
+
+    <p style="margin-top:3rem;font-size:0.7rem;color:#555;text-align:center;">
+      Press <strong>Cmd+P</strong> or <strong>Ctrl+P</strong> to save as PDF.<br>
+      <a href="index.html">Legal index</a> ·
+      <a href="platform-token-prospectus.html">$bMovies prospectus</a> ·
+      <a href="film-token-risk-disclosure.html">Film token risk disclosure</a> ·
+      <a href="runar-covenant-design.html">Runar covenant design</a> ·
+      <a href="../terms.html">Terms of Service</a>
+    </p>
+  </main>
+
+  <script type="module" src="../js/nav-session.js"></script>
+</body>
+</html>

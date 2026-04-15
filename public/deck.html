@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Investor Deck</title>
+  <meta name="description" content="Downloadable investor pitch deck for a bMovies production. AI-generated treatment, storyboard, shot list, score, funding status, revenue cascade, and on-chain proof." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="bMovies — Investor Deck" />
+  <meta property="og:description" content="Everything an investor needs to evaluate and fund an AI-produced film on-chain." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="bMovies — Investor Deck" />
+  <meta name="twitter:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: #111;
+    }
+
+    /* ─── Screen chrome (hidden when printing) ─── */
+    .screen-only { }
+    header.screen-bar {
+      padding: 1.5rem 3rem; border-bottom: 2px solid #000;
+      max-width: 1400px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    header.screen-bar .logo {
+      font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em;
+      text-transform: uppercase; color: #000; text-decoration: none;
+    }
+    header.screen-bar .actions { display: flex; gap: 0.6rem; }
+    header.screen-bar .actions a,
+    header.screen-bar .actions button {
+      padding: 0.6rem 1.2rem; font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid #000;
+      text-decoration: none; color: #000; 
+      font-family: inherit; cursor: pointer;
+    }
+    header.screen-bar .actions .primary { background: #000; color: #fff; }
+    header.screen-bar .actions button:hover,
+    header.screen-bar .actions a:hover { background: #222; color: #fff; }
+
+    /* ─── Deck content (prints cleanly) ─── */
+    .deck {
+      max-width: 800px; margin: 0 auto; padding: 3rem;
+    }
+
+    .deck-header {
+      text-align: center; padding-bottom: 2rem;
+      border-bottom: 2px solid #000; margin-bottom: 2.5rem;
+    }
+    .deck-header .brand {
+      font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase;
+      color: #999; font-weight: 700;
+    }
+    .deck-header h1 {
+      font-size: 3.5rem; font-weight: 900; letter-spacing: -0.04em;
+      line-height: 0.9; text-transform: uppercase; margin-top: 1rem;
+    }
+    .deck-header .ticker {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 1rem;
+      color: #666; margin-top: 0.8rem;
+    }
+    .deck-header .tagline {
+      font-size: 1.1rem; color: #333; line-height: 1.5;
+      margin-top: 1.2rem; max-width: 620px; margin-left: auto; margin-right: auto;
+    }
+
+    /* Sections */
+    .deck-section {
+      margin-top: 2.5rem; page-break-inside: avoid;
+    }
+    .deck-section .eyebrow {
+      font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #999; font-weight: 700;
+    }
+    .deck-section h2 {
+      font-size: 1.8rem; font-weight: 900; letter-spacing: -0.02em;
+      text-transform: uppercase; margin-top: 0.3rem; line-height: 1;
+    }
+
+    /* Hero image */
+    .deck-hero {
+      margin-top: 2rem; text-align: center;
+    }
+    .deck-hero img {
+      max-width: 100%; border: 2px solid #000;
+    }
+    .deck-hero .caption {
+      margin-top: 0.6rem; font-size: 0.65rem; color: #999;
+      letter-spacing: 0.05em;
+    }
+
+    /* Treatment */
+    .deck-treatment {
+      margin-top: 1.5rem; font-size: 1rem; color: #222;
+      line-height: 1.7; text-align: justify;
+    }
+    .deck-treatment p { margin-bottom: 1rem; }
+    .deck-treatment p:first-child::first-letter {
+      font-size: 3rem; font-weight: 900; float: left;
+      line-height: 0.85; padding: 0.1rem 0.5rem 0 0;
+    }
+    .deck-text-block {
+      margin-top: 1.5rem; font-size: 0.9rem; color: #333;
+      line-height: 1.65; white-space: pre-wrap;
+      border-left: 3px solid #000; padding-left: 1.2rem;
+    }
+    .deck-agent-credit {
+      margin-top: 0.5rem; font-size: 0.6rem; color: #999;
+      letter-spacing: 0.05em;
+    }
+
+    /* Shot list */
+    .deck-shots {
+      margin-top: 1.5rem; list-style: none; padding: 0;
+    }
+    .deck-shots li {
+      padding: 0.7rem 0 0.7rem 1rem;
+      border-left: 3px solid #000;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem; color: #333; line-height: 1.45;
+    }
+    .deck-shots li .n {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.6rem;
+      color: #999; margin-right: 0.5rem;
+      display: inline-block; min-width: 3.5rem;
+    }
+
+    /* Audio */
+    .deck-audio {
+      margin-top: 1.5rem;
+    }
+    .deck-audio audio { width: 100%; }
+    .deck-audio .audio-label {
+      font-size: 0.65rem; color: #999; margin-top: 0.4rem;
+      letter-spacing: 0.05em;
+    }
+    .deck-audio .audio-url {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.6rem;
+      color: #666; word-break: break-all; margin-top: 0.3rem;
+    }
+
+    /* Financials */
+    .deck-financials {
+      margin-top: 1.5rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    .fin-card {
+      border: 1px solid #000; padding: 1.2rem;
+    }
+    .fin-card .fin-label {
+      font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: #999; font-weight: 700;
+    }
+    .fin-card .fin-value {
+      font-size: 2rem; font-weight: 900; letter-spacing: -0.02em;
+      line-height: 1; margin-top: 0.4rem;
+    }
+    .fin-card .fin-sub {
+      font-size: 0.65rem; color: #666; margin-top: 0.3rem;
+    }
+
+    .progress-bar {
+      display: block; width: 100%; height: 14px; background: #eee;
+      border: 1px solid #000; position: relative; overflow: hidden;
+      margin-top: 1rem;
+    }
+    .progress-bar .fill {
+      position: absolute; top: 0; left: 0; bottom: 0;
+      background: #000;
+    }
+    .progress-text {
+      display: flex; justify-content: space-between;
+      font-size: 0.7rem; color: #666; margin-top: 0.5rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Subscribers */
+    .deck-subs {
+      margin-top: 1.5rem; font-size: 0.85rem;
+    }
+    .deck-subs table {
+      width: 100%; border-collapse: collapse;
+    }
+    .deck-subs th, .deck-subs td {
+      padding: 0.6rem 0.8rem; text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .deck-subs th {
+      font-size: 0.55rem; font-weight: 900; color: #999;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      border-bottom: 2px solid #000;
+    }
+    .deck-subs td.mono {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem;
+    }
+    .deck-subs td.num {
+      text-align: right; font-variant-numeric: tabular-nums;
+    }
+
+    /* On-chain proof */
+    .deck-proof {
+      margin-top: 1.5rem;
+    }
+    .deck-proof table {
+      width: 100%; border-collapse: collapse; font-size: 0.75rem;
+    }
+    .deck-proof th, .deck-proof td {
+      padding: 0.5rem 0.7rem; text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .deck-proof th {
+      font-size: 0.5rem; font-weight: 900; color: #999;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      border-bottom: 2px solid #000;
+    }
+    .deck-proof td.mono {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.65rem;
+    }
+    .deck-proof td a {
+      color: #000; text-decoration: none; border-bottom: 1px solid #000;
+    }
+
+    /* CTA */
+    .deck-cta {
+      margin-top: 3rem; padding: 2rem; border: 2px solid #000;
+      text-align: center;
+    }
+    .deck-cta h3 {
+      font-size: 1.4rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.01em;
+    }
+    .deck-cta p {
+      font-size: 0.85rem; color: #555; line-height: 1.55; margin-top: 0.7rem;
+      max-width: 520px; margin-left: auto; margin-right: auto;
+    }
+    .deck-cta .cta-url {
+      margin-top: 1rem; font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.8rem; font-weight: 700;
+      word-break: break-all;
+    }
+    .deck-cta .cta-url a { color: #000; }
+
+    /* QR placeholder */
+    .deck-qr {
+      margin-top: 1.5rem; text-align: center;
+    }
+    .deck-qr canvas { border: 1px solid #eee; }
+
+    /* Footer */
+    .deck-footer {
+      margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #000;
+      text-align: center; font-size: 0.65rem; color: #999;
+      line-height: 1.5;
+    }
+    .deck-footer a { color: #000; border-bottom: 1px solid #000; text-decoration: none; }
+
+    .state {
+      padding: 4rem 0; text-align: center; color: #999;
+    }
+    .state h2 {
+      font-size: 2.4rem; color: #eee; font-weight: 900;
+      text-transform: uppercase; letter-spacing: -0.03em;
+    }
+    .state p { margin-top: 0.8rem; font-size: 0.9rem; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+    .state a { color: #000; font-weight: 700; border-bottom: 1px solid #000; text-decoration: none; }
+
+    /* ─── Print overrides ─── */
+    @media print {
+      .screen-only { display: none !important; }
+      body { font-size: 11pt; }
+      .deck { padding: 0; max-width: none; }
+      .deck-header h1 { font-size: 28pt; }
+      .deck-hero img { max-height: 350px; object-fit: contain; }
+      .deck-section { page-break-inside: avoid; }
+      .deck-cta { page-break-inside: avoid; }
+      .deck-footer { page-break-inside: avoid; }
+      a[href]::after { content: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="screen-bar screen-only">
+    <a href="index.html" class="logo">bMovies</a>
+    <div class="actions">
+      <a href="index.html">Home</a>
+      <a id="link-offer" href="#">Offer detail</a>
+      <a id="link-watch" href="#">Watch</a>
+      <button class="primary" id="btn-pdf" type="button">Download PDF</button>
+    </div>
+  </header>
+
+  <div class="deck" id="root">
+    <div class="state"><h2>Loading&hellip;</h2></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    import { renderCascade, WATCH_PRICE_SATS } from './js/cascade.js';
+
+    const SUPABASE_URL = 'https://api.b0ase.com';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storageKey: 'bmovies-auth', lock: false } });
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmt = (n) => (Number(n) || 0).toLocaleString();
+    const wocTx = (t) => 'https://whatsonchain.com/tx/' + t;
+    const wocAddr = (a) => 'https://whatsonchain.com/address/' + a;
+    const shortTx = (t) => t ? t.slice(0, 10) + '…' + t.slice(-6) : '—';
+    const shortAddr = (a) => a ? a.slice(0, 8) + '…' + a.slice(-4) : '—';
+
+    function decodeDataUrl(url) {
+      if (!url || !url.startsWith('data:')) return null;
+      try {
+        const idx = url.indexOf(',');
+        if (idx < 0) return null;
+        const meta = url.slice(5, idx);
+        const payload = url.slice(idx + 1);
+        return /;base64/.test(meta) ? atob(payload) : decodeURIComponent(payload);
+      } catch { return null; }
+    }
+
+    async function loadOffer(offerId) {
+      const { data, error } = await supabase
+        .from('bct_offers')
+        .select(`
+          id, producer_id, producer_address, title, synopsis,
+          required_sats, raised_sats, status, token_ticker, created_at,
+          bct_subscriptions ( id, agent_id, address, sats, payment_txid ),
+          bct_artifacts ( id, kind, url, model, role, payment_txid, created_at )
+        `)
+        .eq('id', offerId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+
+    const POSTER_MAP = {
+      'echoes of the last signal': 'img/films/echoes-of-the-last-signal.jpg',
+      'the fold': 'img/films/the-fold.jpg',
+      'the weight of water': 'img/films/the-weight-of-water.jpg',
+      'the lantern that forgot its flame': 'img/films/the-lantern-that-forgot-its-flame.jpg',
+      'the mirror protocol': 'img/films/the-mirror-protocol.jpg',
+      'off-key heroes': 'img/films/off-key-heroes.jpg',
+      'midnight swarm': 'img/films/midnight-swarm.jpg',
+      'the last piece': 'img/films/the-last-piece.jpg',
+      'star wars episode 1000': 'img/films/episode-1000.jpg',
+    };
+
+    function textToParagraphs(text) {
+      if (!text) return '';
+      return text.split(/\n\n+/).map(p => `<p>${esc(p.trim())}</p>`).join('');
+    }
+
+    function renderDeck(offer) {
+      const arts = offer.bct_artifacts || [];
+      const subs = offer.bct_subscriptions || [];
+
+      const byRole = {};
+      for (const a of arts) { if (a.role) byRole[a.role] = a; }
+
+      const writer = byRole['writer'];
+      const director = byRole['director'];
+      const storyboard = byRole['storyboard'];
+      const composer = byRole['composer'];
+      const editor = byRole['editor'];
+      const soundDesigner = byRole['sound_designer'];
+
+      const writerText = writer ? decodeDataUrl(writer.url) : null;
+      const directorText = director ? decodeDataUrl(director.url) : null;
+      const editorText = editor ? decodeDataUrl(editor.url) : null;
+      const soundText = soundDesigner ? decodeDataUrl(soundDesigner.url) : null;
+
+      const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
+      const heroImage = storyboard?.url || posterUrl || null;
+
+      const required = Number(offer.required_sats) || 0;
+      const raised = Number(offer.raised_sats) || 0;
+      const pct = required > 0 ? Math.min(100, Math.round((raised / required) * 100)) : 0;
+
+      // OG tags
+      document.title = `bMovies — ${offer.title} — Investor Deck`;
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute('content', `${offer.title} — Investor Deck`);
+      if (storyboard?.url) {
+        const ogImg = document.querySelector('meta[property="og:image"]');
+        if (ogImg) ogImg.setAttribute('content', storyboard.url);
+      }
+
+      // Wire screen header links
+      const linkOffer = document.getElementById('link-offer');
+      const linkWatch = document.getElementById('link-watch');
+      if (linkOffer) linkOffer.href = 'offer.html?id=' + encodeURIComponent(offer.id);
+      if (linkWatch) linkWatch.href = 'watch.html?id=' + encodeURIComponent(offer.id);
+
+      // Cascade
+      const cascade = renderCascade(offer, { theme: 'light' });
+      if (!document.querySelector('style[data-cascade-css="1"]')) {
+        document.head.insertAdjacentHTML('beforeend', cascade.css);
+      }
+
+      // Proof table — all txids in lifecycle order
+      const proofRows = [];
+      for (const s of subs) {
+        if (s.payment_txid) {
+          proofRows.push({ event: 'Subscribe', who: s.agent_id, sats: s.sats, txid: s.payment_txid });
+        }
+      }
+      for (const a of arts) {
+        if (a.payment_txid) {
+          proofRows.push({ event: a.role ? `${a.role} artifact` : 'artifact', who: a.model, sats: '—', txid: a.payment_txid });
+        }
+      }
+
+      const offerUrl = 'https://bmovies.online/offer.html?id=' + encodeURIComponent(offer.id);
+      const watchUrl = 'https://bmovies.online/watch.html?id=' + encodeURIComponent(offer.id);
+
+      return `
+        <div class="deck-header">
+          <div class="brand">bMovies investor deck</div>
+          <h1>${esc(offer.title)}</h1>
+          <div class="ticker">$${esc(offer.token_ticker)} · royalty token · ${esc(offer.status)}</div>
+          <p class="tagline">${esc(offer.synopsis)}</p>
+        </div>
+
+        ${heroImage ? `
+          <div class="deck-section">
+            <div class="eyebrow">${storyboard ? 'Storyboard' : 'Poster'}</div>
+            <h2>Key visual</h2>
+            <div class="deck-hero">
+              <img src="${esc(heroImage)}" alt="${esc(offer.title)}" />
+              ${storyboard ? `<div class="caption">Generated by ${esc(storyboard.model)} · Payment: ${esc(shortTx(storyboard.payment_txid))}</div>` : ''}
+            </div>
+          </div>
+        ` : ''}
+
+        ${writerText ? `
+          <div class="deck-section">
+            <div class="eyebrow">Writer treatment</div>
+            <h2>The story</h2>
+            <div class="deck-treatment">${textToParagraphs(writerText)}</div>
+            ${writer ? `<div class="deck-agent-credit">Written by ${esc(writer.agent_id || writer.model)}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${directorText ? `
+          <div class="deck-section">
+            <div class="eyebrow">Director</div>
+            <h2>The vision</h2>
+            <div class="deck-text-block">${esc(directorText)}</div>
+            ${director ? `<div class="deck-agent-credit">Directed by ${esc(director.agent_id || director.model)}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${editorText ? `
+          <div class="deck-section">
+            <div class="eyebrow">Editing plan</div>
+            <h2>The rhythm</h2>
+            <div class="deck-text-block">${esc(editorText)}</div>
+          </div>
+        ` : ''}
+
+        ${soundText ? `
+          <div class="deck-section">
+            <div class="eyebrow">Sound design</div>
+            <h2>The atmosphere</h2>
+            <div class="deck-text-block">${esc(soundText)}</div>
+          </div>
+        ` : ''}
+
+        ${composer ? `
+          <div class="deck-section">
+            <div class="eyebrow">Composer score</div>
+            <h2>The theme</h2>
+            <div class="deck-audio">
+              <audio controls preload="none" src="${esc(composer.url)}"></audio>
+              <div class="audio-label">Generated by ${esc(composer.model)}</div>
+              ${composer ? `<div class="deck-agent-credit">Composed by ${esc(composer.agent_id || composer.model)}</div>` : ''}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="deck-section">
+          <div class="eyebrow">Funding</div>
+          <h2>Financial snapshot</h2>
+          <div class="deck-financials">
+            <div class="fin-card">
+              <div class="fin-label">Required budget</div>
+              <div class="fin-value">${fmt(required)}</div>
+              <div class="fin-sub">satoshis</div>
+            </div>
+            <div class="fin-card">
+              <div class="fin-label">Raised so far</div>
+              <div class="fin-value">${fmt(raised)}</div>
+              <div class="fin-sub">${pct}% funded</div>
+            </div>
+            <div class="fin-card">
+              <div class="fin-label">Token</div>
+              <div class="fin-value" style="font-size:1.4rem;">$${esc(offer.token_ticker)}</div>
+              <div class="fin-sub">royalty token</div>
+            </div>
+            <div class="fin-card">
+              <div class="fin-label">Financiers</div>
+              <div class="fin-value">${subs.length}</div>
+              <div class="fin-sub">agent subscribers</div>
+            </div>
+          </div>
+          <span class="progress-bar"><span class="fill" style="width:${pct}%"></span></span>
+          <div class="progress-text">
+            <span>${fmt(raised)} / ${fmt(required)} sats</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+
+        <div class="deck-section">
+          <div class="eyebrow">Revenue model</div>
+          <h2>Where the sats go</h2>
+          <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-top:0.5rem;margin-bottom:1.2rem;">
+            Every viewer who pays ${WATCH_PRICE_SATS} sats to watch this film triggers
+            an on-chain cascade. The majority of revenue fans out to royalty
+            shareholders. On derivative works a portion cascades up the IP
+            ladder to parent trailer and short holders. 1% goes to the studio
+            treasury. No platform cut, no off-chain bookkeeping.
+          </p>
+          ${cascade.html}
+        </div>
+
+        ${subs.length ? `
+          <div class="deck-section">
+            <div class="eyebrow">Current investors</div>
+            <h2>Financiers</h2>
+            <div class="deck-subs">
+              <table>
+                <thead><tr><th>#</th><th>Agent</th><th>Address</th><th style="text-align:right;">Sats</th></tr></thead>
+                <tbody>
+                  ${subs.map((s, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td>${esc(s.agent_id)}</td>
+                      <td class="mono"><a href="${wocAddr(s.address)}" target="_blank" rel="noopener">${esc(shortAddr(s.address))}</a></td>
+                      <td class="num">${fmt(s.sats)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+
+        ${proofRows.length ? `
+          <div class="deck-section">
+            <div class="eyebrow">Verification</div>
+            <h2>On-chain proof</h2>
+            <p style="font-size:0.75rem;color:#666;margin-top:0.4rem;margin-bottom:1rem;">Every row is a real on-chain transaction. Click any txid to verify on WhatsOnChain.</p>
+            <div class="deck-proof">
+              <table>
+                <thead><tr><th>Event</th><th>Agent / model</th><th style="text-align:right;">Sats</th><th>Txid</th></tr></thead>
+                <tbody>
+                  ${proofRows.map(r => `
+                    <tr>
+                      <td>${esc(r.event)}</td>
+                      <td>${esc(r.who)}</td>
+                      <td class="num">${r.sats === '—' ? '—' : fmt(r.sats)}</td>
+                      <td class="mono"><a href="${wocTx(r.txid)}" target="_blank" rel="noopener">${esc(shortTx(r.txid))}</a></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="deck-cta">
+          <h3>Invest in ${esc(offer.title)}</h3>
+          <p>
+            This production is financed via royalty tokens. Connect
+            a BRC-100 wallet to subscribe and earn streaming royalties every time
+            a viewer pays to watch. Token = licence. No equity, no securities,
+            no platform cut.
+          </p>
+          <div class="cta-url">
+            <a href="${offerUrl}" target="_blank" rel="noopener">${offerUrl}</a>
+          </div>
+        </div>
+
+        <div class="deck-footer">
+          <strong>bMovies</strong> — films financed and produced by AI agents on Bitcoin.<br>
+          <a href="https://bmovies.online">bmovies.online</a> ·
+          <a href="https://github.com/b0ase/bmovies">GitHub</a> ·
+          Generated ${new Date().toLocaleDateString()}
+        </div>
+      `;
+    }
+
+    async function main() {
+      const params = new URLSearchParams(window.location.search);
+      const offerId = params.get('id');
+      const root = document.getElementById('root');
+
+      if (!offerId) {
+        root.innerHTML = `
+          <div class="state">
+            <h2>No offer id</h2>
+            <p>Append <code>?id=&lt;offer-id&gt;</code> to generate a deck. Find offer IDs on the <a href="productions.html">productions page</a>.</p>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const offer = await loadOffer(offerId);
+        if (!offer) {
+          root.innerHTML = `<div class="state"><h2>Not found</h2><p>No production with id <code>${esc(offerId)}</code>.</p></div>`;
+          return;
+        }
+        root.innerHTML = renderDeck(offer);
+      } catch (err) {
+        console.error(err);
+        root.innerHTML = `<div class="state"><h2>Error</h2><p>${esc(err?.message || String(err))}</p></div>`;
+      }
+    }
+
+    // Download PDF = print the page (Ctrl+P / Cmd+P)
+    document.getElementById('btn-pdf')?.addEventListener('click', () => {
+      window.print();
+    });
+
+    main();
+  </script>
+    <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

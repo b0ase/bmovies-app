@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <title>bMovies — Open Graph Card</title>
+  <meta name="description" content="Social preview card for bMovies. Screenshot this page at 1200×630 for a fresh OG image." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 1200px; height: 630px;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #000; color: #fff;
+    }
+    body {
+      display: flex; flex-direction: column;
+      padding: 70px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background layer: radial red glow */
+    .bg-glow {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 50% 100%, rgba(229, 9, 20, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 85% 15%, rgba(229, 9, 20, 0.15) 0%, transparent 50%),
+        #000;
+      z-index: 0;
+    }
+
+    /* Diagonal red stripe accent */
+    .stripe {
+      position: absolute; top: -100px; right: -100px;
+      width: 500px; height: 800px;
+      background: linear-gradient(135deg, rgba(229, 9, 20, 0.15) 0%, transparent 50%);
+      transform: rotate(20deg);
+      z-index: 0;
+    }
+
+    /* Film strip perforations on left edge */
+    .film-strip {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 36px;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          #111 0,
+          #111 20px,
+          #000 20px,
+          #000 24px
+        );
+      border-right: 1px solid #222;
+      z-index: 1;
+    }
+
+    .content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
+
+    .kicker {
+      font-size: 14px; letter-spacing: 0.25em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+
+    .logo-block {
+      margin-top: 30px;
+    }
+    .logo-mark {
+      display: inline-block;
+      font-family: 'Bebas Neue', 'Oswald', sans-serif;
+      font-size: 180px; font-weight: 400;
+      letter-spacing: 0.06em; line-height: 0.85;
+      border: 7px solid #E50914;
+      padding: 10px 45px 5px;
+      text-shadow: 0 8px 24px rgba(0,0,0,0.95), 0 0 40px rgba(229,9,20,0.35);
+    }
+    .logo-mark .b { color: #fff; }
+    .logo-mark .movies { color: #E50914; }
+
+    .tagline {
+      margin-top: 40px;
+      font-size: 36px; font-weight: 900;
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      max-width: 900px;
+    }
+    .tagline .accent { color: #E50914; }
+
+    .footer {
+      margin-top: auto;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .footer .left {
+      font-size: 18px; color: #888; line-height: 1.5;
+    }
+    .footer .left strong { color: #fff; font-weight: 900; }
+    .footer .tiers {
+      display: flex; gap: 14px;
+    }
+    .footer .tier {
+      padding: 10px 18px;
+      border: 1px solid #333;
+      background: rgba(0, 0, 0, 0.6);
+      text-align: center;
+      min-width: 110px;
+    }
+    .footer .tier.featured {
+      background: #E50914;
+      border-color: #E50914;
+    }
+    .footer .tier-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #aaa;
+    }
+    .footer .tier.featured .tier-label { color: #fff; }
+    .footer .tier-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px; color: #fff; line-height: 1; margin-top: 2px;
+    }
+    .url {
+      position: absolute; bottom: 30px; right: 40px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 14px; color: #555; letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="stripe"></div>
+  <div class="film-strip"></div>
+
+  <div class="content">
+    <div class="kicker">Open Run Agentic Pay · BSVA Hackathon</div>
+    <div class="logo-block">
+      <span class="logo-mark"><span class="b">B</span><span class="movies">MOVIES</span></span>
+    </div>
+    <div class="tagline">
+      Create a Movie. Sell Tickets.<br>
+      Trade Royalties.<br>
+      <span class="accent">You own 99%.</span>
+    </div>
+    <div class="footer">
+      <div class="left">
+        AI-produced films, financed on-chain.<br>
+        <strong>6 AI studios. 58 agents. Pay $0.99 to $999.</strong>
+      </div>
+      <div class="tiers">
+        <div class="tier">
+          <div class="tier-label">Trailer</div>
+          <div class="tier-price">$9.99</div>
+        </div>
+        <div class="tier">
+          <div class="tier-label">Short</div>
+          <div class="tier-price">$99</div>
+        </div>
+        <div class="tier featured">
+          <div class="tier-label">Feature</div>
+          <div class="tier-price">$999</div>
+        </div>
+      </div>
+    </div>
+    <div class="url">bmovies.online</div>
+  </div>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

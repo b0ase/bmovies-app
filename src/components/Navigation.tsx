@@ -2,83 +2,149 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
-// Minimal bMovies top nav. The authenticated experience lives here —
-// My Studio, creative tools, exchange, marketplace. The public
-// marketing face is bmovies.online (a separate static site).
-//
-// Tabs ordered left-to-right by user journey: dashboard first, then
-// creative tools, then market surfaces. Logo on the far left, public
-// site + sign-in CTA on the far right.
+/**
+ * Unified top nav for the Next.js routes.
+ *
+ * Mirrors the brochure's js/nav-session.js structure so /account,
+ * /login, /studio feel continuous with the static brochure pages.
+ * Brochure links use plain <a href="…html"> because those routes
+ * are served by Vercel as static files — the Next.js router should
+ * NOT try to intercept them with a client-side navigation.
+ *
+ * Sign-in CTA flips to "Account" when a valid Supabase session
+ * exists in localStorage['bmovies-auth'] (same key both the
+ * brochure and the Next.js app use).
+ */
 
-const NAV_LINKS = [
-  { href: '/account', label: 'My studio' },
-  { href: '/movie-editor', label: 'Editor' },
-  { href: '/storyboard', label: 'Storyboard' },
-  { href: '/script-gen', label: 'Script' },
-  { href: '/title-designer', label: 'Titles' },
-  { href: '/music-studio', label: 'Music' },
-  { href: '/pitch-deck', label: 'Deck' },
-  { href: '/studio', label: 'Studios' },
-  { href: '/exchange', label: 'Exchange' },
-  { href: '/marketplace', label: 'Marketplace' },
+type NavLink = { href: string; label: string }
+
+const NAV_LINKS: NavLink[] = [
+  { href: '/about.html', label: 'About' },
+  { href: '/commission.html', label: 'Commission' },
+  { href: '/exchange.html', label: 'Exchange' },
+  { href: '/productions.html', label: 'Live' },
+  { href: '/studios.html', label: 'Studios' },
+  { href: '/watch.html', label: 'Watch' },
 ]
+
+function isSessionValid(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const raw = localStorage.getItem('bmovies-auth')
+    if (!raw) return false
+    const parsed = JSON.parse(raw)
+    const expiresAt = parsed?.expires_at || parsed?.currentSession?.expires_at
+    if (!expiresAt) return false
+    return Date.now() / 1000 < Number(expiresAt)
+  } catch {
+    return false
+  }
+}
 
 export function Navigation() {
   const pathname = usePathname()
+  const [signedIn, setSignedIn] = useState(false)
+
+  useEffect(() => {
+    setSignedIn(isSessionValid())
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'bmovies-auth') setSignedIn(isSessionValid())
+    }
+    const onAuthChanged = () => setSignedIn(isSessionValid())
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('bmovies:auth-changed', onAuthChanged)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('bmovies:auth-changed', onAuthChanged)
+    }
+  }, [])
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#1a1a1a] bg-black/90 backdrop-blur">
-      <div className="mx-auto max-w-[1400px] px-6 h-16 flex items-center gap-6">
+    <header
+      className="site-header"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.9rem max(3rem, calc((100% - 1400px) / 2))',
+        background: '#000',
+        borderBottom: '1px solid #222',
+      }}
+    >
+      <a
+        href="/"
+        style={{
+          fontFamily: "var(--font-bebas), 'Bebas Neue', 'Oswald', 'Inter', sans-serif",
+          fontSize: '1.6rem',
+          fontWeight: 400,
+          letterSpacing: '0.06em',
+          color: '#fff',
+          textDecoration: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          border: '2px solid #E50914',
+          padding: '0.15rem 0.7rem',
+          lineHeight: 1.1,
+          textShadow: '1px 2px 4px rgba(229, 9, 20, 0.3)',
+        }}
+      >
+        b<span style={{ color: '#E50914' }}>Movies</span>
+      </a>
+
+      <nav
+        style={{
+          display: 'flex',
+          flex: 1,
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          padding: '0 2rem',
+          margin: '0 0 0 2rem',
+        }}
+      >
+        {NAV_LINKS.map((l) => {
+          const active = pathname && l.href.includes(pathname.replace(/^\//, ''))
+          return (
+            <a
+              key={l.href}
+              href={l.href}
+              style={{
+                padding: '0.5rem 1rem',
+                fontFamily: "'Inter', -apple-system, sans-serif",
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: active ? '#fff' : '#aaa',
+                textDecoration: 'none',
+                borderBottom: active ? '2px solid #E50914' : '2px solid transparent',
+              }}
+            >
+              {l.label}
+            </a>
+          )
+        })}
         <Link
-          href="/"
-          className="flex items-center font-black tracking-tight text-2xl shrink-0"
-          style={{ fontFamily: 'var(--font-bebas)' }}
+          href="/account"
+          className="signin-cta"
+          style={{
+            padding: '0.5rem 1rem',
+            fontFamily: "'Inter', -apple-system, sans-serif",
+            fontSize: '0.65rem',
+            fontWeight: 900,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: signedIn ? '#6bff8a' : '#fff',
+            background: signedIn ? 'transparent' : '#E50914',
+            border: `1px solid ${signedIn ? '#6bff8a' : '#E50914'}`,
+            textDecoration: 'none',
+            marginLeft: '0.75rem',
+          }}
         >
-          <span className="text-white">b</span>
-          <span className="text-[#E50914]">Movies</span>
+          {signedIn ? 'Account' : 'Sign In'}
         </Link>
-
-        <span className="hidden sm:inline text-[0.55rem] uppercase tracking-[0.15em] text-[#666] font-bold border border-[#222] px-2 py-1 shrink-0">
-          App · Beta
-        </span>
-
-        <nav className="hidden md:flex items-center gap-5 flex-1 min-w-0 overflow-x-auto">
-          {NAV_LINKS.map((l) => {
-            const active =
-              pathname === l.href ||
-              (l.href !== '/' && pathname?.startsWith(l.href))
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                  active
-                    ? 'text-[#E50914] border-b-2 border-[#E50914] pb-1'
-                    : 'text-[#bbb] hover:text-white'
-                }`}
-              >
-                {l.label}
-              </Link>
-            )
-          })}
-        </nav>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <a
-            href="https://bmovies.online"
-            className="hidden sm:inline text-[0.6rem] uppercase tracking-[0.15em] text-[#666] hover:text-white"
-          >
-            ← Public site
-          </a>
-          <Link
-            href="/login"
-            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
-          >
-            Sign in
-          </Link>
-        </div>
-      </div>
+      </nav>
     </header>
   )
 }

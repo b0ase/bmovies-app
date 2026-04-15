@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Your Film is Being Made</title>
+  <meta name="description" content="Watch your bMovies production come to life in real time. Tier-aware deliverables — pitch, trailer, short, or feature — appear here as your crew ships them." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+
+    .top-bar {
+      padding: 1.5rem 3rem; display: flex; justify-content: space-between;
+      align-items: center; max-width: 1400px; margin: 0 auto;
+    }
+    .top-bar .logo { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; color: #fff; text-decoration: none; }
+    .top-bar .logo span { color: #E50914; }
+    .top-bar a.back { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #777; text-decoration: none; border: 1px solid #333; padding: 0.5rem 1rem; }
+    .top-bar a.back:hover { color: #fff; border-color: #666; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 3rem 6rem; }
+
+    .success-badge {
+      display: inline-block; background: #E50914; color: #fff;
+      font-size: 0.55rem; font-weight: 900; letter-spacing: 0.2em;
+      text-transform: uppercase; padding: 0.4rem 0.8rem; margin-bottom: 1.5rem;
+    }
+    .subtitle {
+      font-size: 1rem; color: #888; line-height: 1.6; margin-top: 1rem;
+      max-width: 680px;
+    }
+
+    /* Film summary card */
+    .film-card {
+      margin-top: 2.5rem; border: 1px solid #333; background: #0a0a0a;
+      padding: 2rem;
+    }
+    .film-card .film-title {
+      font-size: 2rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.02em; color: #fff; line-height: 1;
+    }
+    .film-card .film-meta {
+      margin-top: 0.6rem; font-size: 0.75rem; color: #666;
+    }
+    .film-card .film-synopsis {
+      margin-top: 1rem; font-size: 0.95rem; color: #aaa; line-height: 1.6;
+    }
+
+    /* Production team progress */
+    .team-section {
+      margin-top: 3rem;
+    }
+    .team-section .kicker {
+      font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .team-section h2 {
+      font-size: 1.8rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.02em; color: #fff; margin-top: 0.3rem;
+    }
+    .team-section .team-desc {
+      font-size: 0.85rem; color: #666; margin-top: 0.6rem; line-height: 1.5;
+    }
+
+    .role-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;
+      margin-top: 1.5rem;
+    }
+    @media (max-width: 640px) { .role-grid { grid-template-columns: 1fr; } }
+
+    .role-card {
+      border: 1px solid #333; padding: 1.5rem; background: #0a0a0a;
+      position: relative; overflow: hidden;
+    }
+    .role-card .role-status {
+      position: absolute; top: 0; right: 0;
+      font-size: 0.5rem; font-weight: 900; letter-spacing: 0.15em;
+      text-transform: uppercase; padding: 0.35rem 0.7rem;
+    }
+    .role-card .role-status.waiting { background: #222; color: #666; }
+    .role-card .role-status.working { background: #E50914; color: #fff; }
+    .role-card .role-status.done { background: #060; color: #6bff8a; }
+
+    .role-card .role-name {
+      font-size: 1.1rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.01em; color: #fff;
+    }
+    .role-card .role-desc {
+      font-size: 0.75rem; color: #888; line-height: 1.5; margin-top: 0.5rem;
+    }
+    .role-card .role-output {
+      margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #222;
+    }
+    .role-card .role-output .output-text {
+      font-size: 0.8rem; color: #ccc; line-height: 1.55;
+      max-height: 120px; overflow-y: auto;
+    }
+    .role-card .role-output img {
+      width: 100%; border: 1px solid #333; margin-top: 0.3rem;
+    }
+    .role-card .role-output audio {
+      width: 100%; margin-top: 0.3rem;
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .role-card .role-output .shots {
+      list-style: none; padding: 0;
+    }
+    .role-card .role-output .shots li {
+      font-size: 0.75rem; color: #aaa; line-height: 1.45;
+      padding: 0.3rem 0 0.3rem 0.7rem;
+      border-left: 2px solid #E50914; margin-bottom: 0.4rem;
+    }
+
+    /* Budget tracker */
+    .budget-section {
+      margin-top: 2.5rem; padding: 1.5rem; border: 1px solid #333;
+      background: #0a0a0a;
+    }
+    .budget-section .budget-label {
+      font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: #666; font-weight: 700;
+    }
+    .budget-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-top: 0.5rem;
+    }
+    .budget-row .amount {
+      font-size: 2rem; font-weight: 900; color: #fff;
+    }
+    .budget-row .sub {
+      font-size: 0.75rem; color: #666;
+    }
+    .budget-bar {
+      margin-top: 0.8rem; height: 8px; background: #222;
+      border-radius: 4px; overflow: hidden;
+    }
+    .budget-bar .fill {
+      height: 100%; background: #E50914; border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    /* CTA */
+    .cta-section {
+      margin-top: 3rem; text-align: center;
+    }
+    .cta-section a {
+      display: inline-block; padding: 1rem 2.5rem;
+      background: #E50914; color: #fff; text-decoration: none;
+      font-size: 0.85rem; font-weight: 900; letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .cta-section a:hover { background: #c4070f; }
+    .cta-section .cta-sub {
+      margin-top: 0.8rem; font-size: 0.7rem; color: #555;
+    }
+
+    /* What's next */
+    .next-steps {
+      margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #222;
+    }
+    .next-steps h3 {
+      font-size: 1.2rem; font-weight: 900; text-transform: uppercase;
+      color: #fff;
+    }
+    .next-steps ul {
+      list-style: none; padding: 0; margin-top: 1rem;
+    }
+    .next-steps li {
+      padding: 0.7rem 0; border-bottom: 1px solid #111;
+      font-size: 0.85rem; color: #888; line-height: 1.5;
+    }
+    .next-steps li strong { color: #fff; }
+    .next-steps li a { color: #E50914; text-decoration: none; }
+
+    .state { padding: 4rem 0; text-align: center; }
+    .state h2 { font-size: 2rem; color: #333; font-weight: 900; text-transform: uppercase; }
+    .state p { color: #555; margin-top: 0.8rem; font-size: 0.9rem; }
+    .state a { color: #E50914; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="index.html" class="logo">b<span>Movies</span></a>
+    <a href="index.html" class="back">← Home</a>
+  </div>
+
+  <main id="root">
+    <div class="state"><h2>Loading your production…</h2></div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+
+    const SUPABASE_URL = 'https://api.b0ase.com';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storageKey: 'bmovies-auth', lock: false } });
+
+    const POLL_MS = 5_000;
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    function decodeDataUrl(url) {
+      if (!url || !url.startsWith('data:')) return null;
+      try {
+        const idx = url.indexOf(',');
+        if (idx < 0) return null;
+        const meta = url.slice(5, idx);
+        const payload = url.slice(idx + 1);
+        return /;base64/.test(meta) ? atob(payload) : decodeURIComponent(payload);
+      } catch { return null; }
+    }
+
+    const root = document.getElementById('root');
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('title') || 'Your Film';
+    const ticker = params.get('ticker') || '';
+    const sessionId = params.get('session_id') || '';
+
+    // Try to find the pitch/offer by matching the Stripe session ID
+    // (stored as payment_txid on bct_pitches) or by title.
+    async function findProduction() {
+      // First try by payment_txid (Stripe session ID)
+      if (sessionId) {
+        const { data: pitch } = await supabase
+          .from('bct_pitches')
+          .select('*')
+          .eq('payment_txid', sessionId)
+          .maybeSingle();
+        if (pitch?.offer_id) {
+          const { data: offer } = await supabase
+            .from('bct_offers')
+            .select('*, bct_artifacts(id, kind, url, model, role, created_at), bct_subscriptions(id, agent_id, sats)')
+            .eq('id', pitch.offer_id)
+            .maybeSingle();
+          if (offer) return { pitch, offer };
+        }
+        if (pitch) return { pitch, offer: null };
+      }
+      // Fallback: find by title
+      const { data: offers } = await supabase
+        .from('bct_offers')
+        .select('*, bct_artifacts(id, kind, url, model, role, created_at), bct_subscriptions(id, agent_id, sats)')
+        .eq('title', title)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (offers?.length) return { pitch: null, offer: offers[0] };
+      return { pitch: null, offer: null };
+    }
+
+    // ─── Tier-aware deliverables map ───
+    // Each tier produces a different bundle of artifacts. The dashboard
+    // looks up artifacts by step_id (preferred — more specific) with a
+    // fallback to role+kind for legacy rows. The "expected" list drives
+    // both the progress bar denominator and the role-card grid.
+    const TIER_DELIVERABLES = {
+      pitch: [
+        { stepId: 'writer.logline',    role: 'writer',     kind: 'text',  title: 'Logline',    desc: 'A one-sentence pitch that captures the whole film.' },
+        { stepId: 'writer.synopsis',   role: 'writer',     kind: 'text',  title: 'Synopsis',   desc: 'A one-page narrative — setup, conflict, resolution.' },
+        { stepId: 'storyboard.poster', role: 'poster',     kind: 'image', title: 'Key art',    desc: 'The poster — the visual centrepiece of the project.' },
+      ],
+      trailer: [
+        { stepId: 'writer.logline',    role: 'writer',     kind: 'text',  title: 'Logline',    desc: 'A one-sentence pitch.' },
+        { stepId: 'writer.synopsis',   role: 'writer',     kind: 'text',  title: 'Synopsis',   desc: 'A one-page treatment.' },
+        { stepId: 'director.vision',   role: 'director',   kind: 'text',  title: 'Director\'s vision', desc: 'Tone, pacing, visual language.' },
+        { stepId: 'storyboard.poster', role: 'poster',     kind: 'image', title: 'Key art',    desc: 'The poster.' },
+        { stepId: 'editor.trailer_cut',role: 'trailer-clip',kind: 'video',title: 'Trailer',    desc: '60 seconds of motion. Your idea, on screen.' },
+      ],
+      short: [
+        { stepId: 'writer.synopsis',   role: 'writer',     kind: 'text',  title: 'Treatment',  desc: 'The story bible.' },
+        { stepId: 'director.vision',   role: 'director',   kind: 'text',  title: 'Direction',  desc: 'How the film will be shot and felt.' },
+        { stepId: 'storyboard.pack',   role: 'storyboard', kind: 'image', title: 'Storyboard', desc: 'Hero frames + key beats.' },
+        { stepId: 'composer.themes',   role: 'composer',   kind: 'text',  title: 'Score',      desc: 'Theme, motifs, cue list.' },
+        { stepId: 'editor.rough_cut',  role: 'editor',     kind: 'video', title: 'Short film', desc: 'The complete short.' },
+        { stepId: 'storyboard.poster', role: 'poster',     kind: 'image', title: 'Key art',    desc: 'The poster.' },
+      ],
+      feature: [
+        { stepId: 'writer.synopsis',     role: 'writer',              kind: 'text',  title: 'Synopsis',         desc: 'One-page narrative.' },
+        { stepId: 'writer.treatment',    role: 'writer',              kind: 'text',  title: 'Treatment',        desc: 'Full 1500-word treatment.' },
+        { stepId: 'writer.beat_sheet',   role: 'writer',              kind: 'text',  title: 'Beat sheet',       desc: '15 narrative beats.' },
+        { stepId: 'writer.screenplay',   role: 'writer',              kind: 'text',  title: 'Screenplay',       desc: 'Opening scenes in script form.' },
+        { stepId: 'director.vision',     role: 'director',            kind: 'text',  title: 'Direction',        desc: 'Vision statement.' },
+        { stepId: 'casting.cast_list',   role: 'casting_director',    kind: 'text',  title: 'Cast',             desc: 'Characters + voice notes.' },
+        { stepId: 'production.lookbook', role: 'production_designer', kind: 'text',  title: 'Lookbook',         desc: 'Palette, sets, references.' },
+        { stepId: 'dp.shot_plan',        role: 'cinematographer',     kind: 'text',  title: 'Cinematography',   desc: 'Lensing + lighting plan.' },
+        { stepId: 'storyboard.pack',     role: 'storyboard',          kind: 'image', title: 'Storyboard',       desc: '12 hero frames.' },
+        { stepId: 'composer.themes',     role: 'composer',            kind: 'text',  title: 'Score',            desc: 'Theme + cue list.' },
+        { stepId: 'editor.rough_cut',    role: 'editor',              kind: 'video', title: 'Feature',          desc: 'The film itself.' },
+      ],
+    };
+
+    const TERMINAL_STATUSES = new Set(['published', 'auto_published', 'released']);
+
+    function findArtifact(arts, expected) {
+      // Prefer match by step_id (most specific). Fall back to role+kind.
+      let art = arts.find(a => a.step_id === expected.stepId);
+      if (art) return art;
+      art = arts.find(a => a.role === expected.role && a.kind === expected.kind);
+      return art || null;
+    }
+
+    function renderArtifactBody(art, fallbackTitle) {
+      if (!art) return '';
+      if (art.kind === 'text') {
+        const text = decodeDataUrl(art.url);
+        if (!text) return '';
+        // Director shot lists are JSON arrays — render as ordered list.
+        let parsed = null;
+        try { parsed = JSON.parse(text); } catch {}
+        if (Array.isArray(parsed)) {
+          return `<div class="role-output"><ol class="shots">${parsed.map(s => `<li>${esc(String(s))}</li>`).join('')}</ol></div>`;
+        }
+        return `<div class="role-output"><div class="output-text">${esc(text)}</div></div>`;
+      }
+      if (art.kind === 'image') {
+        return `<div class="role-output"><img src="${esc(art.url)}" alt="${esc(fallbackTitle)}" loading="lazy" /></div>`;
+      }
+      if (art.kind === 'video') {
+        return `<div class="role-output"><video controls preload="metadata" src="${esc(art.url)}" style="width:100%;display:block;background:#000;"></video></div>`;
+      }
+      if (art.kind === 'audio') {
+        return `<div class="role-output"><audio controls preload="none" src="${esc(art.url)}"></audio></div>`;
+      }
+      return '';
+    }
+
+    function renderRoleCard(expected, art) {
+      const isDone = !!art;
+      const badge = isDone
+        ? '<span class="role-status done">Complete</span>'
+        : '<span class="role-status waiting">Waiting</span>';
+      const body = renderArtifactBody(art, expected.title);
+      return `
+        <div class="role-card">
+          ${badge}
+          <div class="role-name">${esc(expected.title)}</div>
+          <div class="role-desc">${esc(expected.desc)}</div>
+          ${body}
+        </div>
+      `;
+    }
+
+    function renderDashboard(titleText, synopsisText, offer) {
+      const arts = offer?.bct_artifacts || [];
+      const tier = (offer?.tier || 'pitch').toLowerCase();
+      const expected = TIER_DELIVERABLES[tier] || TIER_DELIVERABLES.pitch;
+      const isTerminal = !!offer && TERMINAL_STATUSES.has(offer.status);
+
+      // Status pill — friendlier than the raw enum value
+      const statusLabel = !offer
+        ? 'Queued'
+        : isTerminal
+          ? 'Ready'
+          : (offer.status || 'in progress').replace(/_/g, ' ');
+
+      // Match each expected slot with whichever artifact landed for it
+      const slots = expected.map(e => ({ expected: e, art: findArtifact(arts, e) }));
+      const doneCount = slots.filter(s => !!s.art).length;
+      const totalCount = slots.length;
+      const budgetPct = Math.round((doneCount / Math.max(totalCount, 1)) * 100);
+
+      // ─── Headline + subtitle vary by terminal vs in-progress state ───
+      const headline = isTerminal
+        ? `Your ${tier} is ready.`
+        : 'Your film is being made.';
+
+      const subtitle = isTerminal
+        ? `Production is complete. Every artifact below is yours, and 99% of the
+           $${esc(offer.token_ticker || ticker || '')} royalty shares are in your account.
+           Browse the deliverables, share the project page, or open the full production
+           timeline to see every step the AI crew took.`
+        : `Your payment has been received. Your ${esc(tier)}-tier production is now at work.
+           ${tier === 'pitch'
+             ? 'Pitch tier ships 3 deliverables — a logline, a synopsis, and the key art — usually in under 2 minutes.'
+             : tier === 'trailer'
+               ? 'Trailer tier ships 5 deliverables including a 60-second video.'
+               : tier === 'short'
+                 ? 'Short tier ships 6 deliverables including the complete short film.'
+                 : 'Feature tier puts 11 specialists on the job under one of the six founding studios.'} You can watch each piece land in real time below.`;
+
+      // ─── CTAs ───
+      const offerId = offer?.id ? encodeURIComponent(offer.id) : '';
+      const readyCtas = isTerminal && offer ? `
+        <div class="cta-section">
+          <a href="/account" target="_blank" rel="noopener" style="margin-right:0.6rem;background:#E50914;">Open my studio ↗</a>
+          <a href="film.html?id=${offerId}" style="background:transparent;border:1px solid #E50914;color:#E50914;margin-right:0.6rem;">Watch the film →</a>
+          <a href="production.html?id=${offerId}" style="background:transparent;border:1px solid #444;color:#aaa;margin-right:0.6rem;">Production timeline</a>
+          <a href="offer.html?id=${offerId}" style="background:transparent;border:1px solid #444;color:#aaa;">Investor view</a>
+          <div class="cta-sub">Your studio dashboard is at <strong style="color:#E50914;">/account</strong> — edit scenes, regen storyboards, rewrite screenplays, share cap tables with investors.</div>
+        </div>
+      ` : `
+        <div class="cta-section" style="opacity:0.5;">
+          <span style="display:inline-block;padding:1rem 2.5rem;border:1px solid #333;font-size:0.85rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;color:#888;">${doneCount === 0 ? 'Booting your crew…' : 'Production in progress'}</span>
+          <div class="cta-sub">This page updates every 5 seconds. Your team is working.</div>
+        </div>
+      `;
+
+      // ─── Wallet linking nudge for orphan offers ───
+      // Until the Stripe webhook attaches the buyer to a bct_account
+      // (Phase 2 work), the offer is owned by an anonymous email. Show
+      // a one-line note inviting the buyer to claim it.
+      const claimNote = isTerminal ? `
+        <div style="margin:1.4rem 0;padding:0.9rem 1.2rem;border:1px dashed #2a2a2a;background:#0a0a0a;font-size:0.78rem;color:#888;line-height:1.5;">
+          <strong style="color:#e8c46b;">Want to claim this project?</strong>
+          The 99% royalty stake is currently held against the email you used at
+          checkout. Sign in with that email on the
+          <a href="/account" style="color:#E50914;">account page</a> to attach it
+          to a wallet — you can link HandCash, BSV Desktop, MetaMask, or any
+          BRC-100 wallet later. Your shares are safe in the meantime.
+        </div>
+      ` : '';
+
+      root.innerHTML = `
+        <div class="success-badge">${isTerminal ? 'Production complete' : 'Payment confirmed'}</div>
+        <h1>${esc(headline)}</h1>
+        <p class="subtitle">${subtitle}</p>
+
+        <div class="film-card">
+          <div class="film-title">${esc(titleText)}</div>
+          <div class="film-meta">
+            ${ticker ? '$' + esc(ticker) + ' · ' : ''}${esc(tier.toUpperCase())} tier · ${esc(statusLabel)} · ${doneCount}/${totalCount} deliverables
+          </div>
+          ${synopsisText ? `<div class="film-synopsis">${esc(synopsisText)}</div>` : ''}
+        </div>
+
+        ${claimNote}
+
+        <section class="team-section">
+          <div class="kicker">Deliverables</div>
+          <h2>${isTerminal ? 'Everything your crew shipped' : 'Your crew at work'}</h2>
+          <p class="team-desc">${isTerminal ? 'Every piece below is on file. Click anything to open it full size on the film page.' : 'Each slot below fills as the matching artifact lands.'}</p>
+          <div class="role-grid">
+            ${slots.map(s => renderRoleCard(s.expected, s.art)).join('')}
+          </div>
+        </section>
+
+        <div class="budget-section">
+          <div class="budget-label">Production progress</div>
+          <div class="budget-row">
+            <span class="amount">${doneCount} of ${totalCount}</span>
+            <span class="sub">deliverables · ${budgetPct}% complete</span>
+          </div>
+          <div class="budget-bar">
+            <div class="fill" style="width:${budgetPct}%"></div>
+          </div>
+        </div>
+
+        ${readyCtas}
+
+        <section class="next-steps">
+          <h3>What happens next</h3>
+          <ul>
+            <li><strong>Watch the project</strong> — the <a href="film.html${offerId ? '?id=' + offerId : ''}">film page</a> shows the synopsis, the key art, and any video that shipped, plus a ticker pill with the project's $ticker.</li>
+            <li><strong>See the production trail</strong> — every step the crew ran, every artifact, every payment, on the <a href="production.html${offerId ? '?id=' + offerId : ''}">live production timeline</a>.</li>
+            <li><strong>Investor view</strong> — share the <a href="offer.html${offerId ? '?id=' + offerId : ''}">offer page</a> with anyone you'd like to back the project. They can buy royalty shares directly.</li>
+            <li><strong>Trade your shares</strong> — your 99% stake is listed on the <a href="exchange.html">exchange</a>. Sell some to fund the next tier, or hold for ticket royalties.</li>
+            <li><strong>Earn royalties</strong> — every $2.99 ticket flows pro-rata to shareholders, forever.</li>
+          </ul>
+        </section>
+      `;
+    }
+
+    async function tick() {
+      const { pitch, offer } = await findProduction();
+      const synopsis = pitch?.synopsis || offer?.synopsis || '';
+      const filmTitle = pitch?.title || offer?.title || title;
+      renderDashboard(filmTitle, synopsis, offer);
+
+      // Stop polling once the offer reaches a terminal status. The
+      // pitch tier auto-publishes within seconds of the last step
+      // landing, so this is the canonical "we are done" signal — much
+      // more reliable than counting role artifacts.
+      if (offer && TERMINAL_STATUSES.has(offer.status) && pollHandle) {
+        clearInterval(pollHandle);
+        pollHandle = null;
+      }
+    }
+
+    let pollHandle = null;
+
+    async function main() {
+      if (!sessionId && !title) {
+        root.innerHTML = `
+          <div class="state">
+            <h2>No production found</h2>
+            <p>This page is reached after a successful payment. <a href="commission.html">Commission a film</a> to get started.</p>
+          </div>
+        `;
+        return;
+      }
+      await tick();
+      pollHandle = setInterval(tick, POLL_MS);
+    }
+
+    main();
+  </script>
+    <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

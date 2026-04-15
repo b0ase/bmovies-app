@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="../js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Runar covenant design</title>
+  <link rel="icon" type="image/png" href="../bmovies_OG.png" />
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; }
+    main { max-width: 860px; margin: 0 auto; padding: 4rem 3rem 6rem; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; letter-spacing: -0.01em; color: #fff; margin-bottom: 0.4rem; line-height: 1; }
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.01em; color: #fff; margin-top: 2.6rem; margin-bottom: 0.8rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    h3 { font-size: 0.95rem; color: #fff; font-weight: 700; margin-top: 1.8rem; margin-bottom: 0.5rem; }
+    p, li { font-size: 0.9rem; color: #bbb; line-height: 1.7; margin-bottom: 0.8rem; }
+    ul, ol { padding-left: 1.5rem; }
+    strong { color: #fff; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { font-size: 0.7rem; color: #555; margin-bottom: 1.6rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+    .intent {
+      border-left: 3px solid #6bff8a; padding: 1rem 1.4rem; background: rgba(107, 255, 138, 0.04);
+      margin: 1.2rem 0 2rem; font-size: 0.88rem; color: #ccc;
+    }
+    .intent strong { color: #6bff8a; }
+    pre {
+      border: 1px solid #1f1f1f; background: #050505; padding: 1rem 1.2rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #c8c8c8;
+      overflow-x: auto; line-height: 1.55; margin: 1rem 0 1.4rem;
+    }
+    pre .c { color: #666; }
+    pre .k { color: #E50914; }
+    pre .s { color: #6bff8a; }
+    pre .n { color: #e8c46b; }
+    .phase {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.2rem 1.4rem;
+      margin: 1rem 0; font-size: 0.85rem; color: #ccc;
+    }
+    .phase h3 { margin-top: 0; color: #E50914; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    @media print {
+      body { background: #fff; color: #000; }
+      main { max-width: none; padding: 1cm; }
+      h1, h2, h3, strong { color: #000 !important; }
+      p, li, pre { color: #333 !important; }
+      pre { background: #f5f5f5 !important; border-color: #ccc !important; }
+      .intent, .phase { background: #f8f8f8 !important; border-color: #ccc !important; }
+      a { color: #000 !important; text-decoration: underline !important; }
+      footer, .site-header { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <h1>Runar covenant design</h1>
+    <p class="meta">Non-custodial dividend distribution path · Version 1 · 2026-04-14</p>
+
+    <div style="border: 1px solid #222; background: #0a0a0a; padding: 1rem 1.2rem; margin: 1.2rem 0 1.8rem; font-size: 0.78rem; color: #aaa; line-height: 1.55;">
+      <strong style="color:#fff;font-size:0.55rem;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:0.4rem;">Issuer</strong>
+      The Bitcoin Corporation Ltd, a private company limited by shares registered in England &amp; Wales · Company number <strong style="color:#fff;">16735102</strong> · Registered office Flat 6, 315 Barking Road, London, E13 8EE, United Kingdom · <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>
+    </div>
+
+    <div class="intent">
+      <strong>The goal.</strong> Eliminate the brief window during which the bMovies Platform custodies ticket revenue on behalf of royalty shareholders. A Runar-compiled Bitcoin SV smart contract holds ticket fees in a UTXO that can <em>only</em> be spent by constructing a fan-out transaction matching the canonical shareholder list at that block height. The Platform never touches the money.
+    </div>
+
+    <h2>1. Why a covenant, not just a fan-out</h2>
+    <p>bMovies already does fan-out transactions — the streaming engine in <code>src/agents/piece-payment.ts</code> broadcasts ~1.73M per 24-hour window, each one a P2PKH spend with N outputs paying holders pro-rata. That code works. But it is <strong>custodially trusted</strong>: the Platform holds the UTXO, the Platform chooses when to broadcast it, and the Platform could (in principle) spend it elsewhere.</p>
+    <p>A covenant contract changes the trust model. The ticket fee goes straight into a UTXO locked by a script that enforces three rules:</p>
+    <ul>
+      <li><strong>The spending transaction must have N outputs</strong> where N matches the holder count at the snapshot block height.</li>
+      <li><strong>Each output must pay a specific address</strong> — the addresses committed at snapshot time.</li>
+      <li><strong>Each output's value must be the pro-rata share</strong> of the UTXO's total amount, proportional to each holder's share count.</li>
+    </ul>
+    <p>Any attempt to spend the UTXO to a different destination fails the script check. The Platform cannot move the money to a wrong address, and neither can anyone else. The only valid spend is the one that distributes the revenue correctly.</p>
+
+    <h2>2. Why not a stateful contract</h2>
+    <p>Runar supports stateful smart contracts (see the stateful examples in <code>/examples/ts/auction</code> and <code>/examples/ts/message-board</code>), but they are not the right tool here. A stateful contract requires every interaction to update an on-chain state variable, which adds complexity and broadcast overhead. For dividend distribution we do not need persistent state — each ticket-sale batch creates a fresh UTXO, the covenant spends it once, and the UTXO is gone. It's a <strong>one-shot pay-out-or-die</strong> pattern, which is a stateless contract.</p>
+
+    <h2>3. Contract shape (Runar TypeScript pseudocode)</h2>
+    <p>This is the intended shape of the contract as it would be written in Runar's TypeScript DSL. It has not been compiled or deployed yet — this document is a design sketch, not a shipped artefact.</p>
+
+<pre><span class="c">// examples/bmovies/DividendCovenant.runar.ts</span>
+<span class="k">import</span> { SmartContract, assert, Addr, Sats, Sig, PubKey, hash256 } <span class="k">from</span> <span class="s">'runar-lang'</span>;
+
+<span class="c">/**
+ * bMovies dividend distribution covenant.
+ *
+ * Holds ticket-sale revenue for a single production and enforces
+ * that it may only be spent by a transaction that fans out the
+ * total value pro-rata to the committed shareholder list.
+ *
+ * Constructor commitments (baked into the locking script at deploy):
+ *   - snapshotRoot: merkle root of the holder list at snapshot time
+ *   - snapshotBlockHeight: block at which the snapshot was taken
+ *   - totalShares: total outstanding shares at snapshot time
+ *   - platformFeeAddr: address of the 1% platform fee
+ *
+ * Spending inputs (provided at spend time):
+ *   - The ordered list of (holderAddr, shareCount) pairs
+ *   - A merkle proof tying that list to snapshotRoot
+ */</span>
+<span class="k">class</span> <span class="n">DividendCovenant</span> <span class="k">extends</span> SmartContract {
+  <span class="k">readonly</span> snapshotRoot: bytes32;
+  <span class="k">readonly</span> snapshotBlockHeight: u32;
+  <span class="k">readonly</span> totalShares: u64;
+  <span class="k">readonly</span> platformFeeAddr: Addr;
+
+  <span class="k">constructor</span>(
+    snapshotRoot: bytes32,
+    snapshotBlockHeight: u32,
+    totalShares: u64,
+    platformFeeAddr: Addr,
+  ) {
+    <span class="k">super</span>(snapshotRoot, snapshotBlockHeight, totalShares, platformFeeAddr);
+    <span class="k">this</span>.snapshotRoot = snapshotRoot;
+    <span class="k">this</span>.snapshotBlockHeight = snapshotBlockHeight;
+    <span class="k">this</span>.totalShares = totalShares;
+    <span class="k">this</span>.platformFeeAddr = platformFeeAddr;
+  }
+
+  <span class="c">/**
+   * Distribute the UTXO's full value to the committed holder list.
+   * The spending transaction's outputs must exactly match the list.
+   */</span>
+  <span class="k">public</span> distribute(
+    holderAddrs: Addr[],
+    holderShares: u64[],
+    merkleProof: bytes[][],
+    spentValue: Sats,
+  ) {
+    <span class="c">// 1. Verify the holder list matches the committed snapshot root</span>
+    <span class="k">const</span> computedRoot = merkleRoot(holderAddrs, holderShares);
+    assert(computedRoot == <span class="k">this</span>.snapshotRoot);
+
+    <span class="c">// 2. Verify shares sum to totalShares (no phantom holders)</span>
+    <span class="k">const</span> shareSum = sum(holderShares);
+    assert(shareSum == <span class="k">this</span>.totalShares);
+
+    <span class="c">// 3. Verify the spending tx has exactly N + 1 outputs</span>
+    <span class="c">//    (N for holders + 1 for the 1% platform fee)</span>
+    assert(ctx.tx.outputs.length == holderAddrs.length + <span class="n">1</span>);
+
+    <span class="c">// 4. Verify each output pays the correct address + amount</span>
+    <span class="k">const</span> distributable = spentValue - (spentValue / <span class="n">100</span>); <span class="c">// 99%</span>
+    <span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; holderAddrs.length; i++) {
+      <span class="k">const</span> expected = (distributable * holderShares[i]) / <span class="k">this</span>.totalShares;
+      assert(ctx.tx.outputs[i].address == holderAddrs[i]);
+      assert(ctx.tx.outputs[i].value == expected);
+    }
+
+    <span class="c">// 5. Verify the last output is the platform fee</span>
+    <span class="k">const</span> platformFee = spentValue / <span class="n">100</span>;
+    assert(ctx.tx.outputs[holderAddrs.length].address == <span class="k">this</span>.platformFeeAddr);
+    assert(ctx.tx.outputs[holderAddrs.length].value == platformFee);
+  }
+}</pre>
+
+    <p>Key design notes:</p>
+    <ul>
+      <li>The <strong>holder list is committed at snapshot time</strong> by baking the merkle root of <code>(address, shareCount)</code> leaves into the contract constructor. This fixes the list for the life of the UTXO — if the cap table changes after the snapshot, the contract pays out the old list. This is intentional: each ticket-sale batch gets its own covenant with its own snapshot, so subsequent batches pick up new holders.</li>
+      <li>The contract is <strong>parameterized per film and per batch</strong>. Every ticket-sale batch for a film deploys a fresh instance with the current holder snapshot. This is cheap: deploy cost is a single small UTXO.</li>
+      <li>The <strong>1% platform fee</strong> goes to a separate output at spend time, not to a stored value. The platform fee is part of the enforced spend, not a deduction.</li>
+      <li>The <strong>spend transaction is unforgeable</strong>: anyone can construct and broadcast it, but only a transaction matching the contract's assertions will unlock the UTXO. A third party (an agent, a node, even a shareholder) can volunteer to broadcast the distribution.</li>
+    </ul>
+
+    <h2>4. End-to-end flow</h2>
+
+    <div class="phase">
+      <h3>Phase A · Ticket sale</h3>
+      <p>A viewer pays $2.99 to stream a film. The Platform's Stripe integration receives the payment, converts the 99% distributable share into $MNEE (a USD-stable BSV-21 token), and sends those sats to the covenant UTXO. The 1% platform fee is collected separately in the same checkout.</p>
+    </div>
+
+    <div class="phase">
+      <h3>Phase B · Batch snapshot</h3>
+      <p>Once a batch threshold is reached (by time — daily/weekly — or by value — e.g. $100 accumulated), the Platform fetches the current holder list from the BSV-21 indexer. Each holder's shares are counted at a specific block height. A merkle root is computed over <code>(holderAddr, shareCount)</code> pairs and committed as the covenant's <code>snapshotRoot</code>.</p>
+    </div>
+
+    <div class="phase">
+      <h3>Phase C · Covenant deploy</h3>
+      <p>The contract is compiled by Runar and deployed to a locking script on Bitcoin SV. The batch's accumulated $MNEE UTXO is sent to this locking script. From that moment on, the Platform <em>cannot</em> spend the UTXO elsewhere — the covenant controls it.</p>
+    </div>
+
+    <div class="phase">
+      <h3>Phase D · Distribution spend</h3>
+      <p>The Platform (or any agent, including shareholders themselves) constructs a spending transaction with N+1 outputs: one for each holder paying the pro-rata share, plus one for the 1% platform fee. The covenant script verifies the transaction structure and unlocks the UTXO. The spend is broadcast. Every holder's wallet receives a $MNEE transfer directly from the covenant, with no intermediate Platform touch.</p>
+    </div>
+
+    <div class="phase">
+      <h3>Phase E · Audit</h3>
+      <p>The covenant deploy txid and the distribution spend txid are logged to <code>bct_distributions</code> in the Platform database for reporting. Holders see the distribution in their app.bmovies.online/account dividend history with a link to the on-chain transaction. The audit trail is: (a) committed snapshot root, (b) covenant deploy, (c) distribution spend, (d) per-holder $MNEE receipt — all four on chain.</p>
+    </div>
+
+    <h2>5. What this buys us legally</h2>
+    <p>The Platform's <a href="non-custodial-disclosure.html">non-custodial disclosure</a> currently acknowledges two brief windows during which the Platform IS custodial: the commission-checkout service-fee window, and the ticket-revenue accumulation window between distribution batches. The Runar covenant eliminates the <strong>second</strong> window entirely. Once deployed:</p>
+    <ul>
+      <li>Ticket revenue flows directly from Stripe → $MNEE conversion → covenant UTXO. The Platform does not "hold" it at any stage; it routes it.</li>
+      <li>The Platform cannot redirect, pause, or reverse a distribution. The covenant is the payment authority, not the Platform.</li>
+      <li>Under UK law, this pushes the Platform further away from "operating a regulated deposit scheme" and closer to "operating a payment rail" — which has a different (lighter) regulatory footprint.</li>
+      <li>In the event of Platform shutdown, the covenant UTXO would still be spendable by any party who has the holder list + merkle proof. Shareholders can be paid even after the Platform itself no longer exists.</li>
+    </ul>
+    <p>The Platform still needs FCA regulatory review for the <strong>first</strong> window (commission checkout fee-in-advance), but that is a much smaller surface to defend than "we accept deposits on your behalf."</p>
+
+    <h2>6. Scope, status, and estimates</h2>
+    <p><strong>Not yet built.</strong> This document is a design sketch, not a shipped contract. The elements that need to be built:</p>
+    <ol>
+      <li>The Runar contract itself — 5–8 days of contract development + testing.</li>
+      <li>A snapshot builder that queries the BSV-21 indexer, produces the holder list, and computes the merkle root — 1–2 days.</li>
+      <li>A deploy script that compiles the contract, funds it from ticket revenue, and broadcasts the deploy — 1 day.</li>
+      <li>A spend constructor that reads the snapshot, builds the fan-out tx, and broadcasts it — 1 day.</li>
+      <li>A $MNEE integration (exchange rate + conversion path) — 2–3 days depending on what $MNEE's official on-ramp looks like.</li>
+      <li>FCA-aware legal review of the contract structure — budget £3k–£10k and 2–4 weeks of lawyer calendar.</li>
+    </ol>
+    <p><strong>Total</strong>: 2–3 weeks of engineering + a parallel legal review thread. Not a hackathon deliverable. It is a post-submission Phase 2 goal that finalises the non-custodial claim made in the prospectus.</p>
+
+    <h2>7. References</h2>
+    <ul>
+      <li>Runar repository: <a href="https://github.com/b0ase/runar">github.com/b0ase/runar</a></li>
+      <li>Runar covenant example: <code>/examples/ts/covenant-vault/CovenantVault.runar.ts</code></li>
+      <li>Runar escrow example: <code>/examples/ts/escrow/Escrow.runar.ts</code></li>
+      <li>bMovies current streaming fan-out: <code>src/agents/piece-payment.ts</code></li>
+      <li>$MNEE (BSV USD stablecoin): check <code>mnee.io</code> for the current SDK + API</li>
+    </ul>
+
+    <p style="margin-top:3rem;font-size:0.7rem;color:#555;text-align:center;">
+      Press <strong>Cmd+P</strong> or <strong>Ctrl+P</strong> to save this design as a PDF.<br>
+      <a href="non-custodial-disclosure.html">Non-custodial disclosure</a> ·
+      <a href="platform-token-prospectus.html">$bMovies prospectus</a> ·
+      <a href="../terms.html">Terms of Service</a>
+    </p>
+  </main>
+
+  <script type="module" src="../js/nav-session.js"></script>
+</body>
+</html>

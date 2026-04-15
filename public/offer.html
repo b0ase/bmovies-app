@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Invest</title>
+  <meta name="description" content="Invest in an AI-produced film. Buy royalty shares on the bonding curve — early tranches are cheap, every ticket pays the holders." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Invest in a Film" />
+  <meta property="og:description" content="Buy royalty shares. Ticket revenue flows to holders." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+
+    .invest-hero {
+      position: relative; min-height: 55vh; overflow: hidden;
+    }
+    .invest-hero .bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      filter: brightness(0.3);
+    }
+    .invest-hero .vignette {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 60%, #000 100%);
+    }
+    .invest-hero .content {
+      position: relative; z-index: 2; max-width: 1200px;
+      margin: 0 auto; padding: 5rem 3rem 3rem;
+      display: flex; gap: 3rem; align-items: flex-end;
+    }
+    .invest-hero .poster {
+      width: 220px; flex-shrink: 0; aspect-ratio: 2/3;
+      background: #111; border: 2px solid #222;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    }
+    .invest-hero .poster img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .invest-hero .info { flex: 1; min-width: 0; }
+    .invest-hero .kicker {
+      font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .invest-hero h1 {
+      font-family: 'Bebas Neue', 'Oswald', sans-serif;
+      font-size: 4.5rem; color: #fff; letter-spacing: 0.02em;
+      line-height: 1; margin-top: 0.5rem;
+    }
+    .invest-hero .tagline {
+      font-size: 1rem; color: #ccc; line-height: 1.5;
+      margin-top: 1rem; max-width: 620px;
+    }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 3rem; }
+
+    .section { margin-top: 3rem; }
+    .section h2 {
+      font-size: 1.6rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.02em; color: #fff; margin-bottom: 1.5rem;
+    }
+
+    /* Buy panel */
+    .buy-panel {
+      display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 860px) {
+      .buy-panel { grid-template-columns: 1fr; }
+    }
+    .buy-main {
+      border: 1px solid #222; background: #0a0a0a; padding: 2rem;
+    }
+    .buy-main .price-row {
+      display: flex; align-items: baseline; gap: 1rem;
+      padding-bottom: 1rem; border-bottom: 1px solid #222;
+    }
+    .buy-main .current-price {
+      font-size: 3rem; font-weight: 900; color: #E50914;
+      font-family: 'SF Mono', Monaco, monospace; line-height: 1;
+    }
+    .buy-main .price-unit {
+      font-size: 0.85rem; color: #666; text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .buy-main .tier-label {
+      font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
+      color: #888; font-weight: 700; margin-top: 1.2rem;
+    }
+    .buy-main .tier-value {
+      font-size: 1.1rem; color: #fff; margin-top: 0.3rem; font-weight: 700;
+    }
+    .buy-main .progress-wrap {
+      margin-top: 1.5rem;
+    }
+    .buy-main .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.6rem; color: #888; text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 0.5rem;
+    }
+    .buy-main .progress-label strong { color: #E50914; }
+    .buy-main .progress-bar {
+      width: 100%; height: 10px; background: #1a1a1a; position: relative;
+      overflow: hidden;
+    }
+    .buy-main .progress-bar .fill {
+      position: absolute; top: 0; left: 0; bottom: 0; background: #E50914;
+    }
+    .buy-main .buy-btn {
+      display: block; width: 100%; padding: 1.1rem;
+      margin-top: 2rem; font-family: inherit;
+      font-size: 0.85rem; font-weight: 900; letter-spacing: 0.1em;
+      text-transform: uppercase; cursor: pointer;
+      background: #E50914; border: 1px solid #E50914; color: #fff;
+    }
+    .buy-main .buy-btn:hover:not(:disabled) { background: #c4070f; }
+    .buy-main .buy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .buy-main .buy-note {
+      font-size: 0.7rem; color: #666; margin-top: 0.8rem; text-align: center;
+    }
+
+    .buy-side {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.5rem;
+    }
+    .buy-side h3 {
+      font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em;
+      color: #E50914; font-weight: 700; margin-bottom: 0.8rem;
+    }
+    .buy-side .stat-row {
+      display: flex; justify-content: space-between; padding: 0.6rem 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .buy-side .stat-row:last-child { border-bottom: none; }
+    .buy-side .stat-label {
+      font-size: 0.7rem; color: #888;
+    }
+    .buy-side .stat-value {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.85rem;
+      color: #fff; font-weight: 700;
+    }
+    .buy-side .stat-value.green { color: #6bff8a; }
+
+    /* Tranche table */
+    .tranche-table-wrap {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.5rem;
+    }
+
+    /* Tranche grid — 10 rows × 10 squares, each square = 1% */
+    .tranche-grid {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.5rem;
+    }
+    .tranche-row {
+      display: grid;
+      grid-template-columns: 130px repeat(10, 1fr) 110px;
+      gap: 0.4rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+    .tranche-row .tr-label {
+      font-size: 0.55rem; color: #888; text-transform: uppercase;
+      letter-spacing: 0.08em; font-weight: 700;
+    }
+    .tranche-row .tr-price {
+      font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem;
+      color: #E50914; text-align: right; font-weight: 700;
+    }
+    .sq {
+      aspect-ratio: 1; border: 1px solid #222;
+      background: transparent;
+      cursor: default;
+      position: relative;
+      transition: all 0.15s;
+    }
+    .sq.sold {
+      background: #333; border-color: #333;
+    }
+    .sq.current {
+      background: rgba(229,9,20,0.15);
+      border-color: #E50914;
+    }
+    .sq.current.clickable {
+      cursor: pointer;
+    }
+    .sq.current.clickable:hover {
+      background: #E50914;
+      transform: scale(1.1);
+    }
+    .sq.future {
+      border-color: #222; background: #050505;
+    }
+    .sq.current::after {
+      content: '$'; position: absolute;
+      inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.5rem; color: #E50914; font-weight: 900;
+    }
+    .sq.current.clickable:hover::after { color: #fff; }
+    .tg-legend {
+      display: flex; gap: 1.2rem; margin-top: 1.2rem;
+      font-size: 0.6rem; color: #666; text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .tg-legend .lg {
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .tg-legend .lg-sq {
+      width: 0.9rem; height: 0.9rem; border: 1px solid #333;
+    }
+    .tg-legend .lg-sq.sold { background: #333; border-color: #333; }
+    .tg-legend .lg-sq.current {
+      background: rgba(229,9,20,0.15); border-color: #E50914;
+    }
+
+    @media (max-width: 720px) {
+      .tranche-row {
+        grid-template-columns: 80px repeat(10, 1fr) 70px;
+        gap: 0.2rem;
+      }
+      .tranche-row .tr-label { font-size: 0.45rem; }
+      .tranche-row .tr-price { font-size: 0.55rem; }
+    }
+
+    /* Modals (reused from trade.html) */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.85); z-index: 1000;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    .modal-backdrop.shown { display: flex; }
+    .modal {
+      background: #0a0a0a; border: 1px solid #333;
+      max-width: 520px; width: 90%; padding: 2rem;
+    }
+    .modal .kicker {
+      font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .modal h3 {
+      font-size: 1.8rem; font-weight: 900; text-transform: uppercase;
+      color: #fff; margin-top: 0.5rem; line-height: 1;
+    }
+    .modal p {
+      font-size: 0.85rem; color: #aaa; line-height: 1.6; margin-top: 1rem;
+    }
+    .modal ul { list-style: none; margin-top: 1rem; padding: 0; }
+    .modal li {
+      font-size: 0.8rem; color: #ccc; line-height: 1.5;
+      padding-left: 1.5rem; position: relative; margin-top: 0.6rem;
+    }
+    .modal li::before {
+      content: '✓'; position: absolute; left: 0; color: #6bff8a;
+      font-weight: 900;
+    }
+    .modal-actions {
+      display: flex; gap: 0.8rem; margin-top: 2rem;
+    }
+    .modal-actions button, .modal-actions a {
+      flex: 1; padding: 0.9rem 1.2rem; font-family: inherit;
+      font-size: 0.7rem; font-weight: 900; letter-spacing: 0.1em;
+      text-transform: uppercase; cursor: pointer; text-align: center;
+      text-decoration: none;
+    }
+    .modal-actions .btn-primary {
+      background: #E50914; border: 1px solid #E50914; color: #fff;
+    }
+    .modal-actions .btn-primary:hover { background: #c4070f; }
+    .modal-actions .btn-primary:disabled { opacity: 0.4; cursor: wait; }
+    .modal-actions .btn-secondary {
+      background: transparent; border: 1px solid #333; color: #aaa;
+    }
+    .modal-actions .btn-secondary:hover { border-color: #666; color: #fff; }
+    .modal-status {
+      margin-top: 1rem; font-size: 0.75rem; min-height: 1.2em;
+    }
+    .modal-status.error { color: #ff6b6b; }
+    .modal-status.success { color: #6bff8a; }
+
+    .state {
+      text-align: center; padding: 6rem 0; color: #555;
+    }
+    .state h2 { color: #333; font-size: 2rem; }
+
+    @media (max-width: 720px) {
+      .invest-hero .content { flex-direction: column; align-items: center; text-align: center; }
+      .invest-hero h1 { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <div id="root">
+    <div class="state"><h2>Loading...</h2></div>
+  </div>
+
+  <!-- KYC Modal -->
+  <div class="modal-backdrop" id="kyc-modal">
+    <div class="modal">
+      <div class="kicker">Identity verification</div>
+      <h3>Verify to invest</h3>
+      <p>
+        Royalty shares are regulated financial instruments. To buy shares
+        you need a one-time identity check. This protects you and keeps
+        the platform compliant.
+      </p>
+      <ul>
+        <li>Takes about 2 minutes</li>
+        <li>Powered by Veriff</li>
+        <li>One verification, unlimited film purchases</li>
+        <li>Your data is encrypted and never shared with sellers</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="kyc-cancel">Cancel</button>
+        <button class="btn-primary" id="kyc-start">Verify my ID →</button>
+      </div>
+      <div class="modal-status" id="kyc-status"></div>
+    </div>
+  </div>
+
+  <!-- Sign-in modal -->
+  <div class="modal-backdrop" id="signin-modal">
+    <div class="modal">
+      <div class="kicker">Sign in required</div>
+      <h3>Create a free account</h3>
+      <p>
+        Trading royalty shares requires an account so we can hold your
+        holdings and settle ticket revenue back to you.
+      </p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="signin-cancel">Cancel</button>
+        <a class="btn-primary" href="/account">Sign in →</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    import { TRANCHES, getCurrentTranche, renderTrancheTable, formatUsd, cumulativeRaised } from './js/bonding-curve.js';
+    import { openPayPicker } from './js/pay-picker.js';
+    const supabase = createClient('https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } }
+    );
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const POSTER_MAP = {
+      'echoes of the last signal': 'img/films/echoes-of-the-last-signal.jpg',
+      'the fold': 'img/films/the-fold.jpg',
+      'the weight of water': 'img/films/the-weight-of-water.jpg',
+      'the lantern that forgot its flame': 'img/films/the-lantern-that-forgot-its-flame.jpg',
+      'the mirror protocol': 'img/films/the-mirror-protocol.jpg',
+      'off-key heroes': 'img/films/off-key-heroes.jpg',
+      'midnight swarm': 'img/films/midnight-swarm.jpg',
+      'the last piece': 'img/films/the-last-piece.jpg',
+      'star wars episode 1000': 'img/films/episode-1000.jpg',
+    };
+
+    let currentSession = null;
+    let currentKyc = null;
+    let currentOffer = null;
+    let currentTranche = null;
+    let pendingPurchase = null;
+
+    function renderTrancheGrid(pctSold) {
+      let html = '';
+      for (let tier = 0; tier < 10; tier++) {
+        const price = TRANCHES[tier].pricePerPercent;
+        const minPct = tier * 10;
+        const maxPct = (tier + 1) * 10;
+        const isCurrentTier = pctSold >= minPct && pctSold < maxPct;
+        html += `<div class="tranche-row">`;
+        html += `<div class="tr-label">Tier ${tier + 1} · ${minPct}-${maxPct}%</div>`;
+        for (let i = 0; i < 10; i++) {
+          const squareIdx = minPct + i;
+          let cls = 'sq';
+          if (squareIdx < pctSold) cls += ' sold';
+          else if (isCurrentTier && squareIdx === Math.floor(pctSold)) cls += ' current clickable';
+          else if (isCurrentTier) cls += ' current clickable';
+          else cls += ' future';
+          html += `<div class="${cls}" data-tier="${tier + 1}" data-pct="${squareIdx}" title="${squareIdx}% — ${formatUsd(price)}"></div>`;
+        }
+        html += `<div class="tr-price">${formatUsd(price)}</div>`;
+        html += `</div>`;
+      }
+      return html;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const offerId = params.get('id');
+
+    async function loadUserState() {
+      const { data: { session } } = await supabase.auth.getSession();
+      currentSession = session;
+      if (!session?.user) return;
+      const { data: account } = await supabase
+        .from('bct_accounts').select('id').eq('auth_user_id', session.user.id).maybeSingle();
+      if (!account) return;
+      const { data: kyc } = await supabase
+        .from('bct_user_kyc').select('status').eq('account_id', account.id).maybeSingle();
+      currentKyc = kyc;
+    }
+
+    async function load() {
+      if (!offerId) {
+        document.getElementById('root').innerHTML = '<div class="state"><h2>No film selected</h2><p><a href="exchange.html" style="color:#E50914;">Browse the exchange →</a></p></div>';
+        return;
+      }
+
+      const [offerRes, statsRes, ticketsRes] = await Promise.all([
+        supabase.from('bct_offers')
+          .select('id, title, synopsis, status, token_ticker, created_at, bct_artifacts(kind, url, role)')
+          .eq('id', offerId).maybeSingle(),
+        supabase.from('bct_film_stats').select('percent_sold, gross_usd, tickets_sold').eq('offer_id', offerId).maybeSingle(),
+        supabase.from('bct_share_sales').select('id').eq('offer_id', offerId),
+      ]);
+
+      if (offerRes.error || !offerRes.data) {
+        document.getElementById('root').innerHTML = '<div class="state"><h2>Film not found</h2></div>';
+        return;
+      }
+
+      currentOffer = offerRes.data;
+      const pctSold = Math.min(100, Number(statsRes.data?.percent_sold || 0));
+      const grossUsd = Number(statsRes.data?.gross_usd || 0);
+      const ticketsSold = Number(statsRes.data?.tickets_sold || 0);
+      const shareHolders = (ticketsRes.data || []).length;
+
+      currentTranche = getCurrentTranche(pctSold);
+      render(currentOffer, pctSold, grossUsd, ticketsSold, shareHolders);
+    }
+
+    function render(offer, pctSold, grossUsd, ticketsSold, shareHolders) {
+      const root = document.getElementById('root');
+      const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
+      const arts = offer.bct_artifacts || [];
+      const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
+      const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
+      const heroImage = posterArt?.url || storyboard?.url || posterUrl || null;
+      const totalRaised = cumulativeRaised(pctSold);
+
+      document.title = `bMovies — Invest in ${offer.title}`;
+
+      root.innerHTML = `
+        <div class="invest-hero">
+          <div class="bg" style="${heroImage ? `background-image:url('${esc(heroImage)}')` : ''}"></div>
+          <div class="vignette"></div>
+          <div class="content">
+            <div class="poster">
+              ${heroImage ? `<img src="${esc(heroImage)}" alt="${esc(offer.title)}" />` : ''}
+            </div>
+            <div class="info">
+              <div class="kicker">Investment opportunity</div>
+              <h1>${esc(offer.title)}</h1>
+              <p class="tagline">${esc(offer.synopsis || '')}</p>
+              <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+                <a href="film.html?id=${encodeURIComponent(offer.id)}" style="padding:0.8rem 1.5rem;border:1px solid #fff;color:#fff;text-decoration:none;font-size:0.7rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;">Watch trailer</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <main>
+          <div class="section">
+            <h2>Buy royalty shares</h2>
+            <div class="buy-panel">
+              <div class="buy-main">
+                <div class="price-row">
+                  <div class="current-price">${formatUsd(currentTranche.pricePerPercent)}</div>
+                  <div class="price-unit">per 1% · 10M tokens</div>
+                </div>
+
+                <div class="tier-label">Current tranche</div>
+                <div class="tier-value">Tier ${currentTranche.tier}/10 — ${currentTranche.minPct}%–${currentTranche.maxPct}%</div>
+
+                <div class="progress-wrap">
+                  <div class="progress-label">
+                    <span><strong>${pctSold.toFixed(1)}%</strong> sold</span>
+                    <span>${(100 - pctSold).toFixed(1)}% available</span>
+                  </div>
+                  <div class="progress-bar"><div class="fill" style="width:${pctSold}%"></div></div>
+                </div>
+
+                <button class="buy-btn" id="buy-btn">Buy 1% — ${formatUsd(currentTranche.pricePerPercent)}</button>
+                <div class="buy-note">Ticket revenue flows to shareholders. Next tier jumps to ${formatUsd(TRANCHES[Math.min(9, currentTranche.tier)].pricePerPercent)} at ${currentTranche.maxPct}% sold.</div>
+              </div>
+
+              <div class="buy-side">
+                <h3>Film stats</h3>
+                <div class="stat-row">
+                  <div class="stat-label">Status</div>
+                  <div class="stat-value">${esc(offer.status)}</div>
+                </div>
+                <div class="stat-row">
+                  <div class="stat-label">Gross revenue</div>
+                  <div class="stat-value green">$${grossUsd.toFixed(0)}</div>
+                </div>
+                <div class="stat-row">
+                  <div class="stat-label">Tickets sold</div>
+                  <div class="stat-value">${ticketsSold}</div>
+                </div>
+                <div class="stat-row">
+                  <div class="stat-label">Shareholders</div>
+                  <div class="stat-value">${shareHolders}</div>
+                </div>
+                <div class="stat-row">
+                  <div class="stat-label">Raised from shares</div>
+                  <div class="stat-value">${formatUsd(totalRaised)}</div>
+                </div>
+                <div class="stat-row">
+                  <div class="stat-label">Token supply</div>
+                  <div class="stat-value">1B</div>
+                </div>
+                <div class="stat-row">
+                  <div class="stat-label">Ticker</div>
+                  <div class="stat-value">$${esc(offer.token_ticker)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>Bonding curve · 100 × 1% squares</h2>
+            <p style="color:#888;font-size:0.85rem;margin-bottom:1rem;max-width:720px;">
+              Every film has <strong style="color:#fff;">1 billion royalty tokens</strong>
+              divided into 100 squares of 1% (10M tokens each). Each row is a tier
+              with an escalating price. <strong style="color:#fff;">Grey squares are sold</strong>,
+              red squares are in the current tier (click to buy), outlined squares
+              are future tiers. Ticket revenue flows to whoever holds the tokens.
+            </p>
+            <div class="tranche-grid">
+              ${renderTrancheGrid(pctSold)}
+              <div class="tg-legend">
+                <div class="lg"><span class="lg-sq sold"></span>Sold</div>
+                <div class="lg"><span class="lg-sq current"></span>Current tier — click to buy</div>
+                <div class="lg"><span class="lg-sq"></span>Future tier</div>
+              </div>
+            </div>
+          </div>
+        </main>
+      `;
+
+      document.getElementById('buy-btn').addEventListener('click', handleBuy);
+
+      // Wire up clickable squares in the current tier
+      document.querySelectorAll('.sq.clickable').forEach(sq => {
+        sq.addEventListener('click', () => handleBuy());
+      });
+    }
+
+    // Modal helpers
+    function showModal(id) { document.getElementById(id).classList.add('shown'); }
+    function hideModal(id) { document.getElementById(id).classList.remove('shown'); }
+    function setKycStatus(text, kind) {
+      const el = document.getElementById('kyc-status');
+      el.textContent = text;
+      el.className = 'modal-status' + (kind ? ' ' + kind : '');
+    }
+
+    document.getElementById('kyc-cancel').addEventListener('click', () => {
+      hideModal('kyc-modal');
+      pendingPurchase = null;
+    });
+    document.getElementById('signin-cancel').addEventListener('click', () => hideModal('signin-modal'));
+
+    document.getElementById('kyc-start').addEventListener('click', async () => {
+      const email = currentSession?.user?.email;
+      if (!email) { hideModal('kyc-modal'); showModal('signin-modal'); return; }
+      const btn = document.getElementById('kyc-start');
+      btn.disabled = true;
+      setKycStatus('Creating verification session...');
+      try {
+        const res = await fetch('/api/kyc-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || 'KYC start failed');
+        if (body.mode === 'veriff' && body.url) {
+          setKycStatus('Opening Veriff...', 'success');
+          window.open(body.url, '_blank');
+          setKycStatus('Complete verification, then return here.', 'success');
+          const pollStart = Date.now();
+          const pollInterval = setInterval(async () => {
+            if (Date.now() - pollStart > 10 * 60 * 1000) {
+              clearInterval(pollInterval);
+              setKycStatus('Timed out. Refresh and try again.', 'error');
+              btn.disabled = false;
+              return;
+            }
+            const { data: acct } = await supabase
+              .from('bct_accounts').select('id').eq('auth_user_id', currentSession.user.id).maybeSingle();
+            if (!acct) return;
+            const { data: kyc } = await supabase
+              .from('bct_user_kyc').select('status').eq('account_id', acct.id).maybeSingle();
+            if (kyc?.status === 'verified') {
+              clearInterval(pollInterval);
+              currentKyc = kyc;
+              setKycStatus('Verified! Proceeding...', 'success');
+              setTimeout(() => {
+                hideModal('kyc-modal');
+                if (pendingPurchase) proceed(pendingPurchase);
+              }, 800);
+            }
+          }, 3000);
+        } else {
+          currentKyc = { status: 'verified' };
+          setKycStatus('Verified (demo mode). Proceeding...', 'success');
+          setTimeout(() => {
+            hideModal('kyc-modal');
+            if (pendingPurchase) proceed(pendingPurchase);
+          }, 800);
+        }
+      } catch (err) {
+        setKycStatus('Failed: ' + (err.message || err), 'error');
+        btn.disabled = false;
+      }
+    });
+
+    async function proceed(purchase) {
+      await openPayPicker({
+        type: 'shares',
+        offerId: purchase.offerId,
+        title: purchase.title,
+        ticker: purchase.ticker,
+        priceUsd: purchase.priceUsd,
+        email: currentSession.user.email,
+      });
+    }
+
+    async function handleBuy() {
+      pendingPurchase = {
+        offerId: currentOffer.id,
+        title: currentOffer.title,
+        ticker: currentOffer.token_ticker,
+        priceUsd: currentTranche.pricePerPercent,
+      };
+      if (!currentSession) { showModal('signin-modal'); return; }
+      if (currentKyc?.status !== 'verified') {
+        document.getElementById('kyc-start').disabled = false;
+        setKycStatus('');
+        showModal('kyc-modal');
+        return;
+      }
+      proceed(pendingPurchase);
+    }
+
+    loadUserState().then(load);
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

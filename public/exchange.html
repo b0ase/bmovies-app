@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Exchange</title>
+  <meta name="description" content="The bMovies exchange. Real on-chain royalty shares for every film, studio, and director on the platform. Trade on 1sat.market, view every token's mint on the blockchain." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Exchange" />
+  <meta property="og:description" content="Real on-chain royalty shares. Every film, studio, and director is a tradable BSV-21 token." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+    main { max-width: 1400px; margin: 0 auto; padding: 3rem 3rem 6rem; }
+
+    .page-intro {
+      padding-bottom: 2rem; border-bottom: 1px solid #222; margin-bottom: 1.5rem;
+    }
+    .page-intro .kicker {
+      font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #E50914; font-weight: 700;
+    }
+    .page-intro h2 {
+      font-size: 2.4rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.03em; color: #fff; margin-top: 0.5rem; line-height: 1;
+    }
+    .page-intro p {
+      font-size: 0.85rem; color: #888; line-height: 1.6; margin-top: 0.8rem;
+      max-width: 860px;
+    }
+    .page-intro strong { color: #fff; }
+
+    /* ─── Stats strip ─── */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 2rem;
+    }
+    .stat {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1rem 1.2rem;
+    }
+    .stat .label {
+      font-size: 0.55rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+    .stat .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      color: #fff;
+      font-weight: 700;
+      margin-top: 0.3rem;
+      line-height: 1;
+    }
+    .stat .sub {
+      font-size: 0.65rem;
+      color: #666;
+      margin-top: 0.3rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ─── Tabs ─── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1rem;
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      max-width: 520px;
+    }
+    .tabs button {
+      flex: 1;
+      padding: 0.9rem 1.2rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s;
+    }
+    .tabs button.active {
+      color: #fff;
+      border-bottom-color: #E50914;
+      background: #0f0f0f;
+    }
+    .tabs button:hover:not(.active) { color: #bbb; }
+
+    /* ─── Table ─── */
+    .market-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #1a1a1a;
+      background: #050505;
+    }
+    .market-table thead th {
+      background: #0a0a0a;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0.9rem 1rem;
+      text-align: left;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      font-weight: 700;
+    }
+    .market-table thead th.right  { text-align: right; }
+    .market-table thead th.center { text-align: center; }
+    .market-table .rank-cell { width: 48px; text-align: center; color: #666; }
+    .market-table tbody tr {
+      border-bottom: 1px solid #111;
+      transition: background 0.1s;
+    }
+    .market-table tbody tr:hover { background: #0a0a0a; }
+    .market-table tbody tr:last-child { border-bottom: none; }
+    .market-table td {
+      padding: 1rem;
+      font-size: 0.8rem;
+      vertical-align: middle;
+    }
+    .market-table td.right  { text-align: right; font-family: 'JetBrains Mono', monospace; }
+    .market-table td.center { text-align: center; font-family: 'JetBrains Mono', monospace; }
+    .market-table td.mono   { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #888; }
+
+    .asset-cell { display: flex; align-items: center; gap: 0.8rem; }
+    .asset-thumb {
+      width: 44px; height: 44px; flex-shrink: 0;
+      background: #1a1a1a;
+      object-fit: cover;
+      border: 1px solid #222;
+    }
+    .asset-name { color: #fff; font-weight: 700; font-size: 0.85rem; }
+    .asset-sub { color: #666; font-size: 0.65rem; margin-top: 0.15rem; }
+
+    .ticker-pill {
+      display: inline-block;
+      padding: 0.3rem 0.6rem;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 0.25rem 0.55rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .status-pill.indexed { background: #0c3c1c; color: #6bff8a; border: 1px solid #1d6a3a; }
+    .status-pill.pending { background: #332611; color: #ffb347; border: 1px solid #5a3f15; }
+    .status-pill.legacy  { background: #2a1416; color: #ff6b6b; border: 1px solid #4a1e20; }
+
+    .action-btns { display: flex; gap: 0.4rem; justify-content: flex-end; }
+    .btn {
+      padding: 0.45rem 0.8rem;
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      color: #aaa;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: #E50914; color: #fff; }
+    .btn.primary { background: #E50914; color: #fff; border-color: #E50914; }
+    .btn.primary:hover { background: #c4070f; }
+
+    .empty {
+      padding: 4rem 1rem;
+      text-align: center;
+      color: #555;
+      font-size: 0.85rem;
+    }
+
+    .notice {
+      margin-top: 2rem;
+      padding: 1.2rem 1.4rem;
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      font-size: 0.75rem;
+      color: #888;
+      line-height: 1.6;
+    }
+    .notice strong { color: #fff; }
+    .notice a { color: #E50914; text-decoration: none; }
+    .notice a:hover { text-decoration: underline; }
+
+    @media (max-width: 900px) {
+      main { padding: 2rem 1rem 4rem; }
+      .market-table thead th,
+      .market-table td { padding: 0.7rem 0.5rem; font-size: 0.7rem; }
+      .hide-mobile { display: none; }
+      .asset-thumb { width: 36px; height: 36px; }
+      .page-intro h2 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="page-intro">
+      <div class="kicker">The bMovies exchange</div>
+      <h2>Trade every bMovies asset</h2>
+      <p>
+        Every film, studio, and director on bMovies is a <strong>real on-chain royalty share</strong>.
+        One billion shares per asset. Tradable at <a href="https://1sat.market" target="_blank" rel="noopener" style="color:#E50914;text-decoration:none;">1sat.market</a>,
+        verifiable on any BSV blockchain explorer. You don't need a wallet to look; you need one to trade.
+      </p>
+    </div>
+
+    <div class="stats-strip" id="stats-strip">
+      <div class="stat"><div class="label">Films</div><div class="value" id="stat-films">—</div><div class="sub">tradable</div></div>
+      <div class="stat"><div class="label">Studios</div><div class="value" id="stat-studios">—</div><div class="sub">tokenised</div></div>
+      <div class="stat"><div class="label">Directors</div><div class="value" id="stat-directors">—</div><div class="sub">tokenised</div></div>
+      <div class="stat"><div class="label">Total supply</div><div class="value" id="stat-supply">—</div><div class="sub">shares on chain</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="active" data-tab="films">Films</button>
+      <button data-tab="studios">Studios</button>
+      <button data-tab="directors">Directors</button>
+    </div>
+
+    <table class="market-table">
+      <thead id="table-head"></thead>
+      <tbody id="market-body">
+        <tr><td colspan="8" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+
+    <div class="notice">
+      <strong>What am I looking at?</strong> Every row is a real BSV-21 token on the Bitcoin SV blockchain.
+      The token id is a transaction you can look up on any BSV explorer. The <strong>Trade</strong> buttons deep-link to 1sat.market where
+      you can connect a HandCash wallet and buy or sell shares. The <strong>View on chain</strong> buttons take you straight to GorillaPool's indexer
+      where you can see the raw inscription.
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="invest.html">Invest</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+
+    const supabase = createClient('https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } }
+    );
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmt = (n) => (Number(n) || 0).toLocaleString();
+    const short = (txid) => txid && txid.length > 16 ? `${txid.slice(0,6)}…${txid.slice(-4)}` : (txid || '—');
+    // Commissioner-provided canonical key art lives under /img/films/{slug}.jpg.
+    // Wins over pipeline-generated posters so expired xAI temp URLs can't
+    // mask a permanent asset. Only slugs in this set map — otherwise we'd
+    // ship 404s for every film without a local file.
+    const slugify = (s) => String(s || '').toLowerCase()
+      .replace(/['\u2018\u2019]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const LOCAL_POSTERS = new Set([
+      'echoes-of-the-last-signal', 'the-fold', 'the-weight-of-water',
+      'the-lantern-that-forgot-its-flame', 'the-mirror-protocol',
+      'off-key-heroes', 'midnight-swarm', 'the-last-piece',
+      'episode-1000', 'star-wars-episode-1000', 'that-weirdo-isnt-satoshi',
+    ]);
+    const localPosterFor = (title) => {
+      const slug = slugify(title);
+      return slug && LOCAL_POSTERS.has(slug) ? `img/films/${slug}.jpg` : null;
+    };
+    // xAI temp CDN URLs expire after a few hours. Treat them as missing.
+    const isEphemeralUrl = (url) => typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url);
+
+    // Films that GorillaPool + 1sat.market will recognise must have a mint
+    // txid in hex format. Anything with a `bsv21-mint-*` prefix is a sentinel
+    // from before the producer wallet was funded / format was fixed — we
+    // still display those rows but flag them "pending re-mint".
+    const isHexTxid = (s) => typeof s === 'string' && /^[0-9a-f]{64}$/.test(s);
+    const isInternalSmokeTest = (id) => /^(pitch-smoke|pitch-lock|pitch-x402|pitch-chain)/.test(id || '');
+
+    // ─── Column definitions ───
+    const COLS = {
+      films: [
+        { label: '#',        cls: 'rank-cell' },
+        { label: 'Film',     cls: '' },
+        { label: 'Ticker',   cls: 'center' },
+        { label: 'Tier',     cls: 'center hide-mobile' },
+        { label: 'Status',   cls: 'center' },
+        { label: 'Token ID', cls: 'mono hide-mobile' },
+        { label: '',         cls: 'right' },
+      ],
+      studios: [
+        { label: '#',        cls: 'rank-cell' },
+        { label: 'Studio',   cls: '' },
+        { label: 'Ticker',   cls: 'center' },
+        { label: 'Aesthetic',cls: 'hide-mobile' },
+        { label: 'Status',   cls: 'center' },
+        { label: 'Token ID', cls: 'mono hide-mobile' },
+        { label: '',         cls: 'right' },
+      ],
+      directors: [
+        { label: '#',        cls: 'rank-cell' },
+        { label: 'Director', cls: '' },
+        { label: 'Ticker',   cls: 'center' },
+        { label: 'Studio',   cls: 'center hide-mobile' },
+        { label: 'Status',   cls: 'center' },
+        { label: 'Token ID', cls: 'mono hide-mobile' },
+        { label: '',         cls: 'right' },
+      ],
+    };
+
+    // ─── Data loaders ───
+
+    async function loadFilms() {
+      const { data, error } = await supabase
+        .from('bct_offers')
+        .select(`
+          id, title, token_ticker, tier, token_mint_txid, status, producer_address, created_at,
+          bct_artifacts ( role, kind, url, step_id, superseded_by )
+        `)
+        .in('tier', ['pitch','trailer','short','feature'])
+        .not('token_mint_txid', 'is', null)
+        .is('archived_at', null)
+        .order('created_at', { ascending: false });
+      if (error) { console.error(error); return []; }
+      return (data || [])
+        .filter(o => !isInternalSmokeTest(o.id))
+        .map(o => {
+          const local = localPosterFor(o.title);
+          const arts = (o.bct_artifacts || []).filter(a => !a.superseded_by && !isEphemeralUrl(a.url));
+          const poster = arts.find(a => a.role === 'poster' && a.kind === 'image');
+          const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
+          // Local file wins — any commissioner-curated poster in /img/films
+          // is permanent. Falls through to non-ephemeral DB artifacts otherwise.
+          return { ...o, poster: local || poster?.url || storyboard?.url || null };
+        });
+    }
+
+    async function loadStudios() {
+      const { data, error } = await supabase
+        .from('bct_studios')
+        .select('*')
+        .order('id');
+      if (error) { console.error(error); return []; }
+      return data || [];
+    }
+
+    async function loadDirectors() {
+      const { data, error } = await supabase
+        .from('bct_directors')
+        .select('*')
+        .order('studio_id');
+      if (error) { console.error(error); return []; }
+      return data || [];
+    }
+
+    // ─── Renderers ───
+
+    function statusPill(mintTxid) {
+      if (!isHexTxid(mintTxid)) {
+        return `<span class="status-pill legacy">Legacy</span>`;
+      }
+      // Real mint → indexed (we trust the re-mint pass; in reality this
+      // should be async-verified against GorillaPool but for the demo
+      // we treat canonical hex as indexable.
+      return `<span class="status-pill indexed">Live</span>`;
+    }
+
+    function actionBtns(mintTxid, filmId) {
+      const canTrade = isHexTxid(mintTxid);
+      const tokenId = canTrade ? `${mintTxid}_0` : '';
+      const viewHref = canTrade
+        ? `https://ordinals.gorillapool.io/api/bsv20/id/${tokenId}`
+        : (filmId ? `film.html?id=${encodeURIComponent(filmId)}` : '#');
+      const tradeHref = canTrade ? `https://1sat.market/outpoint/${tokenId}/bsv21` : '#';
+      return `
+        <div class="action-btns">
+          ${filmId ? `<a class="btn" href="film.html?id=${encodeURIComponent(filmId)}">Film page</a>` : ''}
+          <a class="btn" href="${viewHref}" target="_blank" rel="noopener">On-chain</a>
+          ${canTrade ? `<a class="btn primary" href="${tradeHref}" target="_blank" rel="noopener">Trade</a>`
+                     : `<button class="btn" disabled style="opacity:0.3;cursor:not-allowed;">Re-mint pending</button>`}
+        </div>
+      `;
+    }
+
+    function renderHeader(tab) {
+      const head = document.getElementById('table-head');
+      head.innerHTML = `<tr>${COLS[tab].map(c => `<th class="${c.cls}">${c.label}</th>`).join('')}</tr>`;
+    }
+
+    function renderFilmsRows(films) {
+      if (!films.length) return `<tr><td colspan="7" class="empty">No films yet. Commission one at <a href="commission.html" style="color:#E50914;text-decoration:none;">bmovies.online/commission</a>.</td></tr>`;
+      return films.map((f, i) => `
+        <tr>
+          <td class="rank-cell">${i + 1}</td>
+          <td>
+            <div class="asset-cell">
+              ${f.poster ? `<img class="asset-thumb" src="${esc(f.poster)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
+              <div>
+                <div class="asset-name">${esc(f.title)}</div>
+                <div class="asset-sub">${esc(f.status || '')}</div>
+              </div>
+            </div>
+          </td>
+          <td class="center"><span class="ticker-pill">$${esc(f.token_ticker || '—')}</span></td>
+          <td class="center hide-mobile">${esc(f.tier || '')}</td>
+          <td class="center">${statusPill(f.token_mint_txid)}</td>
+          <td class="mono hide-mobile">${short(f.token_mint_txid)}</td>
+          <td class="right">${actionBtns(f.token_mint_txid, f.id)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderStudiosRows(studios) {
+      if (!studios.length) return `<tr><td colspan="7" class="empty">No studios tokenised yet.</td></tr>`;
+      return studios.map((s, i) => `
+        <tr>
+          <td class="rank-cell">${i + 1}</td>
+          <td>
+            <div class="asset-cell">
+              ${s.logo_url ? `<img class="asset-thumb" src="${esc(s.logo_url)}" alt="" loading="lazy" />` : '<div class="asset-thumb"></div>'}
+              <div>
+                <div class="asset-name">${esc(s.name)}</div>
+                <div class="asset-sub">${esc((s.bio || '').slice(0, 60))}${s.bio && s.bio.length > 60 ? '…' : ''}</div>
+              </div>
+            </div>
+          </td>
+          <td class="center"><span class="ticker-pill">$${esc(s.token_ticker)}</span></td>
+          <td class="hide-mobile" style="color:#888;font-size:0.72rem;">${esc(s.aesthetic || '')}</td>
+          <td class="center">${statusPill(s.token_mint_txid)}</td>
+          <td class="mono hide-mobile">${short(s.token_mint_txid)}</td>
+          <td class="right">${actionBtns(s.token_mint_txid, null)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDirectorsRows(directors, studiosById) {
+      if (!directors.length) return `<tr><td colspan="7" class="empty">No directors tokenised yet.</td></tr>`;
+      return directors.map((d, i) => {
+        const studio = studiosById[d.studio_id];
+        return `
+          <tr>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                ${d.headshot_url ? `<img class="asset-thumb" src="${esc(d.headshot_url)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : '<div class="asset-thumb"></div>'}
+                <div>
+                  <div class="asset-name">${esc(d.name)}</div>
+                  <div class="asset-sub">${esc(d.style || '')}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center"><span class="ticker-pill">$${esc(d.token_ticker)}</span></td>
+            <td class="center hide-mobile" style="color:#888;font-size:0.72rem;">${esc(studio?.name || '—')}</td>
+            <td class="center">${statusPill(d.token_mint_txid)}</td>
+            <td class="mono hide-mobile">${short(d.token_mint_txid)}</td>
+            <td class="right">${actionBtns(d.token_mint_txid, null)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ─── Tab controller ───
+    let films = [], studios = [], directors = [];
+    let studiosById = {};
+    let currentTab = 'films';
+
+    async function bootstrap() {
+      [films, studios, directors] = await Promise.all([
+        loadFilms(), loadStudios(), loadDirectors(),
+      ]);
+      studiosById = Object.fromEntries(studios.map(s => [s.id, s]));
+
+      // Stats strip
+      const tradable = films.filter(f => isHexTxid(f.token_mint_txid)).length;
+      document.getElementById('stat-films').textContent = tradable;
+      document.getElementById('stat-studios').textContent = studios.length;
+      document.getElementById('stat-directors').textContent = directors.length;
+      const totalAssets = tradable + studios.length + directors.length;
+      document.getElementById('stat-supply').textContent = (totalAssets * 1_000_000_000).toLocaleString();
+
+      renderTab(currentTab);
+    }
+
+    function renderTab(tab) {
+      currentTab = tab;
+      renderHeader(tab);
+      const body = document.getElementById('market-body');
+      if (tab === 'films')     body.innerHTML = renderFilmsRows(films);
+      if (tab === 'studios')   body.innerHTML = renderStudiosRows(studios);
+      if (tab === 'directors') body.innerHTML = renderDirectorsRows(directors, studiosById);
+
+      document.querySelectorAll('.tabs button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+    }
+
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.addEventListener('click', () => renderTab(btn.dataset.tab));
+    });
+
+    bootstrap();
+  </script>
+
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

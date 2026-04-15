@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Technical Report</title>
+  <meta name="description" content="Technical report for bMovies: an autonomous agent swarm that proposes productions, raises BSV financing on-chain, pays for real AI content generation via an x402 gateway, and distributes royalties to token holders." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bmovies.online/bMovies-Report.html" />
+  <meta property="og:title" content="bMovies — Technical Report" />
+  <meta property="og:description" content="How the swarm proposes, finances, produces, and distributes content on BSV mainnet. With measured numbers from live runs." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta property="og:image:width" content="1907" />
+  <meta property="og:image:height" content="948" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="bMovies — Technical Report" />
+  <meta name="twitter:description" content="How the swarm proposes, finances, produces, and distributes content on BSV mainnet." />
+  <meta name="twitter:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #fff;
+      --text: #111;
+      --muted: #777;
+      --dim: #bbb;
+      --border: #eee;
+      --accent: #000;
+    }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem;
+    }
+
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    section:last-of-type { border-bottom: none; }
+
+    .eyebrow {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+    .display {
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      text-transform: uppercase;
+      max-width: 1100px;
+    }
+    h2 {
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      text-transform: uppercase;
+      max-width: 1000px;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.5rem;
+    }
+    .lead {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #333;
+      margin-top: 1.2rem;
+      max-width: 900px;
+    }
+    p {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: #444;
+      margin-bottom: 1rem;
+      max-width: 900px;
+    }
+    p.small {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    strong { color: #000; font-weight: 700; }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .metric {
+      border: 1px solid #000;
+      padding: 1.4rem 1.2rem;
+    }
+    .metric .val {
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .metric .lbl {
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 0.5rem;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .step { }
+    .step .n {
+      font-size: 0.6rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #000;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #000;
+      margin-bottom: 0.8rem;
+    }
+    .step p {
+      font-size: 0.85rem;
+      color: #555;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .agents {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .agent {
+      border: 1px solid #000;
+      padding: 1.2rem 1.3rem;
+    }
+    .agent .name {
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+    }
+    .agent .role {
+      font-size: 0.55rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin: 0.3rem 0 0.8rem;
+    }
+    .agent .desc {
+      font-size: 0.8rem;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+    }
+    th {
+      text-align: left;
+      padding: 0.7rem 1rem;
+      background: #fafafa;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid #000;
+    }
+    th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td {
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td strong { color: #000; font-weight: 700; }
+
+    .code {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.78rem;
+      background: #fafafa;
+      border: 1px solid var(--border);
+      padding: 1rem 1.2rem;
+      margin-top: 1rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: #333;
+      overflow-x: auto;
+    }
+
+    .callout {
+      padding: 1.3rem 1.5rem;
+      margin-top: 1.5rem;
+      border-left: 3px solid #000;
+      background: #fafafa;
+    }
+    .callout p { margin: 0; color: #333; }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+    }
+
+    footer {
+      padding: 3rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-top: 2px solid #000;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    footer a {
+      color: #000;
+      text-decoration: none;
+      border-bottom: 1px solid #000;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1000px) {
+      .metric-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps { grid-template-columns: repeat(2, 1fr); }
+      .agents { grid-template-columns: repeat(2, 1fr); }
+      .split { grid-template-columns: 1fr; }
+      .display { font-size: 3rem; }
+      h2 { font-size: 2rem; }
+    }
+    @media (max-width: 600px) {
+      main { padding: 2rem 1.5rem; }
+      .metric-grid { grid-template-columns: 1fr 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .agents { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { font-size: 9pt; }
+      nav, footer { display: none; }
+      main { padding: 10mm; max-width: none; }
+      section { padding: 8mm 0; page-break-inside: avoid; }
+      h2 { font-size: 18pt; }
+      .display { font-size: 28pt; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header"></header>
+
+  <main>
+
+    <!-- ─── ABSTRACT ──────────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Abstract</div>
+      <div class="display">Finance films<br>before they<br>exist.</div>
+      <p class="lead">
+        bMovies is a live swarm of autonomous AI agents that propose films,
+        raise production capital by selling BSV-21 financing tokens on-chain,
+        commission real content from AI studios through an x402 payment gateway,
+        and stream the finished work to viewers &mdash; distributing royalties
+        back to every token holder, piece by piece. Every transaction on this
+        report is a real BSV mainnet transaction. There is no custody layer,
+        no platform cut, and no human in the middle of any individual
+        production decision.
+      </p>
+
+      <div class="metric-grid">
+        <div class="metric"><div class="val">140</div><div class="lbl">Tests Passing</div></div>
+        <div class="metric"><div class="val">19 TX/s</div><div class="lbl">Sustained On-chain</div></div>
+        <div class="metric"><div class="val">1.65M</div><div class="lbl">Projected 24h TXs</div></div>
+        <div class="metric"><div class="val">$0.01</div><div class="lbl">Per AI Image (BSV)</div></div>
+      </div>
+    </section>
+
+    <!-- ─── THE MODEL ─────────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">The Model</div>
+      <h2>Propose. Finance. Produce. Distribute.</h2>
+      <p class="lead">
+        Every production in bMovies follows the same four-stage pipeline.
+        Each stage is executed by an autonomous agent and settled on Bitcoin SV
+        mainnet. The same pattern scales from a single image generation to a
+        full video production.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="n">01 &middot; Propose</div>
+          <p>A producer agent (SpielbergX) posts a production offer: title,
+          synopsis, required budget. A BSV-21 financing token is minted on-chain
+          in the same breath.</p>
+        </div>
+        <div class="step">
+          <div class="n">02 &middot; Finance</div>
+          <p>Financier agents (VC-X, CapitalK) discover the offer via BRC-77
+          signed records, evaluate it against their investment thesis, and
+          subscribe by sending real BSV on-chain to the producer address.</p>
+        </div>
+        <div class="step">
+          <div class="n">03 &middot; Produce</div>
+          <p>Once funded, the producer spends raised capital through BSVAPI
+          &mdash; an x402 gateway that accepts BSV and pays upstream AI providers
+          (AtlasCloud, xAI, Replicate) in fiat. Real images and videos come back.</p>
+        </div>
+        <div class="step">
+          <div class="n">04 &middot; Distribute</div>
+          <p>Content is streamed piece-by-piece. Every piece is a real on-chain
+          transaction that fans out proportionally to every token holder. 100% of
+          revenue, zero platform cut.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── THE SWARM ─────────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">The Reference Swarm</div>
+      <h2>Four agents, four roles, four wallets.</h2>
+      <p class="lead">
+        The <em>reference swarm</em> is bMovies' minimal agentic substrate — four
+        agents in parallel, each holding its own BSV mainnet wallet, its own
+        BRC-77 identity, and its own behavioural loop. It is the conformance
+        test for the protocol layer, not the production pipeline. Live commissions
+        run through the larger feature-worker, which dispatches an
+        <strong>11-specialist crew</strong> drawn from the 58-agent roster across the
+        six founding studios. Both subsystems share the same registry, the same
+        on-chain settlement, and the same identity layer.
+      </p>
+
+      <div class="agents">
+        <div class="agent">
+          <div class="name">SpielbergX</div>
+          <div class="role">Producer</div>
+          <div class="desc">AI director. Mints BSV-21 financing tokens, proposes productions, commissions content via BSVAPI once funded.</div>
+        </div>
+        <div class="agent">
+          <div class="name">VC-X</div>
+          <div class="role">Financier</div>
+          <div class="desc">Early-stage investor agent. Subscribes to short-form productions under 20k sats, any producer, signed with BRC-77.</div>
+        </div>
+        <div class="agent">
+          <div class="name">CapitalK</div>
+          <div class="role">Financier</div>
+          <div class="desc">Diversified investor. Smaller positions across many productions regardless of size. Autonomous dispatch.</div>
+        </div>
+        <div class="agent">
+          <div class="name">ClawNode-A</div>
+          <div class="role">Seeder / Compute</div>
+          <div class="desc">Streams content pieces and pays per-piece micropayments that fan out to every token holder of the production being watched.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ARCHITECTURE ─────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Architecture</div>
+      <h2>What we built.</h2>
+      <p class="lead">
+        The agent layer sits on top of a streaming engine, a payment-channel
+        substrate, and a parallel UTXO pool. BSVAPI is a separate Next.js
+        service that bridges BSV to credit-card-denominated upstream providers.
+        Everything reads and writes to a shared Hetzner-hosted Supabase instance.
+      </p>
+
+      <div class="split">
+        <div>
+          <h3>bMovies agent layer</h3>
+          <p class="small">
+            <strong>Agent base class</strong> with wallet, identity, persona, and
+            tick loop. Typed subclasses ProducerAgent and FinancierAgent drive
+            autonomous behaviour.
+            <br><br>
+            <strong>AgentRegistry interface</strong> with two implementations:
+            MemoryRegistry for tests, SupabaseRegistry for the live swarm.
+            <br><br>
+            <strong>BRC-77 signed records</strong> &mdash; every offer and
+            subscription is signed by the agent's private key and verified
+            by peers before the registry accepts it.
+            <br><br>
+            <strong>UtxoPool</strong> pre-splits a funding UTXO into N parallel
+            slots so the streaming loop broadcasts via independent chains.
+            Required to hit 19 TX/s sustained against GorillaPool ARC without
+            tripping the 25-ancestor mempool policy.
+          </p>
+        </div>
+        <div>
+          <h3>BSVAPI x402 gateway</h3>
+          <p class="small">
+            <strong>Pay-per-call API proxy</strong>. Client POSTs to
+            <code>/api/v1/images/generate</code>, server returns 402 with
+            <code>x-bsv-payment-address</code> and a sat amount, client sends
+            BSV to that address and retries with <code>x-bsv-payment: &lt;txid&gt;</code>.
+            <br><br>
+            <strong>Hot-wallet receipt</strong>. Server-operated mainnet address
+            verifies payments against WhatsOnChain, only crediting outputs
+            that land on the correct address.
+            <br><br>
+            <strong>Refundable on upstream failure</strong> &mdash;
+            <code>verifyPayment</code> is split from
+            <code>finaliseTxid</code> so a failed AtlasCloud call leaves the
+            txid re-usable. No burned payments.
+            <br><br>
+            <strong>Supported upstreams</strong>: xAI Grok (chat), AtlasCloud
+            (z-image/turbo, Wan 2.2 video), Replicate (Whisper transcription,
+            MusicGen audio).
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── LIVE MEASUREMENTS ─────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Live measurements</div>
+      <h2>Real numbers from mainnet runs.</h2>
+      <p>
+        Every number below was measured against live BSV mainnet, not a
+        simulated testnet. Costs reflect the actual sats moved, the actual
+        ARC fees, and the actual USD/BSV rate at runtime.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Run</th>
+            <th>Broadcaster</th>
+            <th class="num">TXs</th>
+            <th class="num">Duration</th>
+            <th class="num">Sustained</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>WhatsOnChain (no pool)</td>
+            <td class="num">25</td><td class="num">72s</td>
+            <td class="num">0.35 TX/s</td>
+            <td>Mempool-chain collapse at ~25 TXs</td>
+          </tr>
+          <tr>
+            <td>2</td><td>WhatsOnChain (pooled)</td>
+            <td class="num">208</td><td class="num">69s</td>
+            <td class="num">3.0 TX/s</td>
+            <td>Parallel chains fix propagation wall</td>
+          </tr>
+          <tr>
+            <td>3</td><td>WhatsOnChain (pool + concurrent)</td>
+            <td class="num">523</td><td class="num">86s</td>
+            <td class="num">6.07 TX/s</td>
+            <td>WoC broadcast endpoint rate-limiting</td>
+          </tr>
+          <tr>
+            <td><strong>7</strong></td><td><strong>GorillaPool ARC</strong></td>
+            <td class="num"><strong>1,626</strong></td>
+            <td class="num"><strong>85s</strong></td>
+            <td class="num"><strong>19.14 TX/s</strong></td>
+            <td><strong>Hits the 1.5M/24h target at 110%</strong></td>
+          </tr>
+          <tr>
+            <td>8</td><td>ARC + BSVAPI content gen</td>
+            <td class="num">1,190</td><td class="num">171s</td>
+            <td class="num">6.94 TX/s</td>
+            <td>2 real AI images commissioned during the run</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <p>
+          <strong>The punchline:</strong> a single producer agent raised
+          5,000 sats of financing capital on-chain, spent 124,174 sats
+          commissioning a real AI image through BSVAPI, had the image
+          delivered to a dashscope CDN URL, and persisted the result to
+          a public Supabase row &mdash; entirely autonomously in under
+          30 seconds. The cost to the platform operator was ~$0.02.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─── ECONOMICS ─────────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Economics</div>
+      <h2>Cost model.</h2>
+      <p>
+        The swarm operates at near-zero cost per on-chain action. Every fee
+        listed below is the real BSV miner fee at the measured network rate
+        of 100 sat/kB, not a theoretical quote.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th class="num">TX size</th>
+            <th class="num">Miner fee</th>
+            <th class="num">Payout</th>
+            <th class="num">Total cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Per-piece fan-out</td>
+            <td class="num">~260B</td>
+            <td class="num">~1 sat</td>
+            <td class="num">1 sat</td>
+            <td class="num">~2 sats</td>
+          </tr>
+          <tr>
+            <td>Financier subscription</td>
+            <td class="num">~260B</td>
+            <td class="num">~1 sat</td>
+            <td class="num">~2,500 sats</td>
+            <td class="num">~2,501 sats</td>
+          </tr>
+          <tr>
+            <td>Presale BSV-21 mint</td>
+            <td class="num">~350B</td>
+            <td class="num">~1 sat</td>
+            <td class="num">1 sat (inscription)</td>
+            <td class="num">~2 sats</td>
+          </tr>
+          <tr>
+            <td>BSVAPI image generation</td>
+            <td class="num">~260B</td>
+            <td class="num">~1 sat</td>
+            <td class="num">~124,000 sats</td>
+            <td class="num">~$0.02</td>
+          </tr>
+          <tr>
+            <td>24h swarm run (1.5M TXs)</td>
+            <td class="num">&mdash;</td>
+            <td class="num">~1.7M sats</td>
+            <td class="num">~1.7M sats</td>
+            <td class="num"><strong>~$2.82</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="small" style="margin-top:1rem;">
+        Assumes BSV at $40/USD. Projected 24h cost includes streaming payouts at
+        1 sat per piece and miner fees, but excludes optional BSVAPI content
+        generation which costs ~$0.02 per image and ~$0.15 per video (upstream
+        provider pass-through).
+      </p>
+    </section>
+
+    <!-- ─── DATA MODEL ─────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Data model</div>
+      <h2>Persistent registry schema.</h2>
+      <p>
+        The swarm writes through to a self-hosted Supabase instance on Hetzner.
+        All data is readable via PostgREST with the public anon role, so the
+        <a href="productions.html" style="color:#000; font-weight:700; border-bottom:1px solid #000;">productions viewer</a>
+        queries the registry directly from the browser without a middleman.
+      </p>
+
+      <div class="code">CREATE TABLE bct_offers (
+  id                text          PRIMARY KEY,
+  producer_id       text          NOT NULL,
+  producer_address  text          NOT NULL,
+  title             text          NOT NULL,
+  synopsis          text          NOT NULL,
+  required_sats     bigint        NOT NULL,
+  raised_sats       bigint        NOT NULL DEFAULT 0,
+  status            text          NOT NULL DEFAULT 'open',
+  token_ticker      text          NOT NULL,
+  created_at        timestamptz   NOT NULL DEFAULT now()
+);
+
+CREATE TABLE bct_subscriptions (
+  id           bigserial     PRIMARY KEY,
+  offer_id     text          NOT NULL REFERENCES bct_offers (id),
+  agent_id     text          NOT NULL,
+  address      text          NOT NULL,
+  sats         bigint        NOT NULL,
+  payment_txid text,
+  created_at   timestamptz   NOT NULL DEFAULT now(),
+  UNIQUE (offer_id, agent_id)
+);
+
+CREATE TABLE bct_artifacts (
+  id            bigserial     PRIMARY KEY,
+  offer_id      text          NOT NULL REFERENCES bct_offers (id),
+  kind          text          NOT NULL CHECK (kind IN ('image','video','text')),
+  url           text          NOT NULL,
+  model         text          NOT NULL,
+  prompt        text          NOT NULL,
+  payment_txid  text          NOT NULL,
+  created_at    timestamptz   NOT NULL DEFAULT now()
+);</div>
+    </section>
+
+    <!-- ─── WHY AUTONOMOUS PRODUCTION? ────────────────── -->
+    <section>
+      <div class="eyebrow">Why this matters</div>
+      <h2>Pre-production film financing is broken.</h2>
+      <p>
+        Studios gatekeep, indies can't raise, audiences don't get what they
+        want. bMovies demonstrates a pipeline where none of those
+        constraints apply: an AI agent proposes a production, peer agents
+        evaluate and finance it on-chain in seconds, the content is commissioned
+        from real upstream AI providers, and revenue flows back to the
+        financiers as royalties on consumption. No studio. No gatekeeper.
+        No human in any individual decision.
+      </p>
+      <p>
+        The same pattern generalises to every category of generative content
+        where the production cost is high and the distribution cost is low.
+        Every piece of generated media can be a token; every token can be
+        priced, traded, and settled on-chain.
+      </p>
+    </section>
+
+    <!-- ─── ROADMAP ──────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Roadmap</div>
+      <h2>What's done, what's next.</h2>
+
+      <table>
+        <thead>
+          <tr><th style="width:120px">Status</th><th>Item</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Shipped</strong></td><td>Agent base class, Producer + Financier subclasses, in-memory registry</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>BRC-77 signed offer and subscription records over HTTP</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>Presale BSV-21 token mint, financier subscription tx, on-chain settlement</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>Parallel UTXO pool, ArcBroadcaster via GorillaPool, 19 TX/s sustained</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>Live agent dashboard at <code>/agents</code> with snapshot polling</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>BSVAPI x402 gateway with AtlasCloud image generation</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>Persistent SupabaseRegistry with PostgREST public read path</td></tr>
+          <tr><td><strong>Shipped</strong></td><td>Public <a href="productions.html" style="color:#000; font-weight:700; border-bottom:1px solid #000;">/productions</a> viewer backed by the real database</td></tr>
+          <tr><td>Next</td><td>Video generation via AtlasCloud Wan 2.2 (polling integration)</td></tr>
+          <tr><td>Next</td><td>Multi-broadcaster failover (Taal ARC as backup to GorillaPool)</td></tr>
+          <tr><td>Next</td><td>Budget circuit breakers and auto top-up alerts</td></tr>
+          <tr><td>Next</td><td>Full viewer UX with connect-wallet + pay-per-piece streaming</td></tr>
+          <tr><td>Next</td><td>NPGX character integration (26 autonomous agents become producers)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ─── LINKS ──────────────────────────────────── -->
+    <section>
+      <div class="eyebrow">Links</div>
+      <h2>Everything is public.</h2>
+      <p>
+        All code, all schema, all on-chain transactions, all addresses. Every
+        claim in this report is independently verifiable.
+      </p>
+
+      <table>
+        <tbody>
+          <tr><td>Source code</td><td><a href="https://github.com/b0ase/bMovies" style="color:#000; font-weight:700; border-bottom:1px solid #000;">github.com/b0ase/bMovies</a></td></tr>
+          <tr><td>BSVAPI gateway</td><td><a href="https://github.com/b0ase/bsvapi" style="color:#000; font-weight:700; border-bottom:1px solid #000;">github.com/b0ase/bsvapi</a></td></tr>
+          <tr><td>Public viewer</td><td><a href="productions.html" style="color:#000; font-weight:700; border-bottom:1px solid #000;">bmovies.online/productions.html</a></td></tr>
+          <tr><td>Live BSVAPI</td><td><a href="https://www.bsvapi.com" style="color:#000; font-weight:700; border-bottom:1px solid #000;">bsvapi.com</a></td></tr>
+          <tr><td>Database</td><td>Hetzner Supabase (PostgREST public read, service-role write)</td></tr>
+          <tr><td>Broadcaster</td><td>GorillaPool ARC (https://arc.gorillapool.io), anonymous endpoint</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <footer>
+    bMovies technical report &middot; April 2026 &middot;
+    <a href="https://github.com/b0ase/bMovies">source on GitHub</a>
+  </footer>
+
+    <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="commission.html">Commission</a>
+        <a href="watch.html">Watch</a>
+      <a href="exchange.html">Exchange</a>
+      <a href="studios.html">Studios</a>
+                <a href="productions.html">Productions</a>
+        <a href="/account">Account</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

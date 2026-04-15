@@ -3,32 +3,23 @@
 /**
  * /account — the bMovies studio dashboard.
  *
- * Seven tabs, each the landing surface for a major user workflow:
+ * Six tabs on the authenticated user's dashboard:
  *
- *   My Films          — every offer the user has commissioned, grouped
- *                       by tier, with status / thumbnail / deep-link
- *                       to the per-film tools
- *   My Studio         — studio brand (name, logo, bio) + current
- *                       production pipeline + quick agent picker
- *   Agents            — hire cast, hire crew, hire editors, salaries,
- *                       soul files (scaffolded — live agent marketplace
- *                       is Phase 2)
- *   Cap Tables        — per-film and $bMovies cap tables with allocation
- *                       bars and on-chain verification
- *   Investor Packs    — printable per-film decks, one click to PDF
- *   Creative Tools    — launcher grid for the 6 creative tools
- *   Wallet            — BRC-100 wallet connect + $bMovies balance +
- *                       per-film $TICKER balances + dividend history
+ *   My Films          — offers the user has commissioned, with
+ *                       thumbnail, status, deep-links to the film /
+ *                       timeline / cap table / deck brochure pages.
+ *   My Studio         — studio brand + current production pipeline.
+ *   Agents            — agent marketplace scaffolding.
+ *   Cap Tables        — per-film + $bMovies cap tables.
+ *   Investor Packs    — printable per-film decks.
+ *   Wallet            — BRC-100 wallet + $bMovies balance + dividends.
  *
  * Data layer: supabase-bmovies.ts (reads bct_offers, bct_artifacts,
  * bct_studios, bct_agents, bct_share_sales, bct_platform_config).
  *
- * Auth: Supabase session. We pull the current user from the shared
- * auth cookie (storageKey = 'bmovies-auth') and match against
- * bct_offers.producer_id.
- *
- * Fallback: if the user isn't signed in, the page shows a "sign in
- * to open your studio" screen with a link back to bmovies.online.
+ * Auth: Supabase session via storageKey 'bmovies-auth'. Fallback if
+ * signed out is a "sign in to open your studio" screen that routes
+ * to /login and /commission.html on the same origin.
  */
 
 import { useState, useEffect, useMemo } from 'react'
@@ -42,7 +33,6 @@ type Tab =
   | 'agents'
   | 'cap-tables'
   | 'investor-packs'
-  | 'creative-tools'
   | 'wallet'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
@@ -51,7 +41,6 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'agents',          label: 'Agents',          icon: '🎭' },
   { id: 'cap-tables',      label: 'Cap Tables',      icon: '📊' },
   { id: 'investor-packs',  label: 'Investor Packs',  icon: '📄' },
-  { id: 'creative-tools',  label: 'Creative Tools',  icon: '🛠' },
   { id: 'wallet',          label: 'Wallet',          icon: '💳' },
 ]
 
@@ -163,7 +152,7 @@ export default function AccountPage() {
               Sign in →
             </Link>
             <a
-              href="https://bmovies.online/commission.html"
+              href="/commission.html"
               className="px-6 py-3 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
             >
               Commission a film ($0.99 +)
@@ -221,7 +210,6 @@ export default function AccountPage() {
         {activeTab === 'agents' && <AgentsTab />}
         {activeTab === 'cap-tables' && <CapTablesTab films={films} />}
         {activeTab === 'investor-packs' && <InvestorPacksTab films={films} />}
-        {activeTab === 'creative-tools' && <CreativeToolsTab />}
         {activeTab === 'wallet' && <WalletTab user={user} />}
       </div>
     </div>
@@ -241,7 +229,7 @@ function MyFilmsTab({ films, loading }: { films: Film[]; loading: boolean }) {
           and upgrade any winner to a trailer, short, or feature.
         </div>
         <a
-          href="https://bmovies.online/commission.html"
+          href="/commission.html"
           className="inline-block px-5 py-2.5 bg-[#E50914] text-white text-xs font-black uppercase tracking-wider"
         >
           Commission a film →
@@ -310,25 +298,25 @@ function FilmCard({ film }: { film: Film }) {
         </p>
         <div className="flex flex-wrap gap-1.5">
           <a
-            href={`https://bmovies.online/film.html?id=${encodeURIComponent(film.id)}`}
+            href={`/film.html?id=${encodeURIComponent(film.id)}`}
             className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
           >
             Watch
           </a>
-          <Link
-            href={`/movie-editor?id=${encodeURIComponent(film.id)}`}
+          <a
+            href={`/production.html?id=${encodeURIComponent(film.id)}`}
             className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-white hover:border-[#E50914]"
           >
-            Edit
-          </Link>
+            Timeline
+          </a>
           <a
-            href={`https://bmovies.online/captable.html?id=${encodeURIComponent(film.id)}`}
+            href={`/captable.html?id=${encodeURIComponent(film.id)}`}
             className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-[#bbb] hover:text-white"
           >
             Cap table
           </a>
           <a
-            href={`https://bmovies.online/deck.html?id=${encodeURIComponent(film.id)}`}
+            href={`/deck.html?id=${encodeURIComponent(film.id)}`}
             className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-[#bbb] hover:text-white"
           >
             Deck
@@ -360,10 +348,10 @@ function StudioTab() {
         <p className="text-[#888] text-sm leading-relaxed mb-4">
           Phase 2 (post-hackathon): spawn your own named studio with your
           own logo and bio, and other users can commission through you.
-          See <a href="https://bmovies.online/about.html#ponzinomics-field-guide" className="text-[#E50914]">the Ponzinomics field guide</a> for the full plan.
+          See <a href="/about.html#ponzinomics-field-guide" className="text-[#E50914]">the Ponzinomics field guide</a> for the full plan.
         </p>
         <a
-          href="https://bmovies.online/studios.html"
+          href="/studios.html"
           className="inline-block text-xs font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914] pb-0.5"
         >
           Browse founding studios →
@@ -397,7 +385,7 @@ function AgentsTab() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <a
-          href="https://bmovies.online/agents.html"
+          href="/agents.html"
           className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
         >
           <div className="text-3xl mb-2">🎭</div>
@@ -405,7 +393,7 @@ function AgentsTab() {
           <div className="text-[#888] text-xs">Browse the bench on the public site.</div>
         </a>
         <a
-          href="https://bmovies.online/studios.html"
+          href="/studios.html"
           className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
         >
           <div className="text-3xl mb-2">🏢</div>
@@ -441,7 +429,7 @@ function CapTablesTab({ films }: { films: Film[] }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <a
-          href="https://bmovies.online/captable.html?id=platform"
+          href="/captable.html?id=platform"
           className="p-5 border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] hover:from-[#2a0005]"
         >
           <div className="text-xs text-[#E50914] font-bold uppercase tracking-wider mb-1">
@@ -462,7 +450,7 @@ function CapTablesTab({ films }: { films: Film[] }) {
           films.slice(0, 8).map((f) => (
             <a
               key={f.id}
-              href={`https://bmovies.online/captable.html?id=${encodeURIComponent(f.id)}`}
+              href={`/captable.html?id=${encodeURIComponent(f.id)}`}
               className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
             >
               <div className="text-xs text-[#666] font-bold uppercase tracking-wider mb-1">
@@ -498,7 +486,7 @@ function InvestorPacksTab({ films }: { films: Film[] }) {
           your first pack.
         </div>
         <a
-          href="https://bmovies.online/commission.html"
+          href="/commission.html"
           className="inline-block px-5 py-2.5 bg-[#E50914] text-white text-xs font-black uppercase tracking-wider"
         >
           Commission a film →
@@ -511,7 +499,7 @@ function InvestorPacksTab({ films }: { films: Film[] }) {
       {films.map((f) => (
         <a
           key={f.id}
-          href={`https://bmovies.online/deck.html?id=${encodeURIComponent(f.id)}`}
+          href={`/deck.html?id=${encodeURIComponent(f.id)}`}
           target="_blank"
           rel="noopener"
           className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
@@ -533,48 +521,6 @@ function InvestorPacksTab({ films }: { films: Film[] }) {
 }
 
 /* ───────── Creative Tools tab ───────── */
-
-function CreativeToolsTab() {
-  const tools = [
-    { href: '/movie-editor',    label: 'Movie editor',    desc: 'Timeline-based scene editor' },
-    { href: '/storyboard',      label: 'Storyboard',      desc: 'Frame-by-frame with AI gen' },
-    { href: '/storyboard-gen',  label: 'Storyboard gen',  desc: 'Batch-generate hero frames' },
-    { href: '/script-gen',      label: 'Script editor',   desc: 'Screenplay with act structure' },
-    { href: '/storyline-gen',   label: 'Storyline',       desc: 'Treatment + beat sheet' },
-    { href: '/title-gen',       label: 'Title generator', desc: 'Cinematic title brainstorm' },
-    { href: '/pitch-deck',      label: 'Pitch deck',      desc: 'Printable investor deck' },
-    { href: '/prompt-gen',      label: 'Prompt gen',      desc: 'Better prompts for the crew' },
-  ]
-  return (
-    <div>
-      <div className="mb-6 max-w-2xl">
-        <p className="text-[#888] text-sm leading-relaxed">
-          Ported from NPGX and wired to your bMovies films. Each tool
-          reads and writes to your film's artifact history, so any edit
-          you make lives forever as a new version with the old one still
-          addressable on the production timeline.
-        </p>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {tools.map((t) => (
-          <Link
-            key={t.href}
-            href={t.href}
-            className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
-          >
-            <div
-              className="text-lg font-black text-white mb-1"
-              style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '0.02em' }}
-            >
-              {t.label}
-            </div>
-            <div className="text-[#888] text-xs leading-relaxed">{t.desc}</div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /* ───────── Wallet tab ───────── */
 

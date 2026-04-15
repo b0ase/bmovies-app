@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="../js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — $bMovies Prospectus and Risk Disclosure</title>
+  <link rel="icon" type="image/png" href="../bmovies_OG.png" />
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; }
+    main { max-width: 860px; margin: 0 auto; padding: 4rem 3rem 6rem; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; letter-spacing: -0.01em; color: #fff; margin-bottom: 0.4rem; line-height: 1; }
+    h1 .sub { display: block; font-size: 1rem; color: #888; margin-top: 0.6rem; letter-spacing: 0.02em; }
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.01em; color: #fff; margin-top: 2.8rem; margin-bottom: 0.8rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    h3 { font-size: 0.95rem; font-weight: 700; color: #fff; margin-top: 1.6rem; margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    p, li { font-size: 0.9rem; color: #bbb; line-height: 1.7; margin-bottom: 0.8rem; }
+    ul, ol { padding-left: 1.5rem; }
+    strong { color: #fff; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { font-size: 0.7rem; color: #555; margin-bottom: 1.6rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+    .entity-box {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.2rem 1.4rem;
+      margin: 1.5rem 0 2.4rem;
+      font-size: 0.8rem; color: #aaa; line-height: 1.6;
+    }
+    .entity-box strong { color: #fff; display: block; font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.4rem; }
+    .draft-warn {
+      border: 1px solid #5a4a0e; background: linear-gradient(90deg, #2a2206, #1a1404);
+      padding: 0.9rem 1.2rem; margin: 1.2rem 0 2rem;
+      font-size: 0.78rem; color: #e8c46b; line-height: 1.6;
+    }
+    .draft-warn strong { color: #ffd84d; }
+    .key-facts {
+      border: 1px solid #2a1414; background: linear-gradient(180deg, #140000, #0a0a0a);
+      padding: 1.4rem 1.6rem;
+      margin: 1.6rem 0 2.4rem;
+    }
+    .key-facts h3 { margin-top: 0; color: #E50914; }
+    .key-facts table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .key-facts td { padding: 0.45rem 0; border-bottom: 1px dashed #1a1a1a; vertical-align: top; }
+    .key-facts td:first-child { color: #888; width: 44%; }
+    .key-facts td:last-child { color: #fff; font-weight: 700; }
+    .risk {
+      border-left: 3px solid #E50914; padding: 0.9rem 1.2rem; background: #0a0a0a;
+      margin: 1rem 0;
+    }
+    .risk h3 { margin: 0 0 0.4rem; color: #E50914; font-size: 0.8rem; }
+    .risk p { margin: 0; font-size: 0.85rem; color: #bbb; }
+    .print-nudge {
+      font-size: 0.7rem; color: #666; text-align: center; margin-top: 3rem;
+      padding-top: 1rem; border-top: 1px solid #1a1a1a;
+    }
+    @media print {
+      body { background: #fff; color: #000; }
+      main { max-width: none; padding: 1cm; }
+      h1, h2, h3, strong, .key-facts td:last-child { color: #000 !important; }
+      p, li, .key-facts td:first-child { color: #333 !important; }
+      .entity-box, .key-facts, .risk { background: #f5f5f5 !important; border-color: #ccc !important; }
+      .draft-warn { background: #fff5e0 !important; border-color: #d4a800 !important; color: #5a4400 !important; }
+      .print-nudge, footer, .site-header { display: none; }
+      a { color: #000 !important; text-decoration: underline !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <h1>$bMovies Prospectus<span class="sub">The platform royalty share — $0.001 primary issuance</span></h1>
+    <p class="meta">Document version 1 · Effective 2026-04-14</p>
+
+    <!-- PS23/6 statutory risk warning for crypto financial promotions
+         to UK retail investors. Required at the top of the document
+         by FCA PS23/6 (Financial promotion rules for cryptoassets).
+         Do NOT remove, reformat, or soften without FCA-experienced
+         solicitor review — the exact wording is statutory. -->
+    <div style="border:2px solid #E50914;background:#1a0003;padding:1.2rem 1.4rem;margin:1.2rem 0 1.6rem;font-size:0.88rem;line-height:1.6;color:#fff;">
+      <strong style="display:block;font-size:0.95rem;margin-bottom:0.5rem;">Don't invest unless you're prepared to lose all the money you invest.</strong>
+      This is a high-risk investment. You could lose all the money you invest and are unlikely to be protected if something goes wrong. <a href="https://www.fca.org.uk/investsmart/5-questions-ask-you-invest" target="_blank" rel="noopener" style="color:#E50914;">Take 2 mins to learn more.</a>
+    </div>
+
+    <div class="draft-warn">
+      <strong>Draft prospectus — not yet reviewed by regulated counsel.</strong> This document is a good-faith working draft of a risk disclosure and offering summary for the $bMovies platform token. It has not been signed off by a solicitor authorised by a regulator in any jurisdiction. Before $bMovies is offered to the public, a solicitor experienced with the UK FCA regulatory perimeter and with small-cap securities offerings will review every clause and the final version will supersede this draft in full. If you are making a purchase decision, please check the document header for the "lawyer-reviewed" stamp which will be added once review is complete. Until then, treat this document as a transparent first draft rather than a legally-binding offering document.
+    </div>
+
+    <div class="entity-box">
+      <strong>Issuer</strong>
+      <strong style="margin-top:0.8rem;display:block;font-size:0.55rem;">Legal name</strong>
+      The Bitcoin Corporation Ltd (the "<strong>Issuer</strong>")<br>
+      Registered in England &amp; Wales<br>
+      Company number: <strong>16735102</strong><br>
+      Registered office: Flat 6, 315 Barking Road, London, E13 8EE, United Kingdom<br>
+      Contact: <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>
+    </div>
+
+    <h2>1. Purpose of this document</h2>
+    <p>This prospectus sets out, in plain English, what the $bMovies platform token is, how it is issued, what right it gives the holder, what risks it carries, and how the offering relates to UK financial services law. It is intended to be read by a prospective buyer before committing any money. The Issuer's view is that an informed buyer is a better buyer, and that failing to disclose the actual mechanics and the actual risks is worse than over-disclosing them.</p>
+
+    <h2>2. Key facts</h2>
+    <div class="key-facts">
+      <h3>At a glance</h3>
+      <table>
+        <tr><td>Issuer</td><td>The Bitcoin Corporation Ltd (England &amp; Wales)</td></tr>
+        <tr><td>Instrument</td><td>$bMovies BSV-21 token</td></tr>
+        <tr><td>Blockchain</td><td>Bitcoin SV mainnet</td></tr>
+        <tr><td>Total supply</td><td>1,000,000,000 (one billion) fixed</td></tr>
+        <tr><td>On-chain mint txid</td><td><a id="mint-txid-link" href="#" style="font-family:monospace;font-size:0.7rem;word-break:break-all;">loading…</a></td></tr>
+        <tr><td>Treasury address</td><td id="treasury-addr" style="font-family:monospace;font-size:0.75rem;">loading…</td></tr>
+        <tr><td>Primary issuance price</td><td>$0.001 per share (Tranche 1)</td></tr>
+        <tr><td>Tranche schedule</td><td>Four step-up tranches: T1 $0.001 · T2 $0.01 · T3 $0.10 · T4 $1.00 (each 10% of supply, remaining 60% reserved)</td></tr>
+        <tr><td>Team / VC allocation</td><td>Zero pre-allocation; no private round; no vesting cliff</td></tr>
+        <tr><td>Economic right</td><td>Pro-rata share of 1% of every production's royalty supply</td></tr>
+        <tr><td>Payout rail</td><td>On-chain via non-custodial distribution (in development)</td></tr>
+        <tr><td>KYC</td><td>Required — Veriff-gated at primary and at any secondary transfer the platform recognises</td></tr>
+      </table>
+    </div>
+
+    <h2>3. What $bMovies is</h2>
+    <p>$bMovies is a <strong>single asset class</strong> issued as a BSV-21 token on the Bitcoin SV blockchain. One billion shares were minted on 2026-04-14. Every share is identical and interchangeable with every other share.</p>
+    <p>Each $bMovies share entitles the holder to a proportional claim on the <strong>bMovies platform royalty pool</strong>. The pool is sourced from a 1% platform fee that bMovies retains on every production commissioned through the site. When a film sells a ticket, 1% of that ticket's value flows into the platform pool; the pool is then distributed pro-rata to $bMovies holders.</p>
+    <p>Example: if the Platform ships 100 films over a year, each film retains 1% of its royalty supply for the $bMovies pool. A $bMovies holder with 1% of the supply receives roughly 1% of the platform pool. Actual returns depend on ticket volume, cascade splits on derivative works, and any operational deductions described in clause 8.</p>
+
+    <h2>4. The Issuer's view: $bMovies is a security</h2>
+    <p>The Issuer takes the position that <strong>$bMovies is likely to fall within the UK definition of a specified investment</strong> under the Financial Services and Markets Act 2000 (Regulated Activities) Order 2001, specifically as a "unit in a collective investment scheme" or a "right under a contract for differences", depending on how the on-chain distribution mechanism is ultimately characterised. Rather than try to avoid this, the Issuer is operating on the assumption that it is, and structuring the offering accordingly.</p>
+    <p>This position has three consequences:</p>
+    <ul>
+      <li><strong>Offers are gated by identity verification.</strong> Every buyer must complete KYC before any share is delivered.</li>
+      <li><strong>Offers are restricted by jurisdiction.</strong> The Issuer may decline to sell to residents of jurisdictions where the offer would be unlawful.</li>
+      <li><strong>The Issuer is in the process of mapping itself against the FCA perimeter.</strong> The Platform is not authorised or regulated by the FCA at the time this document is published. A solicitor-reviewed path to perimeter compliance will be disclosed in a subsequent version of this prospectus.</li>
+    </ul>
+
+    <h2>5. Non-custodial design</h2>
+    <p>The Issuer is deliberately structured as a <strong>non-custodial platform</strong>. $bMovies shares are delivered directly to an address the buyer controls — either a BRC-100 wallet the buyer has connected to the site (Metanet Client, Yours Wallet, HandCash, etc.), or a BSV address the buyer provided in their account profile. <strong>The Issuer does not hold your private keys. The Issuer cannot move, freeze, or reissue your shares.</strong></p>
+    <p>The consequence of non-custodial delivery: if you lose access to the wallet you used at purchase, the Issuer cannot recover the shares. Treat your wallet backup with the same care you would treat a bearer bond or a physical stock certificate.</p>
+    <p>For the full non-custodial disclosure, see <a href="non-custodial-disclosure.html">Non-custodial disclosure</a>.</p>
+
+    <h2>6. Primary issuance and tranche schedule</h2>
+    <p>$bMovies is offered in four step-up tranches. Each tranche is 10% of the total supply (100,000,000 shares). The remaining 60% is reserved in an on-chain treasury and is not offered to the public at this time; any future release from the reserve will be disclosed in writing at least 30 days in advance and will be subject to a supplementary prospectus.</p>
+    <div class="key-facts">
+      <h3>Tranche schedule (planned)</h3>
+      <table>
+        <tr><td>Tranche 1 — 100M shares</td><td>$0.001 per share · raises $100,000</td></tr>
+        <tr><td>Tranche 2 — 100M shares</td><td>$0.01 per share · raises $1,000,000</td></tr>
+        <tr><td>Tranche 3 — 100M shares</td><td>$0.10 per share · raises $10,000,000</td></tr>
+        <tr><td>Tranche 4 — 100M shares</td><td>$1.00 per share · raises $100,000,000</td></tr>
+        <tr><td>Reserved — 600M shares</td><td>Held in treasury. Not for sale. Future release subject to supplementary prospectus.</td></tr>
+      </table>
+    </div>
+    <p>Tranches advance automatically: when a tranche is fully sold, the price steps up to the next level. Buyers are always charged at the current tranche's price. You can verify the live tranche state from the <a href="../invest.html">/invest.html</a> page.</p>
+    <p>Primary issuance is conducted via the Platform only. No over-the-counter sales, no brokered offerings, no private placements.</p>
+
+    <h2>7. How ticket revenue becomes your dividend</h2>
+    <p>The flow is:</p>
+    <ol>
+      <li>A viewer pays to stream a film. The payment lands in the Platform's collection account.</li>
+      <li>1% of each payment is allocated to the $bMovies platform pool (the remaining 99% is distributed to the film's own shareholders subject to the IP cascade).</li>
+      <li>On a regular batch cycle (currently weekly), the pool is converted to $MNEE, a USD-denominated stablecoin on the BSV blockchain, and distributed to $bMovies holders in a single on-chain transaction with one output per holder, proportional to holdings.</li>
+      <li>The holder sees the distribution land in their wallet and in their app.bmovies.online/account dividend history.</li>
+    </ol>
+    <p>The distribution mechanism is under active development. Until the on-chain distribution path (described in the <a href="runar-covenant-design.html">Runar covenant design</a>) is live, ticket revenue accumulated between distribution batches may temporarily sit in the Operator's collection account. <strong>Under English law the Operator holds any such funds as a bailee and trustee for the benefit of royalty share holders</strong>, subject to the limits described in the Non-custodial disclosure. The Operator will not commence primary issuance of $bMovies until either (a) the on-chain distribution path is operational or (b) an equivalent trust-law structure has been confirmed by regulated counsel. Until then, <strong>no $bMovies shares will be sold at primary issuance</strong>. This prospectus exists to describe the intended state; the launch state will be disclosed in writing before any purchase is accepted.</p>
+
+    <h2>8. Risks</h2>
+
+    <div class="risk">
+      <h3>You may lose all the money you paid</h3>
+      <p>The Platform may fail to attract viewers. Films may not earn enough ticket revenue to generate meaningful dividends. The on-chain distribution mechanism may fail or be replaced. Secondary markets may not exist. The Issuer may wind up. In any of these cases the value of your $bMovies shares may fall to zero and you will not recover the purchase price.</p>
+    </div>
+
+    <div class="risk">
+      <h3>$bMovies may be re-classified by regulators</h3>
+      <p>The Issuer's view that $bMovies is a specified investment may be wrong, either in a direction that makes the offering unlawful in some jurisdiction, or in a direction that triggers additional disclosure, prospectus, or authorisation requirements. If this happens, the Issuer may have to suspend the offering, buy back shares at the issued price, or restrict the offering to a narrower audience.</p>
+    </div>
+
+    <div class="risk">
+      <h3>Technical risks</h3>
+      <p>Bitcoin SV may experience consensus failures. BSV-21 token indexers may fail to index the token correctly. The BSV-21 standard may be deprecated in favour of a successor standard. Your BRC-100 wallet may lose support. Any of these technical events could make your shares inaccessible or worthless, even though the underlying ledger entry still exists.</p>
+    </div>
+
+    <div class="risk">
+      <h3>Non-custodial wallet risk</h3>
+      <p>You are responsible for your own wallet. If you lose your private key or seed phrase, your shares are permanently inaccessible. The Issuer cannot reissue or recover them. There is no helpdesk that can override this.</p>
+    </div>
+
+    <div class="risk">
+      <h3>Platform risk</h3>
+      <p>The bMovies Platform is operated by The Bitcoin Corporation Ltd, a small private company. The company may fail, be acquired, restructure, or simply choose to wind down operations. Because $bMovies shares live on the public BSV blockchain, they will continue to exist if the Platform shuts down — but the distribution mechanism depends on the Platform running, and may cease when the Platform does.</p>
+    </div>
+
+    <div class="risk">
+      <h3>Dilution risk (bounded)</h3>
+      <p>The 60% reserved supply could be released in the future via a supplementary prospectus, diluting existing holders' pro-rata share of the platform pool. The reserve is currently held at the treasury address and cannot move without the treasury key. The Issuer will not release reserved supply without 30 days of advance notice.</p>
+    </div>
+
+    <div class="risk">
+      <h3>Secondary market illiquidity</h3>
+      <p>The Platform does not guarantee a secondary market for $bMovies. You may not be able to sell your shares on demand. Any peer-to-peer transfer via 1sat.market or another on-chain venue is subject to the Platform's KYC recognition policy described in the Terms of Service.</p>
+    </div>
+
+    <h2>9. Buyer eligibility</h2>
+    <p>$bMovies is offered to individuals and entities who:</p>
+    <ul>
+      <li>Are at least 18 years of age.</li>
+      <li>Have completed identity verification with the Platform's KYC provider.</li>
+      <li>Are resident in a jurisdiction where such an offer is lawful.</li>
+      <li>Understand and accept the risks described in this document.</li>
+      <li>Can commit capital they are prepared to lose in full.</li>
+    </ul>
+
+    <h2>10. How to verify this document is current</h2>
+    <p>The canonical version of this prospectus lives at <code>https://bmovies.online/legal/platform-token-prospectus.html</code>. Any document version older than the one published at that URL is superseded. Once a lawyer-reviewed edition is published, it will be marked with a "Reviewed by [firm name] on [date]" stamp above the draft warning, and the draft warning will be removed.</p>
+
+    <h2>11. Contact</h2>
+    <p>Questions, concerns, or requests for additional disclosure can be sent to <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>. The Issuer commits to respond substantively within five working days.</p>
+
+    <p class="print-nudge">
+      Press <strong>Cmd+P</strong> or <strong>Ctrl+P</strong> to save this prospectus as a PDF.<br>
+      <a href="../about.html">← Back to About</a> · <a href="../terms.html">Terms of Service</a> · <a href="non-custodial-disclosure.html">Non-custodial disclosure</a>
+    </p>
+  </main>
+
+  <script type="module">
+    // Pull the live on-chain mint txid + treasury address from the
+    // treasury-stats API so the prospectus always shows the canonical
+    // values. If the backend hasn't been updated, show the loading
+    // strings as a fallback — never print stale stub data.
+    fetch('/api/platform/treasury-stats')
+      .then(r => r.json())
+      .then(d => {
+        const txid = d?.catalog?.platform_token;
+        const treasuryEl = document.getElementById('treasury-addr');
+        const linkEl = document.getElementById('mint-txid-link');
+        if (txid && /^[0-9a-f]{64}$/.test(txid)) {
+          linkEl.textContent = txid;
+          linkEl.href = `https://ordinals.gorillapool.io/api/bsv20/id/${txid}_0`;
+          linkEl.target = '_blank';
+          linkEl.rel = 'noopener';
+        } else {
+          linkEl.textContent = 'not yet minted';
+          linkEl.removeAttribute('href');
+        }
+        // Treasury address isn't exposed by the API yet; fall back.
+        treasuryEl.textContent = '(see mint tx for issuing address)';
+      })
+      .catch(() => { /* leave loading placeholders */ });
+  </script>
+  <script type="module" src="../js/nav-session.js"></script>
+</body>
+</html>
