@@ -2423,15 +2423,15 @@ function ToolView({
 interface TextArtifact { id: number; url: string; step_id: string | null; role: string | null; content?: string }
 
 const SCRIPT_TABS = [
-  { stepPrefix: 'writer.logline',    label: 'Logline' },
-  { stepPrefix: 'writer.synopsis',   label: 'Synopsis' },
-  { stepPrefix: 'writer.treatment',  label: 'Treatment' },
-  { stepPrefix: 'writer.beat_sheet', label: 'Beat Sheet' },
-  { stepPrefix: 'writer.screenplay', label: 'Screenplay' },
-  { stepPrefix: 'director.vision',   label: 'Director\'s Vision' },
-  { stepPrefix: 'casting.cast_list', label: 'Cast' },
-  { stepPrefix: 'dp.shot_plan',      label: 'Cinematography' },
-  { stepPrefix: 'composer.themes',   label: 'Score Brief' },
+  { stepPrefix: 'writer.logline',    label: 'Logline',            alwaysShow: true },
+  { stepPrefix: 'writer.synopsis',   label: 'Synopsis',           alwaysShow: true },
+  { stepPrefix: 'writer.treatment',  label: 'Script',             alwaysShow: true },
+  { stepPrefix: 'writer.screenplay', label: 'Screenplay',         alwaysShow: true },
+  { stepPrefix: 'writer.beat_sheet', label: 'Beat Sheet',         alwaysShow: false },
+  { stepPrefix: 'director.vision',   label: 'Director\'s Vision', alwaysShow: false },
+  { stepPrefix: 'casting.cast_list', label: 'Cast',               alwaysShow: false },
+  { stepPrefix: 'dp.shot_plan',      label: 'Shot List',          alwaysShow: false },
+  { stepPrefix: 'composer.themes',   label: 'Score Brief',        alwaysShow: false },
 ]
 
 function decodeDataUrl(url: string): string | null {
@@ -2495,40 +2495,37 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
     return () => { cancelled = true }
   }, [projectId])
 
-  // Match artifacts to tabs
+  // Match artifacts to tabs — always show key tabs even if empty
   const tabData = SCRIPT_TABS.map(tab => {
     const match = artifacts.find(a =>
       a.step_id?.startsWith(tab.stepPrefix) ||
       (tab.stepPrefix === 'writer.logline' && a.role === 'writer' && !a.step_id)
     )
-    return { ...tab, artifact: match }
-  }).filter(t => t.artifact?.content || (t.label === 'Synopsis' && offerSynopsis))
+    // For synopsis, fall back to the offer's synopsis field
+    const content = match?.content || (tab.stepPrefix === 'writer.synopsis' ? offerSynopsis : '')
+    return { ...tab, artifact: match, content }
+  }).filter(t => t.alwaysShow || t.content)
 
-  // If no tab data at all, show the offer synopsis
-  if (!loading && tabData.length === 0 && offerSynopsis) {
-    tabData.push({
-      stepPrefix: 'writer.synopsis',
-      label: 'Synopsis',
-      artifact: { id: 0, url: '', step_id: 'writer.synopsis', role: 'writer', content: offerSynopsis },
-    })
-  }
-
-  const currentContent = tabData[activeTab]?.artifact?.content || offerSynopsis || ''
+  const currentContent = tabData[activeTab]?.content || ''
 
   return (
     <div className="space-y-4">
       {/* Tab row */}
-      <div className="flex gap-0 overflow-x-auto border-b border-[#222]">
+      <div className="flex gap-0 overflow-x-auto border-b border-[#E50914]/30">
         {loading ? (
-          <div className="h-8 w-48 bg-[#0a0a0a] animate-pulse" />
+          <div className="h-10 w-48 bg-[#0a0a0a] animate-pulse" />
         ) : tabData.map((tab, i) => (
           <button
             key={tab.stepPrefix}
             onClick={() => setActiveTab(i)}
-            className="px-3 py-2 text-[0.6rem] font-bold uppercase tracking-wider whitespace-nowrap transition-colors"
+            className="px-4 py-2.5 font-bold uppercase tracking-wider whitespace-nowrap transition-colors"
             style={{
-              color: i === activeTab ? '#fff' : '#666',
-              borderBottom: i === activeTab ? '2px solid #E50914' : '2px solid transparent',
+              fontFamily: 'var(--font-bebas), "Bebas Neue", sans-serif',
+              fontSize: '0.95rem',
+              letterSpacing: '0.1em',
+              color: i === activeTab ? '#fff' : (tab.content ? '#E50914' : '#333'),
+              borderBottom: i === activeTab ? '3px solid #E50914' : '3px solid transparent',
+              background: i === activeTab ? 'rgba(229, 9, 20, 0.1)' : 'transparent',
             }}
           >
             {tab.label}
@@ -2541,12 +2538,29 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
         <div className="h-64 bg-[#0a0a0a] border border-[#1a1a1a] animate-pulse" />
       ) : (
         <>
-          <div
-            className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-5 whitespace-pre-wrap"
-            style={{ minHeight: '300px', fontFamily: 'var(--font-mono), monospace' }}
-          >
-            {currentContent || 'No content generated yet for this section.'}
-          </div>
+          {currentContent ? (
+            <div
+              className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-5 whitespace-pre-wrap"
+              style={{ minHeight: '300px', fontFamily: 'var(--font-mono), monospace' }}
+            >
+              {currentContent}
+            </div>
+          ) : (
+            <div className="border border-dashed border-[#222] bg-[#050505] p-8 text-center" style={{ minHeight: '200px' }}>
+              <div className="text-xl font-black mb-2 text-[#E50914]" style={{ fontFamily: 'var(--font-bebas)' }}>
+                {tabData[activeTab]?.label || 'Content'}
+              </div>
+              <p className="text-[#666] text-sm mb-4">
+                Not generated yet. Upgrade to a higher tier or ask the bMovies agent to generate this.
+              </p>
+              <button
+                onClick={() => alert(`Ask the bMovies agent (bottom-right chat) to generate a ${tabData[activeTab]?.label?.toLowerCase() || 'script'} for "${projectTitle}"`)}
+                className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
+              >
+                Generate {tabData[activeTab]?.label || 'content'}
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <span className="text-[0.5rem] text-[#555] font-mono">
               {currentContent.split(/\s+/).filter(Boolean).length} words
