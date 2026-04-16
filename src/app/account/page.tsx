@@ -1885,6 +1885,7 @@ interface StudioData {
   founded_year: number
   aesthetic: string | null
   owner_account_id: string | null
+  created_by: string | null
 }
 
 function StudioInfoSection({
@@ -2066,8 +2067,32 @@ function StudioInfoSection({
   }
 
   if (studio) {
+    const isPlaceholder = studio.created_by === 'auto'
     return (
       <div>
+        {isPlaceholder && (
+          <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-4 mb-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">
+                  Default studio
+                </div>
+                <p className="text-[#888] text-sm">
+                  Upgrade for $0.99 to get an AI-generated logo, bio, and 8 specialist agents with unique names and personas.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const el = document.getElementById('studio-upgrade-form')
+                  if (el) el.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider shrink-0"
+              >
+                Upgrade studio
+              </button>
+            </div>
+          </div>
+        )}
         <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
           <div className="flex items-start gap-5">
             {studio.logo_url ? (
@@ -2143,8 +2168,8 @@ function StudioInfoSection({
     )
   }
 
-  // No studio: show create form
-  return (
+  // Placeholder studio (created_by === 'auto'): show the studio name + upgrade CTA + the create form below
+  if (!studio) return (
     <div>
       <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
         <h3
