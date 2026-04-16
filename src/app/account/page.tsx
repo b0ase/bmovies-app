@@ -1458,9 +1458,21 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               <span className="text-[0.5rem] text-[#F6851B]">Ethereum</span>
             </button>
           </div>
+            <button
+              onClick={() => {
+                window.open('https://handcash.io', '_blank')
+                alert('HandCash uses OAuth — once connected, your HandCash handle becomes your payment identity on bMovies. Integration completing soon.')
+              }}
+              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#38C032] transition-colors cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#38C032" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#38C032" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#38C032">H</text></svg>
+              <span className="text-[0.6rem] font-bold text-white">HandCash</span>
+              <span className="text-[0.5rem] text-[#38C032]">BSV</span>
+            </button>
+          </div>
           <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
             BSV Desktop is recommended for the full bMovies experience (x402 payments, token purchases, KYC certificates).
-            Phantom and MetaMask support is experimental — cross-chain settlement coming post-launch.
+            HandCash uses OAuth for seamless BSV payments. Phantom and MetaMask are experimental — cross-chain coming post-launch.
           </p>
         </div>
       )}
