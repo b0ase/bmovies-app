@@ -106,6 +106,13 @@
   </style>
 </head>
 <body>
+  <script>
+    // Hide chrome when embedded in an iframe (?embed=1)
+    if (new URLSearchParams(location.search).has('embed')) {
+      document.documentElement.classList.add('embedded');
+    }
+  </script>
+  <style>.embedded .site-header, .embedded .site-footer { display: none !important; } .embedded main { padding-top: 1rem !important; }</style>
   <header class="site-header"></header>
 
   <main id="root">

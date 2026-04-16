@@ -217,8 +217,8 @@ export function AccountToolbar() {
     fontWeight: 400,
     letterSpacing: '0.12em',
     textTransform: 'uppercase' as const,
-    color: isActive ? '#fff' : '#555',
-    background: isActive ? 'rgba(229, 9, 20, 0.1)' : 'transparent',
+    color: isActive ? '#fff' : '#E50914',
+    background: isActive ? 'rgba(229, 9, 20, 0.15)' : 'transparent',
     border: 'none',
     borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
     whiteSpace: 'nowrap' as const,
@@ -279,8 +279,8 @@ export function AccountToolbar() {
               key={tab.id}
               onClick={() => navigateTo(href)}
               style={tabStyle(isActive)}
-              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#ccc' }}
-              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = isActive ? '#fff' : '#555' }}
+              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = isActive ? '#fff' : '#E50914' }}
             >
               {tab.label}
             </button>
@@ -342,17 +342,14 @@ export function AccountToolbar() {
             const isActive = tab.type === 'tool'
               ? activeTool === tab.id
               : (!activeTool && activeTab === tab.id)
-            const isCaptable = tab.id === 'captable'
             const href = tab.type === 'tool'
               ? `/account?project=${projectId}&tool=${tab.id}`
-              : isCaptable
-                ? `/captable.html?id=${projectId}`
-                : `/account?project=${projectId}&tab=${tab.id}`
+              : `/account?project=${projectId}&tab=${tab.id}`
 
             return (
               <button
                 key={tab.id}
-                onClick={() => isCaptable ? (window.location.href = href) : navigateTo(href)}
+                onClick={() => navigateTo(href)}
                 style={subTabStyle(isActive)}
               >
                 {tab.label}

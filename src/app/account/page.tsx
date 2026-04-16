@@ -737,20 +737,16 @@ function ProjectView({
     )
   }
 
-  // Cap table: redirect straight to the brochure page — no in-app duplicate
-  useEffect(() => {
-    if (tab === 'captable' && currentFilm) {
-      window.location.href = `/captable.html?id=${encodeURIComponent(currentFilm.id)}`
-    }
-  }, [tab, currentFilm])
-
   switch (tab) {
     case 'captable':
-      // Show brief loading state while the redirect fires
       return (
-        <div className="animate-pulse">
-          <div className="h-8 w-64 bg-[#1a1a1a] mb-4" />
-          <div className="h-4 w-full bg-[#0e0e0e] mb-2" />
+        <div>
+          <iframe
+            src={`/captable.html?id=${encodeURIComponent(currentFilm.id)}&embed=1`}
+            className="w-full border-0"
+            style={{ minHeight: '80vh', background: '#000' }}
+            title={`Cap table: ${currentFilm.title}`}
+          />
         </div>
       )
     case 'crew':
@@ -893,12 +889,40 @@ function ProjectOverviewView({ film }: { film: Film }) {
             >
               Timeline
             </a>
-            <button
-              onClick={() => router.push(`/account?project=${film.id}&tool=script`, { scroll: false })}
-              className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 border border-[#333] text-white hover:border-[#E50914] transition-colors"
+          </div>
+
+          {/* Deep links — same as captable.html's link row */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            <a
+              href={`/film.html?id=${encodeURIComponent(film.id)}`}
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
             >
-              Open tools
-            </button>
+              Film page
+            </a>
+            <a
+              href={`/production.html?id=${encodeURIComponent(film.id)}`}
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#333] text-white hover:border-[#E50914] transition-colors"
+            >
+              Production timeline
+            </a>
+            <a
+              href={`/offer.html?id=${encodeURIComponent(film.id)}`}
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#333] text-white hover:border-[#E50914] transition-colors"
+            >
+              Investor view
+            </a>
+            <a
+              href={`/deck.html?id=${encodeURIComponent(film.id)}`}
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#333] text-white hover:border-[#E50914] transition-colors"
+            >
+              Investor pack
+            </a>
+            <a
+              href="/legal/film-token-risk-disclosure.html"
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:border-[#E50914] transition-colors"
+            >
+              Risk disclosure
+            </a>
           </div>
 
           {publishStatus && (
