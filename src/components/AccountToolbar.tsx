@@ -248,20 +248,22 @@ export function AccountToolbar() {
                   key={tab.id}
                   onClick={() => navigateTo(href)}
                   style={{
-                    padding: '0.65rem 0.85rem',
-                    fontFamily: "'Inter', -apple-system, sans-serif",
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
+                    padding: '0.85rem 1.4rem',
+                    fontFamily: 'var(--font-bebas), "Bebas Neue", "Inter", -apple-system, sans-serif',
+                    fontSize: '1.1rem',
+                    fontWeight: 400,
+                    letterSpacing: '0.12em',
                     textTransform: 'uppercase' as const,
-                    color: isActive ? '#fff' : '#666',
-                    background: 'transparent',
+                    color: isActive ? '#fff' : '#555',
+                    background: isActive ? 'rgba(229, 9, 20, 0.1)' : 'transparent',
                     border: 'none',
-                    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+                    borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
                     whiteSpace: 'nowrap' as const,
                     cursor: 'pointer',
-                    transition: 'color 150ms',
+                    transition: 'color 150ms, background 150ms',
                   }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#ccc' }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = '#555' }}
                 >
                   {tab.label}
                 </button>
