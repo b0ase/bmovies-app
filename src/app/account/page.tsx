@@ -1410,7 +1410,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#E50914] transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#E50914" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#E50914" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#E50914">B</text></svg>
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #E50914",borderRadius:"50%",color:"#E50914",fontWeight:700,fontSize:13}}>B</span>
               <span className="text-[0.6rem] font-bold text-white">BSV Desktop</span>
               <span className="text-[0.5rem] text-[#E50914]">BRC-100</span>
             </button>
@@ -1425,7 +1425,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#6366F1] transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6366F1" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#6366F1" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#6366F1">Y</text></svg>
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #6366F1",borderRadius:"50%",color:"#6366F1",fontWeight:700,fontSize:13}}>Y</span>
               <span className="text-[0.6rem] font-bold text-white">Yours Wallet</span>
               <span className="text-[0.5rem] text-[#6366F1]">BRC-100</span>
             </button>
@@ -1439,7 +1439,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#AB9FF2] transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#AB9FF2" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#AB9FF2" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#AB9FF2">P</text></svg>
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #AB9FF2",borderRadius:"50%",color:"#AB9FF2",fontWeight:700,fontSize:13}}>P</span>
               <span className="text-[0.6rem] font-bold text-white">Phantom</span>
               <span className="text-[0.5rem] text-[#AB9FF2]">Solana</span>
             </button>
@@ -1453,7 +1453,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#F6851B] transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F6851B" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#F6851B" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#F6851B">M</text></svg>
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #F6851B",borderRadius:"50%",color:"#F6851B",fontWeight:700,fontSize:13}}>M</span>
               <span className="text-[0.6rem] font-bold text-white">MetaMask</span>
               <span className="text-[0.5rem] text-[#F6851B]">Ethereum</span>
             </button>
@@ -1465,7 +1465,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#38C032] transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#38C032" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#38C032" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#38C032">H</text></svg>
+              <span style={{width:24,height:24,display:'inline-flex',alignItems:'center',justifyContent:'center',border:'1.5px solid #38C032',borderRadius:'50%',color:'#38C032',fontWeight:700,fontSize:13}}>H</span>
               <span className="text-[0.6rem] font-bold text-white">HandCash</span>
               <span className="text-[0.5rem] text-[#38C032]">BSV</span>
             </button>
