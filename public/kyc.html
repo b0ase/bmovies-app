@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Identity verification (KYC)</title>
+  <meta name="description" content="Verify your identity to invest in $bMovies tokens. Powered by Veriff. Your verification status becomes a BRC certificate on BSV — portable, verifiable, yours." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    .wrap { max-width: 900px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+    .eyebrow { font-size: 0.65rem; color: #E50914; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.4rem, 5vw, 3.6rem); color: #fff; margin: 0.5rem 0 1rem; letter-spacing: 0.01em; line-height: 0.95; }
+    .lede { color: #bbb; font-size: 0.95rem; line-height: 1.6; max-width: 700px; }
+    .lede b { color: #fff; }
+
+    .status-card {
+      margin-top: 2rem;
+      padding: 2rem;
+      border: 1px solid #222;
+      background: #0a0a0a;
+    }
+    .status-card.verified {
+      border-color: #0e3a0e;
+      background: linear-gradient(135deg, #030a03 0%, #0a0a0a 100%);
+    }
+    .status-card.unverified {
+      border-color: #E50914;
+      background: linear-gradient(135deg, #1a0003 0%, #0a0a0a 100%);
+    }
+    .status-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+    .status-badge.green { background: #0e3a0e; color: #6bff8a; border: 1px solid #1a5a1a; }
+    .status-badge.red { background: #3a0e0e; color: #ff6b7a; border: 1px solid #5a1a1a; }
+    .status-badge.yellow { background: #3a3a0e; color: #ffff6b; border: 1px solid #5a5a1a; }
+
+    .status-card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      color: #fff;
+      margin: 0 0 0.5rem;
+    }
+    .status-card p { color: #888; font-size: 0.85rem; line-height: 1.6; }
+    .status-card .meta {
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #666;
+    }
+    .status-card .meta span { color: #888; }
+
+    .btn-verify {
+      display: inline-block;
+      margin-top: 1.2rem;
+      padding: 0.9rem 1.6rem;
+      background: #E50914;
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.75rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-verify:hover { background: #b00610; }
+    .btn-verify:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    .btn-secondary {
+      display: inline-block;
+      margin-top: 0.8rem;
+      margin-left: 0.8rem;
+      padding: 0.9rem 1.6rem;
+      background: transparent;
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid #333;
+    }
+    .btn-secondary:hover { border-color: #E50914; color: #fff; }
+
+    /* BRC certificate section */
+    .section { margin-top: 3rem; }
+    .section h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      color: #fff;
+      margin-bottom: 0.8rem;
+    }
+
+    .cert-card {
+      border: 1px solid #222;
+      background: #0a0a0a;
+      padding: 1.5rem;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      color: #888;
+    }
+    .cert-card .field { display: flex; gap: 0.8rem; margin-bottom: 0.3rem; }
+    .cert-card .key { color: #E50914; min-width: 140px; }
+    .cert-card .val { color: #ccc; word-break: break-all; }
+    .cert-card .separator { border-top: 1px dashed #222; margin: 0.8rem 0; }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+    .flow-step {
+      border: 1px solid #1a1a1a;
+      background: #050505;
+      padding: 1.2rem;
+    }
+    .flow-step .num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #E50914;
+      line-height: 1;
+    }
+    .flow-step .title {
+      font-size: 0.8rem;
+      font-weight: 900;
+      color: #fff;
+      margin: 0.4rem 0 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .flow-step .desc { font-size: 0.75rem; color: #888; line-height: 1.5; }
+
+    .signin-prompt {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    .signin-prompt h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      color: #fff;
+    }
+    .signin-prompt p { color: #888; margin-top: 0.5rem; font-size: 0.9rem; }
+
+    #loading { color: #666; font-size: 0.85rem; padding: 3rem 0; }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main class="wrap">
+    <div class="eyebrow">Identity · KYC · BRC certificates</div>
+    <h1>Verify once.<br>Use <span style="color:#E50914;">everywhere</span>.</h1>
+    <p class="lede">
+      bMovies uses <b>Veriff</b> for identity verification. Complete a one-time
+      check (photo ID + selfie, ~90 seconds) and your verified status becomes
+      a <b>BRC certificate</b> on BSV — a portable, cryptographically signed
+      credential that any BRC-100 application can verify without you repeating
+      the process.
+    </p>
+
+    <div id="root">
+      <div id="loading">Checking your verification status…</div>
+    </div>
+
+    <!-- BRC certificate explainer (always visible) -->
+    <div class="section">
+      <div class="eyebrow">How it works</div>
+      <h2>From Veriff check to BRC certificate</h2>
+      <div class="flow-grid">
+        <div class="flow-step">
+          <div class="num">1</div>
+          <div class="title">Verify</div>
+          <div class="desc">Complete the Veriff identity check — photo ID + live selfie. Takes ~90 seconds. Processed in minutes.</div>
+        </div>
+        <div class="flow-step">
+          <div class="num">2</div>
+          <div class="title">Certify</div>
+          <div class="desc">Veriff sends the result to bMovies. We update your KYC status and issue a BRC certificate signed with the platform key.</div>
+        </div>
+        <div class="flow-step">
+          <div class="num">3</div>
+          <div class="title">Store</div>
+          <div class="desc">The certificate is stored in your BRC-100 wallet alongside your keys. It proves "this address is KYC verified" without revealing your identity.</div>
+        </div>
+        <div class="flow-step">
+          <div class="num">4</div>
+          <div class="title">Present</div>
+          <div class="desc">Any BRC-100 app can request the certificate. You approve the request; the app verifies the signature. No re-verification needed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="eyebrow">BRC certificate schema</div>
+      <h2>What the certificate contains</h2>
+      <p style="color:#888;font-size:0.85rem;line-height:1.6;margin-bottom:1rem;max-width:700px;">
+        The certificate is a BRC-signed object that attests to your KYC status
+        without exposing personal information. The verifier (e.g., another
+        exchange, a token issuer) checks the signature against the bMovies
+        platform public key — if it's valid, they know you're verified.
+      </p>
+      <div class="cert-card" id="cert-display">
+        <div class="field"><span class="key">type</span><span class="val">"BRC-KYC-Certificate"</span></div>
+        <div class="field"><span class="key">version</span><span class="val">"1.0"</span></div>
+        <div class="field"><span class="key">issuer</span><span class="val">"bMovies Platform (The Bitcoin Corporation Ltd)"</span></div>
+        <div class="field"><span class="key">issuerAddress</span><span class="val" id="cert-issuer">1G9wojxX3zs2Sy2JxT3Y9E3JMtFgdSCKAf</span></div>
+        <div class="separator"></div>
+        <div class="field"><span class="key">subject</span><span class="val" id="cert-subject">[your BSV address]</span></div>
+        <div class="field"><span class="key">kycProvider</span><span class="val">"Veriff OÜ"</span></div>
+        <div class="field"><span class="key">kycLevel</span><span class="val">"document + biometric"</span></div>
+        <div class="field"><span class="key">status</span><span class="val" id="cert-status">pending</span></div>
+        <div class="field"><span class="key">verifiedAt</span><span class="val" id="cert-date">—</span></div>
+        <div class="separator"></div>
+        <div class="field"><span class="key">protocolID</span><span class="val">[1, "bmovies-kyc"]</span></div>
+        <div class="field"><span class="key">keyID</span><span class="val">"kyc-cert-1"</span></div>
+        <div class="field"><span class="key">signature</span><span class="val" id="cert-sig">[signed by platform key via BRC-100 createSignature]</span></div>
+        <div class="separator"></div>
+        <div class="field"><span class="key">note</span><span class="val" style="color:#666;">Certificate does NOT contain name, DOB, or ID details. Only attests that the address holder passed Veriff's document + biometric check. Privacy-preserving by design.</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="eyebrow">Why this matters</div>
+      <h2>Portable KYC for the agentic economy</h2>
+      <p style="color:#888;font-size:0.85rem;line-height:1.6;max-width:700px;">
+        In a world where agents transact on your behalf, the KYC check needs
+        to happen <b style="color:#fff;">once</b> and travel with your identity — not be
+        repeated at every platform. BRC certificates solve this: your wallet
+        holds the proof, any compliant service can verify it, and your
+        personal data never leaves the Veriff vault.
+      </p>
+      <p style="color:#666;font-size:0.8rem;margin-top:1rem;max-width:700px;">
+        bMovies requires KYC verification for: purchasing $bMovies platform
+        tokens via the <a href="invest.html" style="color:#E50914;text-decoration:none;">bonding curve</a>,
+        withdrawing revenue to external wallets, and accessing regulated
+        features. Commissioning films and creating studios do not require KYC.
+      </p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="commission.html">Commission</a>
+        <a href="exchange.html">Exchange</a>
+        <a href="productions.html">Live</a>
+        <a href="studios.html">Studios</a>
+        <a href="watch.html">Watch</a>
+        <a href="legal/privacy.html">Privacy</a>
+        <a href="legal/terms.html">Terms</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient('https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } });
+
+    const root = document.getElementById('root');
+
+    async function load() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      const user = session?.user;
+
+      if (!user) {
+        root.innerHTML = `
+          <div class="signin-prompt">
+            <h2>Sign in to verify your identity</h2>
+            <p>You need a bMovies account before starting KYC verification.</p>
+            <a href="/login?returnTo=/kyc.html" class="btn-verify" style="margin-top:1.5rem;display:inline-block;text-decoration:none;">Sign in →</a>
+          </div>
+        `;
+        return;
+      }
+
+      // Get display info
+      const md = user.user_metadata || {};
+      const displayName = md.display_name || md.brc100_address || user.email || 'Unknown';
+      const bsvAddress = md.brc100_address || null;
+
+      // Check bct_accounts
+      const { data: account } = await supabase
+        .from('bct_accounts')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      // Check KYC status
+      let kyc = null;
+      if (account?.id) {
+        const { data } = await supabase
+          .from('bct_user_kyc')
+          .select('status, verified_at, veriff_session')
+          .eq('account_id', account.id)
+          .maybeSingle();
+        kyc = data;
+      }
+
+      const isVerified = kyc?.status === 'verified';
+      const isPending = kyc?.status === 'submitted' || kyc?.status === 'pending';
+
+      // Update the certificate display
+      if (bsvAddress) {
+        document.getElementById('cert-subject').textContent = bsvAddress;
+      }
+      if (isVerified) {
+        document.getElementById('cert-status').textContent = 'verified';
+        document.getElementById('cert-status').style.color = '#6bff8a';
+        document.getElementById('cert-date').textContent = kyc.verified_at || '—';
+        document.getElementById('cert-sig').textContent = '[valid — signed by bMovies platform key]';
+        document.getElementById('cert-sig').style.color = '#6bff8a';
+      }
+
+      if (isVerified) {
+        root.innerHTML = `
+          <div class="status-card verified">
+            <span class="status-badge green">Verified</span>
+            <h2>Identity verified</h2>
+            <p>Your Veriff identity check is complete. You can purchase $bMovies tokens, withdraw revenue, and access all regulated features.</p>
+            <div class="meta">
+              <div>Account: <span>${displayName}</span></div>
+              ${bsvAddress ? `<div>BSV address: <span>${bsvAddress}</span></div>` : ''}
+              <div>Verified: <span>${kyc.verified_at ? new Date(kyc.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</span></div>
+              <div>Provider: <span>Veriff OÜ (document + biometric)</span></div>
+              ${kyc.veriff_session ? `<div>Session: <span>${kyc.veriff_session}</span></div>` : ''}
+            </div>
+            <a href="invest.html" class="btn-verify" style="text-decoration:none;display:inline-block;margin-top:1.2rem;">Invest in $bMovies →</a>
+            <a href="/account" class="btn-secondary" style="text-decoration:none;">Back to account</a>
+          </div>
+        `;
+      } else if (isPending) {
+        root.innerHTML = `
+          <div class="status-card" style="border-color:#5a5a1a;">
+            <span class="status-badge yellow">Pending</span>
+            <h2>Verification in progress</h2>
+            <p>Your identity check has been submitted to Veriff and is being processed. This usually takes 1–5 minutes. Refresh this page to check for updates.</p>
+            <div class="meta">
+              <div>Account: <span>${displayName}</span></div>
+              ${kyc.veriff_session ? `<div>Session: <span>${kyc.veriff_session}</span></div>` : ''}
+            </div>
+            <button class="btn-verify" onclick="window.location.reload()" style="margin-top:1.2rem;">Refresh status</button>
+          </div>
+        `;
+      } else {
+        root.innerHTML = `
+          <div class="status-card unverified">
+            <span class="status-badge red">Not verified</span>
+            <h2>Verify your identity</h2>
+            <p>Complete a Veriff identity check to unlock $bMovies token purchases and regulated features. You'll need a valid photo ID and a live selfie. Takes ~90 seconds.</p>
+            <div class="meta">
+              <div>Account: <span>${displayName}</span></div>
+              ${bsvAddress ? `<div>BSV address: <span>${bsvAddress}</span></div>` : ''}
+            </div>
+            <button class="btn-verify" id="start-kyc" style="margin-top:1.2rem;">Start verification →</button>
+            <div id="kyc-error" style="display:none;margin-top:0.8rem;color:#ff6b7a;font-size:0.8rem;"></div>
+          </div>
+        `;
+
+        document.getElementById('start-kyc').addEventListener('click', async () => {
+          const btn = document.getElementById('start-kyc');
+          const errEl = document.getElementById('kyc-error');
+          btn.disabled = true;
+          btn.textContent = 'Starting verification…';
+          errEl.style.display = 'none';
+          try {
+            const res = await fetch('/api/kyc-start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: user.email }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || data.message || 'KYC start failed');
+            if (data.url) {
+              window.location.href = data.url;
+            } else if (data.mode === 'demo') {
+              window.location.reload();
+            } else {
+              throw new Error('No redirect URL returned');
+            }
+          } catch (err) {
+            errEl.textContent = err.message;
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Start verification →';
+          }
+        });
+      }
+    }
+
+    load();
+  </script>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>
