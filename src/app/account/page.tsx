@@ -1408,8 +1408,11 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
                   const { connectBsvDesktop } = await import('@/lib/brc100')
                   const status = await connectBsvDesktop()
                   if (status.connected) window.location.reload()
-                  else alert(status.error || 'BSV Desktop not detected. Make sure it is running and unlocked.')
-                } catch { alert('Could not connect BSV Desktop') }
+                  else alert(status.error || 'BSV Desktop not detected.')
+                } catch (err) {
+                  console.error('[wallet] BSV Desktop connect error:', err)
+                  alert('Could not connect BSV Desktop: ' + (err instanceof Error ? err.message : String(err)))
+                }
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#E50914] transition-colors cursor-pointer"
             >

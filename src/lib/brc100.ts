@@ -110,9 +110,18 @@ export async function detectMetanet(): Promise<
   | { url: string; client: WalletInterface; address: string; publicKey: string }
   | null
 > {
+  // Try both HTTP and HTTPS on each port. BSV Desktop listens on HTTP but
+  // some browser+OS combos block mixed-content fetches (HTTPS page → HTTP
+  // localhost). Trying HTTPS first catches self-signed cert setups; HTTP
+  // is the fallback that works on most configurations.
+  const candidates: string[] = []
   for (const port of METANET_PORTS) {
-    const url = `http://127.0.0.1:${port}`
+    candidates.push(`https://localhost:${port}`)
+    candidates.push(`http://localhost:${port}`)
+    candidates.push(`http://127.0.0.1:${port}`)
+  }
 
+  for (const url of candidates) {
     // Step 1 — lightweight presence check. /isAuthenticated never touches
     // the overlay network so it works even when the wallet's internal
     // messaging is misbehaving.
@@ -120,14 +129,15 @@ export async function detectMetanet(): Promise<
     try {
       const res = await fetch(`${url}/isAuthenticated`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: location.origin },
+        headers: { 'Content-Type': 'application/json' },
         body: '{}',
         signal: AbortSignal.timeout(3000),
       })
       if (!res.ok) continue
       const body = (await res.json()) as { authenticated?: boolean }
       authed = Boolean(body?.authenticated)
-    } catch {
+    } catch (err) {
+      console.debug(`[brc100] probe ${url} failed:`, err instanceof Error ? err.message : err)
       continue
     }
     if (!authed) {
@@ -159,7 +169,7 @@ export async function detectMetanet(): Promise<
             `try restarting BSV Desktop. Error: ${msg}`,
         )
       } else {
-        console.warn(`[brc100] BSV Desktop handshake failed: ${msg}`)
+        console.warn(`[brc100] BSV Desktop handshake failed on ${url}: ${msg}`)
       }
     }
   }
