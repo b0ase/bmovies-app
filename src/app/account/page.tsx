@@ -2122,6 +2122,24 @@ function StudioInfoSection({
             </div>
           </div>
 
+          {/* Action buttons — top of box */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            <a
+              href={`https://whatsonchain.com/address/${studio.treasury_address}`}
+              target="_blank"
+              rel="noopener"
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+            >
+              Treasury on chain
+            </a>
+            <a
+              href="/commission.html"
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
+            >
+              Commission a film
+            </a>
+          </div>
+
           {/* Roster poster — the cinematic team card generated at studio creation */}
           {studio.poster_url && (
             <div className="mb-5">
@@ -2181,29 +2199,6 @@ function StudioInfoSection({
             )}
           </div>
 
-          {/* Studio footer links */}
-          <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-[#E50914]/20">
-            <a
-              href={`https://whatsonchain.com/address/${studio.treasury_address}`}
-              target="_blank"
-              rel="noopener"
-              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
-            >
-              Treasury on chain
-            </a>
-            <a
-              href="/studios.html"
-              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
-            >
-              All studios
-            </a>
-            <a
-              href="/commission.html"
-              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
-            >
-              Commission a film
-            </a>
-          </div>
         </div>
       </div>
     )
