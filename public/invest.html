@@ -5,7 +5,7 @@
   <script src="js/session-sanitizer.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bMovies — Invest in the platform</title>
-  <meta name="description" content="Buy $bMovies platform shares. 1% of every film commissioned flows to holders. 1 billion supply. KYC-gated. Sold only on bmovies.online.">
+  <meta name="description" content="Buy $bMovies platform shares with BSV. 1% of every film commissioned flows to holders. 1 billion supply. KYC-gated. Sold only on bmovies.online.">
   <meta property="og:title" content="bMovies — Invest in the platform">
   <meta property="og:description" content="1% of every film. 1 billion shares. Sold only here.">
   <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg">
@@ -231,6 +231,99 @@
     .buy-status.error { color: #ff4757; }
     .buy-status.success { color: #6bff8a; }
 
+    /* Tranche info */
+    .tranche-info {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    @media (max-width: 700px) { .tranche-info { grid-template-columns: 1fr; } }
+    .tranche-info .ti-box {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      padding: 0.7rem 1rem;
+    }
+    .tranche-info .ti-label {
+      font-size: 0.5rem;
+      color: #666;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .tranche-info .ti-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #fff;
+      margin-top: 0.2rem;
+    }
+
+    /* Wallet status bar */
+    .wallet-bar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.8rem 1rem;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .wallet-bar .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ff4757;
+      flex-shrink: 0;
+    }
+    .wallet-bar .dot.connected { background: #6bff8a; }
+    .wallet-bar .wallet-label { color: #888; }
+    .wallet-bar .wallet-addr {
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+    }
+    .wallet-bar button {
+      margin-left: auto;
+      padding: 0.3rem 0.8rem;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #fff;
+      font-size: 0.65rem;
+      cursor: pointer;
+    }
+    .wallet-bar button:hover { background: #2a2a2a; }
+
+    /* Bonding curve table */
+    .curve-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      margin-top: 1rem;
+    }
+    .curve-table th {
+      text-align: left;
+      font-size: 0.55rem;
+      color: #888;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid #1f1f1f;
+    }
+    .curve-table td {
+      padding: 0.55rem 0.8rem;
+      border-bottom: 1px dashed #111;
+      color: #ccc;
+    }
+    .curve-table tr.active td {
+      color: #fff;
+      background: rgba(229, 9, 20, 0.08);
+      border-color: #E50914;
+    }
+    .curve-table .num { text-align: right; }
+
     /* Tokenomics table */
     .tok {
       border: 1px solid #1f1f1f;
@@ -319,10 +412,10 @@
 
   <main class="wrap">
     <div class="hero">
-      <div class="hero-eyebrow">$bMovies — the platform share</div>
+      <div class="hero-eyebrow">$bMovies -- the platform share</div>
       <h1>Own a slice of<br>every film <span>bMovies</span> makes</h1>
       <p class="sub">
-        Every film commissioned through bMovies — trailer, short, feature, or pitch — pays <b>1% of its royalty shares</b> into a shared pool held on behalf of $bMovies holders. You own a piece of every single one. Not a subscription. Not a promise. A real fractional claim on the platform's entire catalog, forever.
+        Every film commissioned through bMovies -- trailer, short, feature, or pitch -- pays <b>1% of its royalty shares</b> into a shared pool held on behalf of $bMovies holders. You own a piece of every single one. Not a subscription. Not a promise. A real fractional claim on the platform's entire catalog, forever.
       </p>
     </div>
 
@@ -339,13 +432,13 @@
       </div>
       <div class="stat">
         <div class="stat-label">Current price</div>
-        <div class="stat-val" id="current-price">—</div>
-        <div class="stat-sub" id="current-price-sub">loading…</div>
+        <div class="stat-val" id="current-price">--</div>
+        <div class="stat-sub" id="current-price-sub">loading...</div>
       </div>
       <div class="stat">
         <div class="stat-label">Sold so far</div>
-        <div class="stat-val" id="sold-count">—</div>
-        <div class="stat-sub" id="sold-remaining">— remaining</div>
+        <div class="stat-val" id="sold-count">--</div>
+        <div class="stat-sub" id="sold-remaining">-- remaining</div>
       </div>
     </div>
 
@@ -375,8 +468,8 @@
         </div>
         <div class="vcard">
           <div class="n">05</div>
-          <h3>Automatic settlement</h3>
-          <p>Dividends land in your account the moment a film earns. No monthly reports, no "check back next quarter", no waiting room. The platform distributes in real time as tickets sell.</p>
+          <h3>Pay with BSV</h3>
+          <p>No credit cards, no Stripe, no intermediaries. Connect your BRC-100 wallet (BSV Desktop or Yours Wallet), approve the transaction, and your shares are credited instantly. On-chain settlement.</p>
         </div>
         <div class="vcard">
           <div class="n">06</div>
@@ -387,12 +480,34 @@
     </div>
 
     <div class="section">
+      <div class="section-label">Bonding curve</div>
+      <h2>Price increases with demand</h2>
+      <p style="color:#aaa;font-size:0.85rem;line-height:1.6;max-width:740px;margin-bottom:1rem;">
+        $bMovies uses a step bonding curve with 10 tranches of 100M tokens each. Early buyers get the lowest price. As supply sells, the price steps up. The table below shows every tranche; the highlighted row is the current active tranche.
+      </p>
+      <div style="border:1px solid #1f1f1f;background:#0a0a0a;padding:1rem 1.2rem;overflow-x:auto;">
+        <table class="curve-table" id="curve-table">
+          <thead>
+            <tr>
+              <th>Tranche</th>
+              <th>Token range</th>
+              <th class="num">USD / token</th>
+              <th class="num">BSV / token</th>
+              <th class="num">Tranche revenue</th>
+            </tr>
+          </thead>
+          <tbody id="curve-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">Buy $bMovies</div>
       <div class="buy">
         <div class="buy-eyebrow">Primary issuance</div>
         <h3>Purchase platform shares</h3>
         <p class="buy-sub">
-          Enter the number of $bMovies shares you want. Minimum 1,000 shares; maximum 10,000,000 per checkout. You must be signed in and have completed identity verification. Payment via Stripe; shares credited to your account page immediately after checkout.
+          Enter the number of $bMovies shares you want. Minimum 1,000 shares; maximum 10,000,000 per purchase. You must be signed in and have completed identity verification. Payment is made directly from your BRC-100 wallet (BSV Desktop or Yours Wallet) to the platform treasury. Shares are credited to your account immediately after on-chain verification.
         </p>
         <div id="buy-signin-nag" class="signin-nag" style="display:none;">
           <a href="/login?returnTo=%2Faccount">Sign in</a> to buy $bMovies shares.
@@ -401,15 +516,39 @@
           Identity verification required. <a href="/account?tab=kyc">Complete KYC</a> to unlock purchases.
         </div>
         <div id="buy-form" class="buy-grid" style="display:none;">
+          <!-- Wallet status bar -->
+          <div class="wallet-bar" id="wallet-bar">
+            <div class="dot" id="wallet-dot"></div>
+            <span class="wallet-label" id="wallet-label">No wallet connected</span>
+            <span class="wallet-addr" id="wallet-addr"></span>
+            <button type="button" id="wallet-btn">Connect wallet</button>
+          </div>
+
+          <!-- Tranche info strip -->
+          <div class="tranche-info">
+            <div class="ti-box">
+              <div class="ti-label">Current tranche</div>
+              <div class="ti-val" id="ti-tranche">--</div>
+            </div>
+            <div class="ti-box">
+              <div class="ti-label">Remaining in tranche</div>
+              <div class="ti-val" id="ti-remaining">--</div>
+            </div>
+            <div class="ti-box">
+              <div class="ti-label">Next tranche price</div>
+              <div class="ti-val" id="ti-next-price">--</div>
+            </div>
+          </div>
+
           <div class="buy-field">
             <label for="tokens-input">Shares to buy</label>
             <input id="tokens-input" type="number" min="1000" max="10000000" step="1000" value="10000" />
           </div>
           <div class="buy-field">
             <label>Total</label>
-            <div class="total-display" id="total-display">$10.00</div>
+            <div class="total-display" id="total-display">--</div>
           </div>
-          <button class="buy-cta" id="buy-btn" type="button">Buy with Stripe →</button>
+          <button class="buy-cta" id="buy-btn" type="button" disabled>Buy with BSV wallet</button>
           <div class="buy-status" id="buy-status">&nbsp;</div>
         </div>
       </div>
@@ -421,12 +560,13 @@
       <div class="tok">
         <div class="tok-row"><div class="l">Total supply</div><div class="v">1,000,000,000 $bMovies</div></div>
         <div class="tok-row"><div class="l">Primary issuance (this page)</div><div class="v">1,000,000,000 (100%)</div></div>
-        <div class="tok-row"><div class="l">Team / insiders</div><div class="v">0 — no pre-mint, no allocation</div></div>
-        <div class="tok-row"><div class="l">VC / private rounds</div><div class="v">0 — no private placements</div></div>
+        <div class="tok-row"><div class="l">Team / insiders</div><div class="v">0 -- no pre-mint, no allocation</div></div>
+        <div class="tok-row"><div class="l">VC / private rounds</div><div class="v">0 -- no private placements</div></div>
         <div class="tok-row"><div class="l">Vesting cliffs</div><div class="v">None</div></div>
         <div class="tok-row"><div class="l">Platform fee captured</div><div class="v">1% of every film's royalty supply</div></div>
         <div class="tok-row"><div class="l">Distributed via</div><div class="v">Pro-rata, automatically, on every ticket sale</div></div>
-        <div class="tok-row"><div class="l">Redeemable for</div><div class="v">Nothing. Not a currency, not a security, not a voucher. Just a revenue share.</div></div>
+        <div class="tok-row"><div class="l">Payment method</div><div class="v">BSV only (BRC-100 wallet). No credit cards.</div></div>
+        <div class="tok-row"><div class="l">Settlement</div><div class="v">On-chain. Verified via WhatsOnChain.</div></div>
       </div>
     </div>
 
@@ -437,7 +577,7 @@
         <div class="pflow-step">
           <div class="n">01</div>
           <h3>Film earns</h3>
-          <p>A viewer pays $2.99 to watch a bMovies feature (or $0.99 for a short). Every ticket flows straight into a public treasury — no opaque intermediaries.</p>
+          <p>A viewer pays $2.99 to watch a bMovies feature (or $0.99 for a short). Every ticket flows straight into a public treasury -- no opaque intermediaries.</p>
         </div>
         <div class="pflow-step">
           <div class="n">02</div>
@@ -447,7 +587,7 @@
         <div class="pflow-step">
           <div class="n">03</div>
           <h3>Pro-rata settle</h3>
-          <p>The treasury batches incoming ticket revenue and distributes pro-rata to every $bMovies holder. Your share = (your holdings / total supply sold) × pool balance.</p>
+          <p>The treasury batches incoming ticket revenue and distributes pro-rata to every $bMovies holder. Your share = (your holdings / total supply sold) x pool balance.</p>
         </div>
         <div class="pflow-step">
           <div class="n">04</div>
@@ -463,9 +603,10 @@
       <div class="risk">
         <h3>Please note</h3>
         <p>$bMovies is a revenue-share instrument, not a currency or a security. Returns depend entirely on how many films are commissioned, how much ticket revenue they earn, and how many $bMovies are outstanding. There is no guarantee of any return.</p>
-        <p>You must be KYC-verified before your purchase is processed. If your verification fails, your purchase will be refunded in full.</p>
+        <p>You must be KYC-verified before your purchase is processed. If your verification fails, your purchase will not proceed.</p>
         <p>Primary issuance is the only venue for new $bMovies. Secondary resale may or may not exist. Do not buy $bMovies with capital you cannot afford to hold indefinitely.</p>
         <p>bMovies is a new platform. We run the production pipeline, the agent swarm, and the payment rails. If any of these fail, your revenue share may be delayed or reduced.</p>
+        <p>BSV/USD conversion uses a fixed rate of $40/BSV for pricing purposes. The actual market rate may differ. You are paying in BSV and the sats amount is final.</p>
       </div>
     </div>
   </main>
@@ -473,39 +614,138 @@
   <script src="js/nav-session.js"></script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    import { connectWallet, payToAddress, walletStatus, walletInstallPrompt } from './js/brc100.js';
+
     const supabase = createClient(
       'https://api.b0ase.com',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
       { auth: { storageKey: 'bmovies-auth', lock: false } }
     );
 
+    // ---- Bonding curve (client-side mirror of src/token/bonding-curve.ts) ----
+
+    const BSV_USD_RATE = 40;
+    const SATS_PER_BSV = 100_000_000;
+    const SATS_PER_CENT = SATS_PER_BSV / (BSV_USD_RATE * 100); // 2500
+
+    const TRANCHES = [
+      { tranche: 1,  priceUsd: 0.001,  pricePerTokenCents: 0.1,    floor: 0,           ceiling: 100_000_000 },
+      { tranche: 2,  priceUsd: 0.005,  pricePerTokenCents: 0.5,    floor: 100_000_000, ceiling: 200_000_000 },
+      { tranche: 3,  priceUsd: 0.01,   pricePerTokenCents: 1.0,    floor: 200_000_000, ceiling: 300_000_000 },
+      { tranche: 4,  priceUsd: 0.025,  pricePerTokenCents: 2.5,    floor: 300_000_000, ceiling: 400_000_000 },
+      { tranche: 5,  priceUsd: 0.05,   pricePerTokenCents: 5.0,    floor: 400_000_000, ceiling: 500_000_000 },
+      { tranche: 6,  priceUsd: 0.10,   pricePerTokenCents: 10.0,   floor: 500_000_000, ceiling: 600_000_000 },
+      { tranche: 7,  priceUsd: 0.20,   pricePerTokenCents: 20.0,   floor: 600_000_000, ceiling: 700_000_000 },
+      { tranche: 8,  priceUsd: 0.40,   pricePerTokenCents: 40.0,   floor: 700_000_000, ceiling: 800_000_000 },
+      { tranche: 9,  priceUsd: 0.70,   pricePerTokenCents: 70.0,   floor: 800_000_000, ceiling: 900_000_000 },
+      { tranche: 10, priceUsd: 1.00,   pricePerTokenCents: 100.0,  floor: 900_000_000, ceiling: 1_000_000_000 },
+    ];
+
+    function trancheForSupply(soldSupply) {
+      for (const t of TRANCHES) {
+        if (soldSupply < t.ceiling) return t;
+      }
+      return TRANCHES[TRANCHES.length - 1];
+    }
+
+    function computeCost(soldSupply, tokensToBuy) {
+      let remaining = tokensToBuy;
+      let cursor = soldSupply;
+      let totalCents = 0;
+      const breakdown = [];
+      while (remaining > 0) {
+        const t = trancheForSupply(cursor);
+        const take = Math.min(remaining, t.ceiling - cursor);
+        totalCents += take * t.pricePerTokenCents;
+        breakdown.push({ tranche: t.tranche, tokens: take, pricePerTokenCents: t.pricePerTokenCents });
+        cursor += take;
+        remaining -= take;
+      }
+      totalCents = Math.round(totalCents * 100) / 100;
+      return { totalCents, breakdown };
+    }
+
+    function centsToSats(cents) {
+      return Math.ceil(cents * SATS_PER_CENT);
+    }
+
+    function satsToBsv(sats) {
+      return (sats / SATS_PER_BSV).toFixed(8);
+    }
+
+    // ---- Formatters ----
+
     const fmtInt = (n) => Number(n).toLocaleString('en-US');
     const fmtUsd = (cents) => `$${(cents / 100).toFixed(2)}`;
+    const fmtUsdPrice = (cents) => `$${(cents / 100).toFixed(4)}`;
 
-    // ─── Load platform config ───
+    // ---- State ----
+
+    let session = null;
+    let account = null;
+    let kycVerified = false;
+    let soldSupply = 0;
+    let totalSupply = 1_000_000_000;
+    let treasuryAddress = '';
+    let walletConnected = false;
+
+    // ---- Bonding curve table ----
+
+    function renderCurveTable() {
+      const tbody = document.getElementById('curve-tbody');
+      tbody.innerHTML = '';
+      const activeTranche = trancheForSupply(soldSupply);
+      for (const t of TRANCHES) {
+        const isActive = t.tranche === activeTranche.tranche && soldSupply < totalSupply;
+        const tr = document.createElement('tr');
+        if (isActive) tr.className = 'active';
+        const bsvPerToken = satsToBsv(centsToSats(t.pricePerTokenCents));
+        const trancheRevenue = (100_000_000 * t.pricePerTokenCents / 100);
+        tr.innerHTML = `
+          <td>${t.tranche}${isActive ? ' (current)' : ''}</td>
+          <td>${fmtInt(t.floor)} - ${fmtInt(t.ceiling)}</td>
+          <td class="num">$${t.priceUsd.toFixed(4)}</td>
+          <td class="num">${bsvPerToken} BSV</td>
+          <td class="num">$${fmtInt(Math.round(trancheRevenue))}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // ---- Load platform config ----
+
     async function loadConfig() {
       const { data: cfg } = await supabase
         .from('bct_platform_config')
         .select('*')
         .eq('id', 'platform')
         .maybeSingle();
-      if (!cfg) return;
-      const price = Number(cfg.current_tranche_price_cents);
-      const sold = Number(cfg.sold_supply);
-      const total = Number(cfg.total_supply);
-      const remaining = total - sold;
-      document.getElementById('current-price').textContent = `$${(price / 100).toFixed(4)}`;
-      document.getElementById('current-price-sub').textContent = 'per $bMovies share';
-      document.getElementById('sold-count').textContent = fmtInt(sold);
+      if (!cfg) return null;
+      soldSupply = Number(cfg.sold_supply || 0);
+      totalSupply = Number(cfg.total_supply || 1_000_000_000);
+      treasuryAddress = cfg.treasury_address || '';
+      const t = trancheForSupply(soldSupply);
+      const remaining = totalSupply - soldSupply;
+      const remainingInTranche = t.ceiling - soldSupply;
+
+      document.getElementById('current-price').textContent = fmtUsdPrice(t.pricePerTokenCents);
+      document.getElementById('current-price-sub').textContent = `${satsToBsv(centsToSats(t.pricePerTokenCents))} BSV per share`;
+      document.getElementById('sold-count').textContent = fmtInt(soldSupply);
       document.getElementById('sold-remaining').textContent = `${fmtInt(remaining)} remaining`;
-      return { price, sold, total, remaining };
+
+      // Tranche info strip
+      document.getElementById('ti-tranche').textContent = `Tranche ${t.tranche} of 10`;
+      document.getElementById('ti-remaining').textContent = fmtInt(remainingInTranche);
+      const nextT = t.tranche < 10 ? TRANCHES[t.tranche] : null;
+      document.getElementById('ti-next-price').textContent = nextT
+        ? `$${nextT.priceUsd.toFixed(4)} (${satsToBsv(centsToSats(nextT.pricePerTokenCents))} BSV)`
+        : 'Final tranche';
+
+      renderCurveTable();
+      return { soldSupply, totalSupply, treasuryAddress };
     }
 
-    // ─── Session + KYC gate ───
-    let session = null;
-    let account = null;
-    let kycApproved = false;
-    let currentPriceCents = 0.1;
+    // ---- Session + KYC gate ----
 
     async function loadSession() {
       const { data: { session: s } } = await supabase.auth.getSession();
@@ -523,8 +763,8 @@
         .select('status')
         .eq('account_id', acc.id)
         .maybeSingle();
-      kycApproved = kyc?.status === 'approved';
-      return { session: s, account: acc, kycApproved };
+      kycVerified = kyc?.status === 'verified';
+      return { session: s, account: acc, kycVerified };
     }
 
     function renderGates() {
@@ -535,49 +775,179 @@
       kycNag.style.display = 'none';
       form.style.display = 'none';
       if (!session) { signinNag.style.display = 'block'; return; }
-      if (!kycApproved) { kycNag.style.display = 'block'; return; }
+      if (!kycVerified) { kycNag.style.display = 'block'; return; }
       form.style.display = 'grid';
     }
 
-    // ─── Total updater ───
-    function updateTotal() {
-      const tokens = Math.floor(Number(document.getElementById('tokens-input').value || 0));
-      const cents = Math.round(tokens * currentPriceCents);
-      document.getElementById('total-display').textContent = fmtUsd(cents);
+    // ---- Wallet connection ----
+
+    function renderWalletBar() {
+      const status = walletStatus();
+      const dot = document.getElementById('wallet-dot');
+      const label = document.getElementById('wallet-label');
+      const addr = document.getElementById('wallet-addr');
+      const btn = document.getElementById('wallet-btn');
+      const buyBtn = document.getElementById('buy-btn');
+
+      walletConnected = status.connected;
+
+      if (status.connected) {
+        dot.classList.add('connected');
+        label.textContent = status.provider === 'metanet' ? 'BSV Desktop' : 'Yours Wallet';
+        addr.textContent = status.address
+          ? status.address.slice(0, 8) + '...' + status.address.slice(-6)
+          : '';
+        btn.textContent = 'Disconnect';
+        buyBtn.disabled = false;
+      } else {
+        dot.classList.remove('connected');
+        label.textContent = 'No wallet connected';
+        addr.textContent = '';
+        btn.textContent = 'Connect wallet';
+        buyBtn.disabled = true;
+      }
     }
 
-    // ─── Checkout ───
-    async function startCheckout() {
-      if (!account || !kycApproved) return;
+    async function handleWalletBtn() {
+      const status = walletStatus();
+      if (status.connected) {
+        const { disconnectWallet } = await import('./js/brc100.js');
+        disconnectWallet();
+        renderWalletBar();
+        return;
+      }
+      const btn = document.getElementById('wallet-btn');
+      btn.textContent = 'Connecting...';
+      btn.disabled = true;
+      try {
+        const result = await connectWallet();
+        if (!result.connected) {
+          const prompt = walletInstallPrompt();
+          setStatus(
+            `No BRC-100 wallet detected. ${prompt.body} ` +
+            `Download: ${prompt.primary.href}`,
+            'error'
+          );
+        }
+      } catch (err) {
+        setStatus('Wallet connection failed: ' + (err.message || err), 'error');
+      }
+      btn.disabled = false;
+      renderWalletBar();
+    }
+
+    // ---- Total updater ----
+
+    function updateTotal() {
+      const tokens = Math.floor(Number(document.getElementById('tokens-input').value || 0));
+      if (tokens < 1) {
+        document.getElementById('total-display').textContent = '--';
+        return;
+      }
+      try {
+        const { totalCents } = computeCost(soldSupply, Math.min(tokens, totalSupply - soldSupply));
+        const sats = centsToSats(totalCents);
+        document.getElementById('total-display').textContent =
+          `${fmtUsd(totalCents)} / ${fmtInt(sats)} sats (${satsToBsv(sats)} BSV)`;
+      } catch {
+        document.getElementById('total-display').textContent = '--';
+      }
+    }
+
+    // ---- BSV Purchase flow ----
+
+    async function startPurchase() {
+      if (!account || !kycVerified || !walletConnected) return;
+
       const tokens = Math.floor(Number(document.getElementById('tokens-input').value || 0));
       if (!tokens || tokens < 1000) {
         setStatus('Minimum purchase is 1,000 $bMovies.', 'error');
         return;
       }
+      if (tokens > 10_000_000) {
+        setStatus('Maximum purchase is 10,000,000 $bMovies per transaction.', 'error');
+        return;
+      }
+
+      if (!treasuryAddress) {
+        setStatus('Treasury address not loaded. Please refresh the page.', 'error');
+        return;
+      }
+
       const btn = document.getElementById('buy-btn');
       btn.disabled = true;
-      setStatus('Redirecting to Stripe…');
+
+      // Compute cost
+      let totalCents, sats;
       try {
-        const r = await fetch('/api/invest/checkout', {
+        const cost = computeCost(soldSupply, tokens);
+        totalCents = cost.totalCents;
+        sats = centsToSats(totalCents);
+      } catch (err) {
+        setStatus(err.message || 'Cost calculation failed', 'error');
+        btn.disabled = false;
+        return;
+      }
+
+      setStatus(`Requesting ${fmtInt(sats)} sats (${satsToBsv(sats)} BSV) from your wallet...`);
+
+      // Step 1: Request payment from BRC-100 wallet
+      let txid;
+      try {
+        const receipt = await payToAddress({
+          address: treasuryAddress,
+          satoshis: sats,
+          description: `Buy ${fmtInt(tokens)} $bMovies tokens`,
+        });
+        txid = receipt.txid;
+        setStatus(`Payment broadcast! txid: ${txid.slice(0, 12)}... Verifying on-chain...`);
+      } catch (err) {
+        const msg = err.message || String(err);
+        if (msg.includes('rejected') || msg.includes('cancelled') || msg.includes('denied')) {
+          setStatus('Payment cancelled by wallet.', 'error');
+        } else {
+          setStatus('Wallet payment failed: ' + msg, 'error');
+        }
+        btn.disabled = false;
+        return;
+      }
+
+      // Step 2: POST to bsv-settle for on-chain verification + crediting
+      try {
+        const r = await fetch('/api/invest/bsv-settle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tokens,
+            txid,
             accountId: account.id,
-            email: account.email,
+            tokens,
           }),
         });
+
+        const data = await r.json();
         if (!r.ok) {
-          const err = await r.json();
-          throw new Error(err.error || 'checkout failed');
+          throw new Error(data.error || `Server returned ${r.status}`);
         }
-        const { url } = await r.json();
-        if (url) window.location.href = url;
-        else throw new Error('no checkout URL');
-      } catch (e) {
-        setStatus('Checkout failed: ' + (e.message || e), 'error');
-        btn.disabled = false;
+
+        setStatus(
+          `Purchase confirmed! ${fmtInt(tokens)} $bMovies tokens added to your account. ` +
+          `TX: ${txid.slice(0, 16)}...`,
+          'success'
+        );
+
+        // Refresh config to show updated supply
+        await loadConfig();
+        updateTotal();
+      } catch (err) {
+        setStatus(
+          'Payment was sent but server verification failed: ' + (err.message || err) +
+          '. Your txid: ' + txid + ' -- contact support if tokens are not credited.',
+          'error'
+        );
       }
+
+      btn.disabled = false;
+      renderWalletBar();
     }
 
     function setStatus(msg, kind) {
@@ -586,15 +956,18 @@
       el.className = 'buy-status' + (kind ? ' ' + kind : '');
     }
 
-    // ─── Init ───
+    // ---- Init ----
+
     (async () => {
-      const cfg = await loadConfig();
-      if (cfg) currentPriceCents = cfg.price;
+      await loadConfig();
       await loadSession();
       renderGates();
+      renderWalletBar();
       updateTotal();
+
       document.getElementById('tokens-input').addEventListener('input', updateTotal);
-      document.getElementById('buy-btn').addEventListener('click', startCheckout);
+      document.getElementById('buy-btn').addEventListener('click', startPurchase);
+      document.getElementById('wallet-btn').addEventListener('click', handleWalletBtn);
     })();
   </script>
 </body>

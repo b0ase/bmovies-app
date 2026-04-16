@@ -114,8 +114,8 @@ export default async function handler(
     .select('status')
     .eq('account_id', body.accountId)
     .maybeSingle();
-  if (!kyc || kyc.status !== 'approved') {
-    res.status(403).json({ error: 'KYC approval required to purchase $bMovies' });
+  if (!kyc || kyc.status !== 'verified') {
+    res.status(403).json({ error: 'KYC verification required to purchase $bMovies' });
     return;
   }
 
