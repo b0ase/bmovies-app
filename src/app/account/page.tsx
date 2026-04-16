@@ -405,26 +405,16 @@ function StudioView({
         activeCount={stats.activeCount}
       />
 
-      {/* Studio info */}
-      <div className="mb-10">
-        <StudioInfoSection
-          hasFilms={stats.count > 0}
-          user={user}
-          accountId={accountId}
-          sessionIdFromUrl={sessionIdFromUrl}
-        />
-      </div>
-
-      {/* Project list */}
-      <div>
-        <h2
-          className="text-3xl font-black mb-4 leading-none"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          Your <span className="text-[#E50914]">films</span>
-        </h2>
-        <ProjectCards films={films} loading={filmsLoading} error={filmsError} />
-      </div>
+      {/* Studio info + films inside */}
+      <StudioInfoSection
+        hasFilms={stats.count > 0}
+        user={user}
+        accountId={accountId}
+        sessionIdFromUrl={sessionIdFromUrl}
+        films={films}
+        filmsLoading={filmsLoading}
+        filmsError={filmsError}
+      />
     </>
   )
 }
@@ -1893,11 +1883,17 @@ function StudioInfoSection({
   user,
   accountId,
   sessionIdFromUrl,
+  films,
+  filmsLoading,
+  filmsError,
 }: {
   hasFilms: boolean
   user: User | null
   accountId: string | null
   sessionIdFromUrl: string | null
+  films?: Film[]
+  filmsLoading?: boolean
+  filmsError?: string | null
 }) {
   const [studio, setStudio] = useState<StudioData | null>(null)
   const [studioLoading, setStudioLoading] = useState(true)
@@ -2156,13 +2152,16 @@ function StudioInfoSection({
             </div>
           </div>
         </div>
+        {/* Films inside the studio */}
         <div className="border border-[#222] bg-[#0a0a0a] p-6">
-          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
-            Founded {studio.founded_year}
+          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-3">
+            Productions
           </div>
-          <p className="text-[#888] text-sm leading-relaxed">
-            Your studio brand goes on every film you commission.
-          </p>
+          {films ? (
+            <ProjectCards films={films} loading={filmsLoading || false} error={filmsError || null} />
+          ) : (
+            <p className="text-[#666] text-sm">No films yet. Commission your first from the studio.</p>
+          )}
         </div>
       </div>
     )
