@@ -61,6 +61,71 @@ const PRICE_BY_TIER: Record<string, number> = {
   feature: 999,
 }
 
+/**
+ * Poster overrides — keep in sync with film.html / productions.html /
+ * index.html / deck.html / leaderboard.html / offer.html / watch.html
+ * in public/. The DB stores xAI temp URLs that expire in ~24h, so we
+ * treat the static JPGs under public/img/films/ as the source of
+ * truth and the bct_artifacts rows as a last-resort fallback.
+ *
+ * Keys MUST be lowercased and punctuation-exact against the film
+ * title's .toLowerCase() — including the apostrophe in "isn't".
+ */
+const POSTER_MAP: Record<string, string> = {
+  'echoes of the last signal':           '/img/films/echoes-of-the-last-signal.jpg',
+  'the fold':                            '/img/films/the-fold.jpg',
+  'the weight of water':                 '/img/films/the-weight-of-water.jpg',
+  'the lantern that forgot its flame':   '/img/films/the-lantern-that-forgot-its-flame.jpg',
+  'the mirror protocol':                 '/img/films/the-mirror-protocol.jpg',
+  'off-key heroes':                      '/img/films/off-key-heroes.jpg',
+  'midnight swarm':                      '/img/films/midnight-swarm.jpg',
+  'the last piece':                      '/img/films/the-last-piece.jpg',
+  'star wars episode 1000':              '/img/films/episode-1000.jpg',
+  "that weirdo isn't satoshi":           '/img/films/that-weirdo-isnt-satoshi.jpg',
+  'spoon from space':                    '/img/films/spoon-from-space.jpg',
+  'silverfish in the cathedral':         '/img/films/silverfish-in-the-cathedral.jpg',
+  'the clockmakers daughter':            '/img/films/the-clockmakers-daughter.jpg',
+  'the cartographer who mapped dreams':  '/img/films/the-cartographer-who-mapped-dreams.jpg',
+  'the coffee machine':                  '/img/films/the-coffee-machine.jpg',
+  'the last lighthouse':                 '/img/films/the-last-lighthouse.jpg',
+  'cipher of the drowned city':          '/img/films/cipher-of-the-drowned-city.jpg',
+  'echoes beneath glacier 9':            '/img/films/echoes-beneath-glacier-9.jpg',
+  'the cartographer of empty rooms':     '/img/films/the-cartographer-of-empty-rooms.jpg',
+  'pale horse, iron sky':                '/img/films/pale-horse-iron-sky.jpg',
+  'sub-orbital lullaby':                 '/img/films/sub-orbital-lullaby.jpg',
+  'glasshouse':                          '/img/films/glasshouse.jpg',
+  'the last transmission':               '/img/films/the-last-transmission.jpg',
+}
+
+/** Any URL matching the xAI imgen temp CDN is untrustworthy — it dies
+ *  in ~24h. The feature-worker is supposed to mirror these to
+ *  /var/www/bmovies-assets/ on Hetzner but the mirror is currently
+ *  empty, so the DB rows point at dead upstreams. Treat as null. */
+function isEphemeralUrl(url: string | null | undefined): boolean {
+  return typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url)
+}
+
+/** Resolve the poster for a film in priority order:
+ *   1. POSTER_MAP override (static JPG in public/img/films/)
+ *   2. Non-ephemeral poster artifact URL from bct_artifacts
+ *   3. Non-ephemeral storyboard frame
+ *   4. null — caller renders the bM placeholder badge
+ */
+function resolvePosterUrl(film: Film): string | null {
+  const mapHit = POSTER_MAP[(film.title || '').toLowerCase()]
+  if (mapHit) return mapHit
+  const arts = film.bct_artifacts || []
+  const poster = arts.find(
+    (a) => !a.superseded_by && a.role === 'poster' && a.kind === 'image',
+  )
+  if (poster?.url && !isEphemeralUrl(poster.url)) return poster.url
+  const storyboard = arts.find(
+    (a) => !a.superseded_by && (a.role === 'storyboard' || a.step_id === 'storyboard.poster') && a.kind === 'image',
+  )
+  if (storyboard?.url && !isEphemeralUrl(storyboard.url)) return storyboard.url
+  return null
+}
+
 interface Film {
   id: string
   title: string
@@ -571,15 +636,13 @@ function MyFilmsTab({
 }
 
 function FilmCard({ film }: { film: Film }) {
-  const poster = (film.bct_artifacts || []).find(
-    (a) => !a.superseded_by && (a.role === 'poster' || a.step_id === 'storyboard.poster'),
-  )
+  const posterUrl = resolvePosterUrl(film)
   const onChain = film.token_mint_txid && /^[0-9a-f]{64}$/.test(film.token_mint_txid)
   return (
     <div className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors">
-      {poster?.url ? (
+      {posterUrl ? (
         <div className="aspect-[2/3] bg-[#050505] overflow-hidden">
-          <img src={poster.url} alt={film.title} className="w-full h-full object-cover" />
+          <img src={posterUrl} alt={film.title} className="w-full h-full object-cover" />
         </div>
       ) : (
         <div className="aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] flex items-center justify-center">
