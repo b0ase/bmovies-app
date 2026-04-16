@@ -1196,6 +1196,7 @@ function ProjectRoomView({ film }: { film: Film }) {
  * ═══════════════════════════════════════════════════════════════════════ */
 
 interface WalletData {
+  kycVerified: boolean
   platformTokens: number
   pricePerTokenCents: number
   studioCount: number
@@ -1244,7 +1245,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
     async function loadWalletData() {
       setWalletLoading(true)
       try {
-        const [holdingsRes, studiosRes, agentsRes, txRes, configRes] = await Promise.all([
+        const [holdingsRes, studiosRes, agentsRes, txRes, configRes, kycRes] = await Promise.all([
           bmovies
             .from('bct_platform_holdings')
             .select('total_tokens')
@@ -1270,6 +1271,11 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             .select('value')
             .eq('key', 'current_tranche_price_cents')
             .maybeSingle(),
+          bmovies
+            .from('bct_user_kyc')
+            .select('status')
+            .eq('account_id', accountId)
+            .maybeSingle(),
         ])
 
         if (cancelled) return
@@ -1288,6 +1294,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           : 0.1
 
         setWalletData({
+          kycVerified: kycRes.data?.status === 'verified',
           platformTokens: (holdingsRes.data?.total_tokens as number) ?? 0,
           pricePerTokenCents: priceCents,
           studioCount: studios.length,
@@ -1300,6 +1307,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
       } catch (err) {
         console.error('[wallet-tab] load error:', err)
         setWalletData({
+          kycVerified: false,
           platformTokens: 0,
           pricePerTokenCents: 0.1,
           studioCount: 0,
@@ -1327,7 +1335,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
     addr.length > 16 ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : addr
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-[1200px] mx-auto">
       {/* Header */}
       <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
         <h1
@@ -1337,7 +1345,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           My <span className="text-[#E50914]">wallet</span>
         </h1>
         <p className="text-[#888] text-sm mt-2 max-w-xl">
-          Your BRC-100 wallet, $bMovies balance, studio tokens, film tokens,
+          Your wallets, $bMovies balance, studio tokens, film tokens,
           agent roster, and transaction history.
         </p>
       </header>
@@ -1373,15 +1381,87 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
             Signed in as
           </div>
-          <div className="text-white font-mono text-sm break-all mb-3">
+          <div className="text-white font-mono text-sm break-all mb-4">
             {email ?? user.id}
           </div>
-          <Link
-            href="/login"
-            className="inline-block text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
-          >
-            Link a BRC-100 wallet
-          </Link>
+          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-3">
+            Connect a wallet
+          </div>
+          {!walletData?.kycVerified && (
+            <div className="border border-[#E50914] bg-[#1a0003] p-4 mb-3">
+              <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">KYC required</div>
+              <p className="text-[#bbb] text-xs leading-relaxed mb-2">
+                Complete identity verification before connecting wallets. One-time check via Veriff (~90 seconds).
+              </p>
+              <a href="/kyc.html" className="inline-block text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white">
+                Verify identity →
+              </a>
+            </div>
+          )}
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 ${!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}`}>
+            <button
+              onClick={async () => {
+                try {
+                  const { connectWallet } = await import('@/lib/brc100')
+                  const status = await connectWallet()
+                  if (status.connected) window.location.reload()
+                  else alert('BSV Desktop not detected. Install it from github.com/bsv-blockchain/bsv-desktop/releases/latest')
+                } catch { alert('Could not connect BSV Desktop') }
+              }}
+              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#E50914] transition-colors cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#E50914" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#E50914" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#E50914">B</text></svg>
+              <span className="text-[0.6rem] font-bold text-white">BSV Desktop</span>
+              <span className="text-[0.5rem] text-[#E50914]">BRC-100</span>
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const { connectWallet } = await import('@/lib/brc100')
+                  const status = await connectWallet()
+                  if (status.connected) window.location.reload()
+                  else alert('Yours Wallet not detected. Install the browser extension from yours.org')
+                } catch { alert('Could not connect Yours Wallet') }
+              }}
+              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#6366F1] transition-colors cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6366F1" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#6366F1" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#6366F1">Y</text></svg>
+              <span className="text-[0.6rem] font-bold text-white">Yours Wallet</span>
+              <span className="text-[0.5rem] text-[#6366F1]">BRC-100</span>
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
+                  (window as any).solana.connect().then(() => alert('Phantom connected — Solana wallet linked. Cross-chain features coming soon.')).catch(() => alert('Phantom connection rejected'))
+                } else {
+                  alert('Phantom not detected. Install from phantom.app')
+                }
+              }}
+              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#AB9FF2] transition-colors cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#AB9FF2" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#AB9FF2" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#AB9FF2">P</text></svg>
+              <span className="text-[0.6rem] font-bold text-white">Phantom</span>
+              <span className="text-[0.5rem] text-[#AB9FF2]">Solana</span>
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined' && (window as any).ethereum) {
+                  (window as any).ethereum.request({ method: 'eth_requestAccounts' }).then(() => alert('MetaMask connected — Ethereum wallet linked. Cross-chain features coming soon.')).catch(() => alert('MetaMask connection rejected'))
+                } else {
+                  alert('MetaMask not detected. Install from metamask.io')
+                }
+              }}
+              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#F6851B] transition-colors cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F6851B" style={{width:24,height:24}}><circle cx="12" cy="12" r="10" fill="none" stroke="#F6851B" strokeWidth="1.5"/><text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#F6851B">M</text></svg>
+              <span className="text-[0.6rem] font-bold text-white">MetaMask</span>
+              <span className="text-[0.5rem] text-[#F6851B]">Ethereum</span>
+            </button>
+          </div>
+          <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
+            BSV Desktop is recommended for the full bMovies experience (x402 payments, token purchases, KYC certificates).
+            Phantom and MetaMask support is experimental — cross-chain settlement coming post-launch.
+          </p>
         </div>
       )}
 
