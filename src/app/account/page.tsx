@@ -2505,25 +2505,48 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
 /* ── Storyboard ── */
 
 function StoryboardView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const [frames, setFrames] = useState<{ id: number; url: string; step_id: string | null }[]>([])
+  const [frames, setFrames] = useState<{ id: number; url: string; step_id: string | null; role: string | null }[]>([])
+  const [posterUrl, setPosterUrl] = useState<string | null>(null)
+  const [tier, setTier] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
+      // Load offer tier + title for POSTER_MAP lookup
+      const { data: offer } = await bmovies
+        .from('bct_offers')
+        .select('tier, title')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (!cancelled && offer) setTier(offer.tier || '')
+
+      // Load ALL image artifacts (storyboard frames + poster)
       const { data } = await bmovies
         .from('bct_artifacts')
-        .select('id, url, step_id')
+        .select('id, url, step_id, role')
         .eq('offer_id', projectId)
         .eq('kind', 'image')
-        .like('step_id', 'storyboard%')
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
-      if (!cancelled) {
-        setFrames((data as any[]) || [])
-        setLoading(false)
+      if (cancelled) return
+      const allImages = (data as any[]) || []
+      // Separate poster from storyboard frames
+      const storyboardFrames = allImages.filter(a =>
+        a.step_id && a.step_id.startsWith('storyboard.') && a.step_id !== 'storyboard.poster'
+      )
+      const posterArt = allImages.find(a => a.role === 'poster' || a.step_id === 'storyboard.poster')
+      // Resolve poster: POSTER_MAP wins over ephemeral DB URL
+      const titleLower = (offer?.title || '').toLowerCase()
+      const mapUrl = POSTER_MAP[titleLower]
+      if (mapUrl) {
+        setPosterUrl(mapUrl)
+      } else if (posterArt?.url && !isEphemeralUrl(posterArt.url)) {
+        setPosterUrl(posterArt.url)
       }
+      setFrames(storyboardFrames)
+      setLoading(false)
     }
     load()
     return () => { cancelled = true }
@@ -2541,25 +2564,38 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
 
   if (frames.length === 0) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
-        <div
-          className="text-xl font-black mb-2 leading-none"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          No storyboard <span className="text-[#E50914]">frames</span> yet
+      <div>
+        {posterUrl && (
+          <div className="mb-6">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-2">
+              Poster
+            </div>
+            <div className="max-w-xs border border-[#222] bg-[#0a0a0a] overflow-hidden">
+              <img src={posterUrl} alt={projectTitle} className="w-full" />
+            </div>
+          </div>
+        )}
+        <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
+          <div
+            className="text-xl font-black mb-2 leading-none"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            No storyboard <span className="text-[#E50914]">frames</span> yet
+          </div>
+          <p className="text-[#888] text-sm leading-relaxed mb-4">
+            {tier === 'pitch'
+              ? 'Pitches include a poster but no storyboard frames. Publish your pitch and sell 10% to fund a trailer — trailers include 6 storyboard frames + video clips.'
+              : 'Generate storyboard frames using the AI agent, or wait for the production pipeline to create them.'}
+          </p>
+          <button
+            onClick={() => {
+              alert(`Ask the bMovies agent (bottom-right chat) to "Generate a storyboard for ${projectTitle}"`)
+            }}
+            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
+          >
+            Generate storyboard
+          </button>
         </div>
-        <p className="text-[#888] text-sm leading-relaxed mb-4">
-          The storyboard is generated during the production pipeline. You can
-          also generate individual frames using the AI agent.
-        </p>
-        <button
-          onClick={() => {
-            alert(`Generate storyboard requested for "${projectTitle}". This will call Grok Imagine to create storyboard frames.`)
-          }}
-          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
-        >
-          Generate storyboard
-        </button>
       </div>
     )
   }
