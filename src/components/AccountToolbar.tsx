@@ -407,6 +407,34 @@ export function AccountToolbar() {
             })}
           </>
         )}
+
+        {/* Sign out — always visible, pushed to right */}
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <button
+            onClick={() => {
+              localStorage.removeItem('bmovies-auth')
+              window.dispatchEvent(new Event('bmovies:auth-changed'))
+              window.location.href = '/'
+            }}
+            style={{
+              padding: '0.5rem 0.75rem',
+              fontFamily: "'Inter', -apple-system, sans-serif",
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase' as const,
+              color: '#666',
+              background: 'transparent',
+              border: '1px solid #333',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap' as const,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#E50914'; e.currentTarget.style.color = '#ff6b7a' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#666' }}
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   )

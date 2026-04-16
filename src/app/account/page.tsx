@@ -1092,7 +1092,7 @@ function ProjectCrewView({ projectId, accountId }: { projectId: string; accountI
 
 function ProjectDeckView({ film }: { film: Film }) {
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <h2
         className="text-3xl font-black mb-4 leading-none"
         style={{ fontFamily: 'var(--font-bebas)' }}
@@ -1140,7 +1140,7 @@ function ProjectDeckView({ film }: { film: Film }) {
 function ProjectRoomView({ film }: { film: Film }) {
   const router = useRouter()
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <h2
         className="text-3xl font-black mb-4 leading-none"
         style={{ fontFamily: 'var(--font-bebas)' }}
@@ -2006,7 +2006,7 @@ function StudioInfoSection({
 
   if (provisioning) {
     return (
-      <div className="max-w-2xl">
+      <div className="max-w-4xl">
         <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-8">
           <div className="animate-pulse">
             <div
@@ -2036,7 +2036,7 @@ function StudioInfoSection({
 
   if (provisionError) {
     return (
-      <div className="max-w-2xl">
+      <div className="max-w-4xl">
         <div className="border border-[#E50914] bg-[#1a0003] p-6">
           <div className="text-[#ff6b7a] text-xs font-bold uppercase tracking-wider mb-2">
             Studio provisioning failed
@@ -2067,7 +2067,7 @@ function StudioInfoSection({
 
   if (studio) {
     return (
-      <div className="max-w-2xl">
+      <div className="max-w-4xl">
         <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
           <div className="flex items-start gap-5">
             {studio.logo_url ? (
@@ -2145,7 +2145,7 @@ function StudioInfoSection({
 
   // No studio: show create form
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
         <h3
           className="text-2xl font-black mb-2 leading-none"
