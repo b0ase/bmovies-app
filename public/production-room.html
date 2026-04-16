@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Production Room</title>
+  <meta name="description" content="Watch your AI agents collaborate on a film in real time." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="bMovies — Production Room" />
+  <meta property="og:description" content="Multi-agent production meeting for your film." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e5e5e5; min-height: 100vh; }
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 2rem 6rem; }
+
+    /* ── Header card ── */
+    .room-header {
+      border: 1px solid #222;
+      background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+      padding: 1.5rem 2rem;
+      margin-bottom: 1rem;
+    }
+    .room-header .kicker {
+      font-size: 0.55rem; color: #E50914; text-transform: uppercase;
+      letter-spacing: 0.18em; font-weight: 700;
+    }
+    .room-header h1 {
+      font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem;
+      line-height: 0.95; color: #fff; margin-top: 0.3rem;
+    }
+    .room-header .sub {
+      font-size: 0.75rem; color: #888; margin-top: 0.4rem;
+    }
+    .room-header .sub strong { color: #ccc; }
+
+    /* ── Autonomy mode ── */
+    .mode-bar {
+      display: flex; gap: 0.5rem; margin-bottom: 1rem;
+      border: 1px solid #1a1a1a; background: #050505; padding: 0.75rem 1rem;
+    }
+    .mode-bar .label {
+      font-size: 0.55rem; color: #666; text-transform: uppercase;
+      letter-spacing: 0.12em; font-weight: 700; align-self: center;
+      margin-right: 0.5rem;
+    }
+    .mode-btn {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; padding: 0.4rem 0.8rem;
+      border: 1px solid #333; background: transparent; color: #888;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .mode-btn:hover { border-color: #E50914; color: #ccc; }
+    .mode-btn.active { border-color: #E50914; background: #E50914; color: #fff; }
+
+    /* ── Agent roster ── */
+    .agent-roster {
+      display: flex; gap: 0.4rem; flex-wrap: wrap;
+      margin-bottom: 1rem; padding: 0.5rem 0;
+    }
+    .agent-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.6rem; font-weight: 600; padding: 0.25rem 0.6rem;
+      border: 1px solid #222; background: #0a0a0a;
+    }
+    .agent-chip .dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    /* ── Message feed ── */
+    .feed {
+      border: 1px solid #222; background: #0a0a0a;
+      min-height: 400px; max-height: 560px;
+      overflow-y: auto; padding: 1.5rem; margin-bottom: 0.75rem;
+    }
+    .feed::-webkit-scrollbar { width: 4px; }
+    .feed::-webkit-scrollbar-thumb { background: #333; }
+
+    .feed-empty {
+      text-align: center; padding: 4rem 1rem;
+    }
+    .feed-empty h2 {
+      font-family: 'Bebas Neue', sans-serif; font-size: 2rem;
+      color: #333; margin-bottom: 0.5rem;
+    }
+    .feed-empty p { font-size: 0.8rem; color: #555; max-width: 24rem; margin: 0 auto; }
+
+    .msg { margin-bottom: 1.2rem; }
+    .msg-speaker {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 0.3rem;
+    }
+    .msg-speaker .role {
+      font-weight: 400; opacity: 0.7; margin-left: 0.3rem;
+    }
+    .msg-body {
+      font-size: 0.85rem; line-height: 1.6; color: #ccc;
+      padding-left: 0.8rem; border-left: 2px solid #222;
+    }
+    .msg-body p { margin-bottom: 0.4rem; }
+    .msg-body p:last-child { margin-bottom: 0; }
+
+    .msg-input-prompt {
+      border: 1px solid #E50914; background: #1a0003;
+      padding: 0.8rem 1rem; margin-top: 0.6rem; margin-bottom: 1rem;
+    }
+    .msg-input-prompt .question-label {
+      font-size: 0.55rem; color: #E50914; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 0.3rem;
+    }
+    .msg-input-prompt .question-text {
+      font-size: 0.85rem; color: #eee; line-height: 1.5;
+    }
+
+    .msg-image {
+      margin-top: 0.6rem; max-width: 420px;
+    }
+    .msg-image img {
+      width: 100%; border: 1px solid #222; display: block;
+    }
+
+    .deliberating {
+      text-align: center; padding: 1.5rem;
+      font-size: 0.75rem; color: #666;
+    }
+    .deliberating span { animation: pulse-text 1.5s ease-in-out infinite; }
+    @keyframes pulse-text {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* ── User input ── */
+    .input-row { display: flex; gap: 0.5rem; }
+    .input-row input {
+      flex: 1; background: #1a1a1a; border: 1px solid #333;
+      padding: 0.8rem 1rem; color: #fff; font-size: 0.85rem;
+      outline: none; font-family: inherit;
+    }
+    .input-row input:focus { border-color: #E50914; }
+    .input-row input::placeholder { color: #555; }
+    .input-row button {
+      padding: 0.8rem 1.5rem; font-size: 0.65rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      border: none; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-send { background: #E50914; color: #fff; }
+    .btn-send:hover { background: #b00610; }
+    .btn-send:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .btn-start { background: #E50914; color: #fff; width: 100%; padding: 1rem; }
+    .btn-start:hover { background: #b00610; }
+
+    .error-banner {
+      border: 1px solid #E50914; background: #1a0003; padding: 1rem;
+      margin-bottom: 1rem; font-size: 0.8rem; color: #ff6b7a;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div id="root">
+      <div class="feed-empty">
+        <h2 style="font-family:'Bebas Neue';font-size:2rem;color:#888;">Loading production room...</h2>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/nav-session.js"></script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    const supabase = createClient(
+      'https://api.b0ase.com',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+      { auth: { storageKey: 'bmovies-auth', lock: false } }
+    );
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+
+    const ROLE_COLORS = {
+      writer: '#3B82F6',
+      director: '#E50914',
+      cinematographer: '#F59E0B',
+      storyboard_artist: '#8B5CF6',
+      editor: '#10B981',
+      composer: '#EC4899',
+      sound_designer: '#6366F1',
+      producer: '#F97316',
+    };
+
+    const root = document.getElementById('root');
+
+    // ── State ──
+    let offerId = null;
+    let conversationId = null;
+    let mode = 'check_and_clarify';
+    let messages = [];
+    let loading = false;
+    let offer = null;
+    let studioName = '';
+    let agents = [];
+    let accessToken = null;
+    let started = false;
+
+    // ── Init ──
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      offerId = params.get('id');
+      if (!offerId) {
+        root.innerHTML = `<div class="error-banner">No film ID specified. Go to <a href="/account" style="color:#E50914;">your account</a> and select a film.</div>`;
+        return;
+      }
+
+      // Get session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        root.innerHTML = `<div class="error-banner">You need to <a href="/account" style="color:#E50914;">sign in</a> to access the production room.</div>`;
+        return;
+      }
+      accessToken = session.access_token;
+
+      // Load offer data
+      const { data: offerData, error: offerErr } = await supabase
+        .from('bct_offers')
+        .select('id, title, synopsis, status, tier, studio_id')
+        .eq('id', offerId)
+        .maybeSingle();
+
+      if (offerErr || !offerData) {
+        root.innerHTML = `<div class="error-banner">Film not found. <a href="/account" style="color:#E50914;">Back to account</a></div>`;
+        return;
+      }
+      offer = offerData;
+      document.title = `bMovies — Production Room: ${esc(offer.title)}`;
+
+      // Load studio
+      if (offer.studio_id) {
+        const { data: studioData } = await supabase
+          .from('bct_studios')
+          .select('name')
+          .eq('id', offer.studio_id)
+          .maybeSingle();
+        studioName = studioData?.name || 'Your Studio';
+      }
+
+      render();
+    }
+
+    // ── API call ──
+    async function sendToRoom(userMessage) {
+      if (loading) return;
+      loading = true;
+
+      if (userMessage) {
+        messages.push({ speaker: 'You', role: 'executive_producer', content: userMessage, isUser: true });
+      }
+      render();
+
+      try {
+        const res = await fetch('/api/agent/production-room', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            offerId,
+            message: userMessage || undefined,
+            mode,
+            conversationId,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+
+        conversationId = data.conversationId;
+        if (data.studio) studioName = data.studio;
+        if (data.agents) agents = data.agents;
+
+        // Parse the multi-agent response into individual messages
+        const parsed = parseAgentMessages(data.message.content);
+        for (const msg of parsed) {
+          messages.push(msg);
+        }
+
+        // If there's a tool result (image), attach it to the last message
+        if (data.toolResult && data.toolResult.artifactUrl) {
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg) lastMsg.imageUrl = data.toolResult.artifactUrl;
+        }
+
+        started = true;
+      } catch (err) {
+        messages.push({
+          speaker: 'System',
+          role: 'error',
+          content: `Error: ${err.message}. Try again.`,
+          isError: true,
+        });
+      } finally {
+        loading = false;
+        render();
+        // Scroll feed to bottom
+        const feed = document.querySelector('.feed');
+        if (feed) feed.scrollTop = feed.scrollHeight;
+      }
+    }
+
+    // ── Parse Grok's multi-agent output into individual messages ──
+    function parseAgentMessages(text) {
+      const msgs = [];
+      // Split on **[Agent Name lines
+      const parts = text.split(/\*\*\[/);
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i].trim();
+        if (!part) continue;
+
+        // Check if this is a "needs your input" block
+        const inputMatch = part.match(/^(.+?)\s*(?:·|—)\s*(.+?)\]\s*needs your input:\*\*\s*([\s\S]*)/i);
+        if (inputMatch) {
+          msgs.push({
+            speaker: inputMatch[1].trim(),
+            role: inputMatch[2].trim(),
+            content: inputMatch[3].replace(/^[""]|[""]$/g, '').trim(),
+            needsInput: true,
+          });
+          continue;
+        }
+
+        // Standard agent message: "Agent Name · Role]**\nDialogue"
+        const stdMatch = part.match(/^(.+?)\s*(?:·|—)\s*(.+?)\]\*\*\s*([\s\S]*)/);
+        if (stdMatch) {
+          msgs.push({
+            speaker: stdMatch[1].trim(),
+            role: stdMatch[2].trim(),
+            content: stdMatch[3].trim(),
+          });
+          continue;
+        }
+
+        // Fallback: plain text (probably the first chunk before any agent tags)
+        if (i === 0 && part.length > 5) {
+          msgs.push({ speaker: 'Narrator', role: 'system', content: part });
+        }
+      }
+
+      // If parsing failed entirely, return the raw text as one message
+      if (msgs.length === 0 && text.trim()) {
+        msgs.push({ speaker: 'Meeting', role: 'notes', content: text.trim() });
+      }
+
+      return msgs;
+    }
+
+    // ── Find role color ──
+    function colorForRole(role) {
+      const normalized = role.toLowerCase().replace(/\s+/g, '_');
+      // Check agent roster from API
+      const match = agents.find(a => a.role === normalized || a.name.toLowerCase() === role.toLowerCase());
+      if (match) return match.color;
+      return ROLE_COLORS[normalized] || '#888';
+    }
+
+    // ── Render ──
+    function render() {
+      const title = offer ? esc(offer.title) : 'Loading...';
+      const sub = studioName ? `<strong>${esc(studioName)}</strong> · ${agents.length || 8} agents` : '';
+
+      const rosterHtml = agents.length > 0
+        ? agents.map(a => `<span class="agent-chip"><span class="dot" style="background:${a.color}"></span>${esc(a.name)} <span style="opacity:0.5;font-weight:400">${esc(a.role.replace(/_/g, ' '))}</span></span>`).join('')
+        : '';
+
+      const modeButtons = ['fully_autonomous', 'check_and_clarify', 'careful'].map(m => {
+        const label = m === 'fully_autonomous' ? 'Fully autonomous' : m === 'check_and_clarify' ? 'Check & clarify' : 'Careful';
+        return `<button class="mode-btn${mode === m ? ' active' : ''}" data-mode="${m}">${label}</button>`;
+      }).join('');
+
+      let feedHtml = '';
+      if (!started && messages.length === 0) {
+        feedHtml = `
+          <div class="feed-empty">
+            <h2>The room is quiet</h2>
+            <p>Hit "Start production meeting" to bring your agents to the table. They'll discuss the film and start making creative decisions.</p>
+          </div>`;
+      } else {
+        for (const msg of messages) {
+          if (msg.isUser) {
+            feedHtml += `
+              <div class="msg">
+                <div class="msg-speaker" style="color:#E50914;">You <span class="role">Executive Producer</span></div>
+                <div class="msg-body" style="border-left-color:#E50914;">${formatContent(msg.content)}</div>
+              </div>`;
+          } else if (msg.isError) {
+            feedHtml += `<div class="error-banner">${esc(msg.content)}</div>`;
+          } else if (msg.needsInput) {
+            const c = colorForRole(msg.role);
+            feedHtml += `
+              <div class="msg-input-prompt">
+                <div class="question-label">${esc(msg.speaker)} · ${esc(msg.role)} needs your input</div>
+                <div class="question-text">${formatContent(msg.content)}</div>
+              </div>`;
+          } else {
+            const c = colorForRole(msg.role);
+            feedHtml += `
+              <div class="msg">
+                <div class="msg-speaker" style="color:${c};">${esc(msg.speaker)} <span class="role">· ${esc(msg.role)}</span></div>
+                <div class="msg-body" style="border-left-color:${c};">${formatContent(msg.content)}</div>
+                ${msg.imageUrl ? `<div class="msg-image"><img src="${esc(msg.imageUrl)}" alt="Generated artifact" loading="lazy"></div>` : ''}
+              </div>`;
+          }
+        }
+        if (loading) {
+          feedHtml += `<div class="deliberating"><span>Agents are deliberating...</span></div>`;
+        }
+      }
+
+      const inputHtml = started
+        ? `<div class="input-row">
+            <input type="text" id="user-input" placeholder="Give direction to your agents..." ${loading ? 'disabled' : ''}>
+            <button class="btn-send" id="send-btn" ${loading ? 'disabled' : ''}>Send</button>
+          </div>`
+        : `<button class="btn-start" id="start-btn" ${loading ? 'disabled' : ''}>Start production meeting</button>`;
+
+      root.innerHTML = `
+        <div class="room-header">
+          <div class="kicker">Production Room</div>
+          <h1>${title}</h1>
+          <div class="sub">${sub}</div>
+        </div>
+        <div class="mode-bar">
+          <span class="label">Autonomy</span>
+          ${modeButtons}
+        </div>
+        ${rosterHtml ? `<div class="agent-roster">${rosterHtml}</div>` : ''}
+        <div class="feed" id="feed">${feedHtml}</div>
+        ${inputHtml}
+      `;
+
+      // Wire events
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          mode = btn.dataset.mode;
+          document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      const startBtn = document.getElementById('start-btn');
+      if (startBtn) {
+        startBtn.addEventListener('click', () => sendToRoom(null));
+      }
+
+      const sendBtn = document.getElementById('send-btn');
+      const userInput = document.getElementById('user-input');
+      if (sendBtn && userInput) {
+        sendBtn.addEventListener('click', () => {
+          const val = userInput.value.trim();
+          if (val) sendToRoom(val);
+        });
+        userInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const val = userInput.value.trim();
+            if (val) sendToRoom(val);
+          }
+        });
+        // Restore focus
+        if (!loading) userInput.focus();
+      }
+
+      // Scroll feed to bottom
+      const feed = document.getElementById('feed');
+      if (feed) feed.scrollTop = feed.scrollHeight;
+    }
+
+    // ── Format content: paragraphs + basic markdown bold ──
+    function formatContent(text) {
+      return esc(text)
+        .split('\n')
+        .filter(l => l.trim())
+        .map(l => `<p>${l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`)
+        .join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -118,7 +118,175 @@ Your boundaries:
 - You CAN recommend specific pages: /exchange.html, /invest.html, /commission.html, /studios.html, /agents.html, /productions.html, /captable.html, /watch.html, /deck.html.
 - You CAN help brainstorm film concepts, studio aesthetics, agent names.
 - You CANNOT share private information about other users.
-- If someone asks about something that doesn't exist yet, say "that's on the roadmap" rather than pretending it works.`;
+- If someone asks about something that doesn't exist yet, say "that's on the roadmap" rather than pretending it works.
+
+## Tools you can invoke
+
+When the user asks you to CREATE something (not just discuss it), you can invoke tools by including a tool block in your response. Use EXACTLY this format on its own line:
+
+[TOOL:script_writer:{"title":"Film Title","synopsis":"Brief synopsis","genre":"genre"}]
+[TOOL:storyboard:{"title":"Film Title","synopsis":"Brief synopsis","frames":5}]
+[TOOL:poster:{"title":"Film Title","synopsis":"Brief synopsis","style":"style notes"}]
+[TOOL:title_card:{"title":"Film Title","style":"cinematic/horror/comedy/etc"}]
+[TOOL:shot_list:{"title":"Film Title","synopsis":"Brief synopsis","scenes":5}]
+[TOOL:score_brief:{"title":"Film Title","mood":"mood description","duration":"30s"}]
+
+Always include your conversational response BEFORE the tool block. The tool will execute and the result will be shown to the user.
+
+Only invoke a tool when the user explicitly asks to CREATE/GENERATE/DESIGN/WRITE something. Don't invoke tools for questions or discussion.`;
+
+/* ─── Tool execution ─── */
+
+const TOOL_PATTERN = /^\[TOOL:(\w+):(.*)\]\s*$/m;
+
+function parseToolCall(
+  text: string,
+): { toolName: string; params: Record<string, unknown>; cleanText: string } | null {
+  const match = text.match(TOOL_PATTERN);
+  if (!match) return null;
+  try {
+    const toolName = match[1];
+    const params = JSON.parse(match[2]) as Record<string, unknown>;
+    const cleanText = text.replace(TOOL_PATTERN, '').trim();
+    return { toolName, params, cleanText };
+  } catch {
+    return null;
+  }
+}
+
+async function executeToolCall(
+  toolName: string,
+  params: Record<string, unknown>,
+  xaiApiKey: string,
+): Promise<{ type: 'text' | 'image' | 'audio'; content: string; artifactUrl?: string } | null> {
+
+  if (toolName === 'script_writer') {
+    const { title, synopsis, genre } = params as { title: string; synopsis: string; genre?: string };
+    const scriptPrompt = `Write a 300-word screenplay treatment for "${title}". Genre: ${genre || 'drama'}. Synopsis: ${synopsis}. Write in proper screenplay format with scene headings (INT./EXT.), action lines, and dialogue. Be vivid and cinematic.`;
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({
+        model: 'grok-3-mini',
+        messages: [
+          { role: 'system', content: 'You are a professional screenwriter.' },
+          { role: 'user', content: scriptPrompt },
+        ],
+        max_tokens: 800,
+        temperature: 0.9,
+      }),
+    });
+    const data = await res.json();
+    const script = data.choices?.[0]?.message?.content || 'Script generation failed.';
+    return { type: 'text', content: script };
+  }
+
+  if (toolName === 'storyboard') {
+    const { title, synopsis, frames } = params as { title: string; synopsis: string; frames?: number };
+    const frameCount = Math.min(frames || 3, 5);
+    const planRes = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({
+        model: 'grok-3-mini',
+        messages: [
+          { role: 'system', content: 'You are a film storyboard artist.' },
+          { role: 'user', content: `Describe ${frameCount} key storyboard frames for "${title}": ${synopsis}. For each frame, write ONE line describing the visual composition, camera angle, and mood. Number them 1-${frameCount}. Be specific and cinematic.` },
+        ],
+        max_tokens: 300,
+      }),
+    });
+    const planData = await planRes.json();
+    const frameDescriptions = planData.choices?.[0]?.message?.content || '';
+
+    const imageRes = await fetch('https://api.x.ai/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({
+        model: 'grok-imagine-image',
+        prompt: `Cinematic storyboard frame for "${title}". ${(synopsis || '').slice(0, 200)}. Frame 1. Dramatic lighting, film grain, widescreen aspect ratio.`,
+        n: 1,
+      }),
+    });
+    const imageData = await imageRes.json();
+    const imageUrl = imageData.data?.[0]?.url || null;
+
+    return {
+      type: 'text',
+      content: `**Storyboard plan for "${title}":**\n\n${frameDescriptions}${imageUrl ? '\n\n**Frame 1 generated:**' : ''}`,
+      artifactUrl: imageUrl || undefined,
+    };
+  }
+
+  if (toolName === 'poster') {
+    const { title, synopsis, style } = params as { title: string; synopsis: string; style?: string };
+    const prompt = `Theatrical movie poster one-sheet for "${title}". ${(synopsis || '').slice(0, 300)}. ${style || 'Bold title typography, dramatic lighting, rich cinematic colour palette'}. Portrait orientation, film grain. Full theatrical one-sheet layout.`;
+    const res = await fetch('https://api.x.ai/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({ model: 'grok-imagine-image', prompt, n: 1 }),
+    });
+    const data = await res.json();
+    const url = data.data?.[0]?.url || null;
+    return { type: 'image', content: url ? `**Poster generated for "${title}":**` : 'Poster generation failed.', artifactUrl: url || undefined };
+  }
+
+  if (toolName === 'title_card') {
+    const { title, style } = params as { title: string; style?: string };
+    const prompt = `Cinematic film title card for "${title}". Style: ${style || 'cinematic'}. Bold typography centered on a dark atmospheric background. Film grain, letterbox 2.39:1 aspect. The title should be the focal point.`;
+    const res = await fetch('https://api.x.ai/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({ model: 'grok-imagine-image', prompt, n: 1 }),
+    });
+    const data = await res.json();
+    const url = data.data?.[0]?.url || null;
+    return { type: 'image', content: url ? `**Title card generated for "${title}":**` : 'Title card generation failed.', artifactUrl: url || undefined };
+  }
+
+  if (toolName === 'shot_list') {
+    const { title, synopsis, scenes } = params as { title: string; synopsis: string; scenes?: number };
+    const sceneCount = Math.min(scenes || 5, 10);
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({
+        model: 'grok-3-mini',
+        messages: [
+          { role: 'system', content: 'You are a veteran cinematographer planning shots for a feature film. Be precise and technical.' },
+          { role: 'user', content: `Create a detailed shot list for ${sceneCount} key scenes of "${title}". Synopsis: ${synopsis}. For each scene include: scene number, location (INT/EXT), time of day, camera setup (lens mm, movement, angle), lighting notes, and a one-line description of the shot's emotional purpose.` },
+        ],
+        max_tokens: 600,
+        temperature: 0.8,
+      }),
+    });
+    const data = await res.json();
+    const shotList = data.choices?.[0]?.message?.content || 'Shot list generation failed.';
+    return { type: 'text', content: shotList };
+  }
+
+  if (toolName === 'score_brief') {
+    const { title, mood, duration } = params as { title: string; mood?: string; duration?: string };
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${xaiApiKey}` },
+      body: JSON.stringify({
+        model: 'grok-3-mini',
+        messages: [
+          { role: 'system', content: 'You are an acclaimed film composer writing a musical brief for a scoring session. Be specific about instrumentation, tempo, key, and emotional arc.' },
+          { role: 'user', content: `Write a scoring brief for the film "${title}". Mood: ${mood || 'dramatic and atmospheric'}. Duration: ${duration || '60 seconds'}. Include: key signature, tempo (BPM), primary instruments, emotional arc across the duration, reference influences (real film scores), and any specific motifs or leitmotifs to establish.` },
+        ],
+        max_tokens: 500,
+        temperature: 0.8,
+      }),
+    });
+    const data = await res.json();
+    const brief = data.choices?.[0]?.message?.content || 'Score brief generation failed.';
+    return { type: 'text', content: brief };
+  }
+
+  return null;
+}
 
 /* ─── Handler ─── */
 
@@ -376,7 +544,7 @@ export default async function handler(
       body: JSON.stringify({
         model: 'grok-3-mini',
         messages: grokMessages,
-        max_tokens: 400,
+        max_tokens: 600,
         temperature: 0.8,
       }),
     });
@@ -406,6 +574,26 @@ export default async function handler(
     return;
   }
 
+  // ── Tool invocation pass ──
+  let toolResult: { type: 'text' | 'image' | 'audio'; content: string; artifactUrl?: string } | undefined;
+  const toolCall = parseToolCall(assistantContent);
+
+  if (toolCall) {
+    assistantContent = toolCall.cleanText;
+    try {
+      const result = await executeToolCall(toolCall.toolName, toolCall.params, xaiApiKey);
+      if (result) {
+        toolResult = result;
+      }
+    } catch (err) {
+      console.error('[agent/chat] Tool execution failed:', err);
+      toolResult = {
+        type: 'text',
+        content: `Tool "${toolCall.toolName}" failed to execute. Try again or rephrase your request.`,
+      };
+    }
+  }
+
   // ── Save messages to DB ──
   // Save user message
   await supa.from('bct_messages').insert({
@@ -416,11 +604,11 @@ export default async function handler(
     tokens_used: null,
   });
 
-  // Save assistant response
+  // Save assistant response (cleaned of tool block)
   await supa.from('bct_messages').insert({
     conversation_id: conversationId,
     role: 'assistant',
-    content: assistantContent,
+    content: assistantContent + (toolResult ? `\n\n[tool:${toolCall?.toolName}]` : ''),
     model: 'grok-3-mini',
     tokens_used: tokensUsed,
   });
@@ -438,5 +626,6 @@ export default async function handler(
       role: 'assistant',
       content: assistantContent,
     },
+    ...(toolResult ? { toolResult } : {}),
   });
 }

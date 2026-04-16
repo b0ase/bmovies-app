@@ -754,6 +754,12 @@ function FilmCard({ film }: { film: Film }) {
           >
             Deck
           </a>
+          <a
+            href={`/production-room.html?id=${encodeURIComponent(film.id)}`}
+            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white transition-colors"
+          >
+            Production Room
+          </a>
         </div>
       </div>
     </div>
@@ -1362,8 +1368,20 @@ function AgentsTab({ user, accountId }: { user: User | null; accountId: string |
 
 /* ───────── Chat tab (Grand Orchestrator) ───────── */
 
+interface ToolResult {
+  type: 'text' | 'image' | 'audio'
+  content: string
+  artifactUrl?: string
+}
+
+interface ChatMessage {
+  role: string
+  content: string
+  toolResult?: ToolResult
+}
+
 function ChatTab({ user, accountId }: { user: User; accountId: string | null }) {
-  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -1395,7 +1413,14 @@ function ChatTab({ user, accountId }: { user: User; accountId: string | null }) 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Chat failed')
       setConversationId(data.conversationId)
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.message.content }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: data.message.content,
+          toolResult: data.toolResult || undefined,
+        },
+      ])
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -1463,23 +1488,50 @@ function ChatTab({ user, accountId }: { user: User; accountId: string | null }) 
           </div>
         )}
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+          <div key={i}>
             <div
-              className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-[#E50914] text-white'
-                  : 'bg-[#1a1a1a] text-[#ccc] border border-[#222]'
-              }`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              {msg.content.split('\n').map((line, j) => (
-                <p key={j} className={j > 0 ? 'mt-2' : ''}>
-                  {line}
-                </p>
-              ))}
+              <div
+                className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-[#E50914] text-white'
+                    : 'bg-[#1a1a1a] text-[#ccc] border border-[#222]'
+                }`}
+              >
+                {msg.content.split('\n').map((line, j) => (
+                  <p key={j} className={j > 0 ? 'mt-2' : ''}>
+                    {line}
+                  </p>
+                ))}
+              </div>
             </div>
+            {msg.toolResult && (
+              <div className="flex justify-start mt-2">
+                <div className="max-w-[85%]">
+                  {msg.toolResult.type === 'image' && msg.toolResult.artifactUrl && (
+                    <div className="border border-[#222] bg-[#050505]">
+                      <img
+                        src={msg.toolResult.artifactUrl}
+                        alt="Generated artifact"
+                        className="w-full max-w-md"
+                        loading="lazy"
+                      />
+                      {msg.toolResult.content && (
+                        <div className="px-3 py-2 text-xs text-[#888]">
+                          {msg.toolResult.content}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {msg.toolResult.type === 'text' && (
+                    <pre className="bg-[#111] border border-[#1a1a1a] px-4 py-3 text-xs text-[#aaa] leading-relaxed font-mono whitespace-pre-wrap overflow-x-auto max-h-[400px] overflow-y-auto">
+                      {msg.toolResult.content}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {loading && (

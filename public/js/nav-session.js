@@ -70,8 +70,9 @@ const ACTIVE_ALIASES = {
   'agents.html':      'studios.html',
   // jobboard.html now has its own top-level Jobs link — no alias needed.
   'leaderboard.html': 'studios.html',
-  'production.html':  'productions.html',
-  'deck.html':        'productions.html',
+  'production.html':       'productions.html',
+  'production-room.html':  'productions.html',
+  'deck.html':             'productions.html',
 };
 
 function currentPageFile() {
