@@ -305,38 +305,55 @@ function updateNav() {
   let signOutBtn = nav?.querySelector('.signout-btn');
 
   if (isSessionValid()) {
-    link.textContent = 'Account';
+    link.textContent = 'Account ▾';
     link.href = '/account';
     link.classList.add('signed-in');
-    // Add Sign Out button if not already there
-    if (nav && !signOutBtn) {
-      signOutBtn = document.createElement('button');
-      signOutBtn.className = 'signout-btn';
-      signOutBtn.textContent = 'Sign Out';
-      signOutBtn.style.cssText =
-        'background:none;border:1px solid #333;color:#888;font-size:0.65rem;' +
-        'font-weight:700;letter-spacing:0.08em;text-transform:uppercase;' +
-        'padding:0.35rem 0.7rem;cursor:pointer;margin-left:0.4rem;';
-      signOutBtn.addEventListener('mouseover', () => {
-        signOutBtn.style.borderColor = '#E50914';
-        signOutBtn.style.color = '#fff';
-      });
-      signOutBtn.addEventListener('mouseout', () => {
-        signOutBtn.style.borderColor = '#333';
-        signOutBtn.style.color = '#888';
-      });
-      signOutBtn.addEventListener('click', () => {
+    // Build a dropdown with Account + Sign Out in one menu
+    let dropdown = nav?.querySelector('.account-dropdown');
+    if (nav && !dropdown) {
+      dropdown = document.createElement('div');
+      dropdown.className = 'account-dropdown';
+      dropdown.style.cssText =
+        'display:none;position:absolute;top:100%;right:0;background:#111;' +
+        'border:1px solid #222;min-width:140px;z-index:1000;padding:0.3rem 0;';
+      dropdown.innerHTML = `
+        <a href="/account" style="display:block;padding:0.5rem 1rem;color:#ccc;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;">Account</a>
+        <button class="signout-trigger" style="display:block;width:100%;text-align:left;padding:0.5rem 1rem;background:none;border:none;color:#888;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;">Sign Out</button>
+      `;
+      dropdown.querySelector('.signout-trigger').addEventListener('click', () => {
         localStorage.removeItem('bmovies-auth');
         window.dispatchEvent(new Event('bmovies:auth-changed'));
         window.location.href = '/';
       });
-      nav.insertBefore(signOutBtn, link.nextSibling);
+      // Hover styles
+      dropdown.querySelectorAll('a, button').forEach(el => {
+        el.addEventListener('mouseover', () => { el.style.color = '#fff'; el.style.background = '#1a1a1a'; });
+        el.addEventListener('mouseout', () => { el.style.color = el.tagName === 'BUTTON' ? '#888' : '#ccc'; el.style.background = 'none'; });
+      });
+      // Position relative to the CTA
+      link.style.position = 'relative';
+      link.appendChild(dropdown);
+      // Toggle on click
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isOpen = dropdown.style.display === 'block';
+        dropdown.style.display = isOpen ? 'none' : 'block';
+      });
+      // Close on click outside
+      document.addEventListener('click', (e) => {
+        if (!link.contains(e.target)) dropdown.style.display = 'none';
+      });
     }
   } else {
     link.textContent = 'Sign In';
     link.href = '/login';
     link.classList.remove('signed-in');
-    if (signOutBtn) signOutBtn.remove();
+    const dropdown = nav?.querySelector('.account-dropdown');
+    if (dropdown) dropdown.remove();
+    link.style.position = '';
+    // Remove old separate signout btn if lingering from previous version
+    const oldBtn = nav?.querySelector('.signout-btn');
+    if (oldBtn) oldBtn.remove();
   }
 }
 
