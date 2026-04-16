@@ -143,17 +143,36 @@ export default async function handler(
   const customerEmail = session.customer_email || '';
 
   // Find or create the user's bct_accounts row.
+  // If an auth.users row exists for this email, link auth_user_id so
+  // the account page can find the user's films after Google sign-in.
   async function resolveAccountId(email: string): Promise<string | null> {
     if (!email) return null;
+
+    // Look up matching auth.users row by email via DB function
+    const { data: authRow } = await supabase
+      .rpc('get_auth_user_by_email', { lookup_email: email })
+      .maybeSingle() as { data: { id: string } | null }
+    const authUserId: string | null = authRow?.id ?? null
+
     const { data: existing } = await supabase
       .from('bct_accounts')
-      .select('id')
+      .select('id, auth_user_id')
       .eq('email', email)
       .maybeSingle();
-    if (existing) return existing.id;
+    if (existing) {
+      // Backfill auth_user_id if missing
+      if (!existing.auth_user_id && authUserId) {
+        await supabase.from('bct_accounts').update({ auth_user_id: authUserId }).eq('id', existing.id)
+      }
+      return existing.id;
+    }
     const { data: created } = await supabase
       .from('bct_accounts')
-      .insert({ email, display_name: email.split('@')[0] })
+      .insert({
+        email,
+        display_name: email.split('@')[0],
+        ...(authUserId ? { auth_user_id: authUserId } : {}),
+      })
       .select('id')
       .single();
     return created?.id ?? null;
