@@ -47,13 +47,13 @@ type Tab =
   | 'chat'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'my-films',        label: 'My Films' },
-  { id: 'studio',          label: 'Studio' },
+  { id: 'chat',            label: 'Agent' },
   { id: 'agents',          label: 'Agents' },
   { id: 'cap-tables',      label: 'Cap Tables' },
+  { id: 'my-films',        label: 'Films' },
   { id: 'investor-packs',  label: 'Investor Packs' },
+  { id: 'studio',          label: 'Studio' },
   { id: 'wallet',          label: 'Wallet' },
-  { id: 'chat',            label: 'Agent' },
 ]
 
 /** USD price per tier — the four commission tiers on /commission.html */
@@ -194,7 +194,7 @@ function AccountContent() {
   const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('my-films')
+  const [activeTab, setActiveTab] = useState<Tab>('chat')
   const [films, setFilms] = useState<Film[]>([])
   const [filmsLoading, setFilmsLoading] = useState(false)
   const [filmsError, setFilmsError] = useState<string | null>(null)
