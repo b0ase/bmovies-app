@@ -1402,10 +1402,10 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             <button
               onClick={async () => {
                 try {
-                  const { connectWallet } = await import('@/lib/brc100')
-                  const status = await connectWallet()
+                  const { connectBsvDesktop } = await import('@/lib/brc100')
+                  const status = await connectBsvDesktop()
                   if (status.connected) window.location.reload()
-                  else alert('BSV Desktop not detected. Install it from github.com/bsv-blockchain/bsv-desktop/releases/latest')
+                  else alert(status.error || 'BSV Desktop not detected. Make sure it is running and unlocked.')
                 } catch { alert('Could not connect BSV Desktop') }
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#E50914] transition-colors cursor-pointer"
@@ -1417,10 +1417,10 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             <button
               onClick={async () => {
                 try {
-                  const { connectWallet } = await import('@/lib/brc100')
-                  const status = await connectWallet()
+                  const { connectYoursWallet } = await import('@/lib/brc100')
+                  const status = await connectYoursWallet()
                   if (status.connected) window.location.reload()
-                  else alert('Yours Wallet not detected. Install the browser extension from yours.org')
+                  else alert(status.error || 'Yours Wallet not detected. Install the browser extension from yours.org')
                 } catch { alert('Could not connect Yours Wallet') }
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#6366F1] transition-colors cursor-pointer"

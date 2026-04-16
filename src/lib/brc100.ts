@@ -187,6 +187,27 @@ export async function connectWallet(): Promise<WalletStatus> {
   return walletStatus()
 }
 
+/** Connect ONLY BSV Desktop / Metanet Client. Does NOT fall back to Yours. */
+export async function connectBsvDesktop(): Promise<WalletStatus> {
+  const metanet = await detectMetanet()
+  if (metanet) {
+    _client = metanet.client
+    _address = metanet.address
+    _publicKey = metanet.publicKey
+    _provider = 'metanet'
+    return walletStatus()
+  }
+  return walletStatus(new Error('BSV Desktop not detected. Make sure it is running and unlocked.'))
+}
+
+/** Connect ONLY Yours Wallet. Does NOT fall back to Metanet. */
+export async function connectYoursWallet(): Promise<WalletStatus> {
+  if (detectYoursWallet()) {
+    return connectYours()
+  }
+  return walletStatus(new Error('Yours Wallet not detected. Install the browser extension from yours.org'))
+}
+
 async function connectYours(): Promise<WalletStatus> {
   try {
     const yours = window.yours
