@@ -46,6 +46,7 @@ const NAV_LINKS = [
   { href: 'x402.html',        label: 'Protocol' },
   { href: 'studios.html',     label: 'Studios' },
   { href: 'watch.html',       label: 'Watch' },
+  { href: 'judges.html',      label: 'Judges' },
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
   // so it was pulled to avoid two adjacent links pointing at the same URL.
