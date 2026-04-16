@@ -49,7 +49,7 @@ interface ProjectOption {
 
 /* ─── Navigation level type ─── */
 
-type NavLevel = 'account' | 'project' | 'tools'
+type NavLevel = 'account' | 'project'
 
 /* ─── Tab definitions ─── */
 
@@ -59,20 +59,18 @@ const ACCOUNT_TABS = [
   { id: 'coupons', label: 'Coupons' },
 ] as const
 
-const PROJECT_TABS = [
-  { id: 'overview',  label: 'Overview' },
-  { id: 'captable',  label: 'Cap Table' },
-  { id: 'crew',      label: 'Crew' },
-  { id: 'deck',      label: 'Deck' },
-  { id: 'room',      label: 'Production Room' },
-] as const
-
-const TOOL_TABS = [
-  { id: 'script',      label: 'Script' },
-  { id: 'storyboard',  label: 'Storyboard' },
-  { id: 'editor',      label: 'Editor' },
-  { id: 'titles',      label: 'Titles' },
-  { id: 'score',       label: 'Score' },
+// All project-level tabs in one row (merged from old PROJECT_TABS + TOOL_TABS)
+const PROJECT_ALL_TABS = [
+  { id: 'overview',    label: 'Overview',   type: 'tab' as const },
+  { id: 'captable',    label: 'Cap Table',  type: 'tab' as const },
+  { id: 'crew',        label: 'Crew',       type: 'tab' as const },
+  { id: 'deck',        label: 'Deck',       type: 'tab' as const },
+  { id: 'room',        label: 'Room',       type: 'tab' as const },
+  { id: 'script',      label: 'Script',     type: 'tool' as const },
+  { id: 'storyboard',  label: 'Storyboard', type: 'tool' as const },
+  { id: 'editor',      label: 'Editor',     type: 'tool' as const },
+  { id: 'titles',      label: 'Titles',     type: 'tool' as const },
+  { id: 'score',       label: 'Score',      type: 'tool' as const },
 ] as const
 
 /* ─── Component ─── */
@@ -92,15 +90,17 @@ export function AccountToolbar() {
   const tabParam = searchParams.get('tab')
   const sectionParam = searchParams.get('section')
 
+  // Two levels only: account or project (project includes tools)
   const navLevel: NavLevel =
-    toolParam && projectId ? 'tools' :
     projectId ? 'project' :
     'account'
 
   // Active tab/tool/section
   const activeSection = sectionParam || 'studio'
   const activeTab = tabParam || 'overview'
-  const activeTool = toolParam || 'script'
+  const activeTool = toolParam || ''
+  // The active item in the merged project row
+  const activeProjectItem = activeTool || activeTab
 
   // Active project object
   const activeProject = projectId ? projects.find(p => p.id === projectId) || null : null
@@ -199,8 +199,8 @@ export function AccountToolbar() {
   const handleProjectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value
     if (!id) return
-    // Stay at current level when switching projects
-    if (navLevel === 'tools' && toolParam) {
+    // Stay at current tab/tool when switching projects
+    if (toolParam) {
       navigateTo(`/account?project=${id}&tool=${toolParam}`)
     } else {
       navigateTo(`/account?project=${id}&tab=${activeTab}`)
@@ -209,6 +209,48 @@ export function AccountToolbar() {
 
   // ─── Don't render during SSR or when signed out ───
   if (!mounted || !signedIn) return null
+
+  const tabStyle = (isActive: boolean) => ({
+    padding: '0.85rem 1.4rem',
+    fontFamily: 'var(--font-bebas), "Bebas Neue", "Inter", -apple-system, sans-serif',
+    fontSize: '1.1rem',
+    fontWeight: 400,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase' as const,
+    color: isActive ? '#fff' : '#555',
+    background: isActive ? 'rgba(229, 9, 20, 0.1)' : 'transparent',
+    border: 'none',
+    borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
+    whiteSpace: 'nowrap' as const,
+    cursor: 'pointer',
+    transition: 'color 150ms, background 150ms',
+  })
+
+  const subTabStyle = (isActive: boolean) => ({
+    padding: '0.5rem 0.7rem',
+    fontFamily: "'Inter', -apple-system, sans-serif",
+    fontSize: '0.6rem',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase' as const,
+    color: isActive ? '#fff' : '#555',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+    whiteSpace: 'nowrap' as const,
+    cursor: 'pointer',
+    transition: 'color 150ms',
+  })
+
+  const rowStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 max(1.5rem, calc((100% - 1400px) / 2))',
+    overflowX: 'auto' as const,
+    WebkitOverflowScrolling: 'touch' as const,
+    scrollbarWidth: 'none' as const,
+    gap: '0',
+  }
 
   return (
     <div
@@ -221,200 +263,31 @@ export function AccountToolbar() {
         width: '100%',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 max(1.5rem, calc((100% - 1400px) / 2))',
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-          gap: '0',
-        }}
-      >
-        {/* ═══ ACCOUNT LEVEL ═══ */}
-        {navLevel === 'account' && (
-          <>
-            {ACCOUNT_TABS.map((tab) => {
-              const isActive =
-                (tab.id === 'studio' && !sectionParam) ||
-                activeSection === tab.id
-              const href =
-                tab.id === 'studio'
-                  ? '/account'
-                  : `/account?section=${tab.id}`
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => navigateTo(href)}
-                  style={{
-                    padding: '0.85rem 1.4rem',
-                    fontFamily: 'var(--font-bebas), "Bebas Neue", "Inter", -apple-system, sans-serif',
-                    fontSize: '1.1rem',
-                    fontWeight: 400,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase' as const,
-                    color: isActive ? '#fff' : '#555',
-                    background: isActive ? 'rgba(229, 9, 20, 0.1)' : 'transparent',
-                    border: 'none',
-                    borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
-                    whiteSpace: 'nowrap' as const,
-                    cursor: 'pointer',
-                    transition: 'color 150ms, background 150ms',
-                  }}
-                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#ccc' }}
-                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = '#555' }}
-                >
-                  {tab.label}
-                </button>
-              )
-            })}
-          </>
-        )}
-
-        {/* ═══ PROJECT LEVEL ═══ */}
-        {navLevel === 'project' && (
-          <>
-            {/* Back button */}
+      {/* ═══ ROW 1: Account tabs — always visible ═══ */}
+      <div style={rowStyle}>
+        {ACCOUNT_TABS.map((tab) => {
+          const isActive = navLevel === 'account' && (
+            (tab.id === 'studio' && !sectionParam) ||
+            activeSection === tab.id
+          )
+          const href =
+            tab.id === 'studio'
+              ? '/account'
+              : `/account?section=${tab.id}`
+          return (
             <button
-              onClick={() => navigateTo('/account')}
-              style={{
-                padding: '0.65rem 0.75rem',
-                fontFamily: "'Inter', -apple-system, sans-serif",
-                fontSize: '0.6rem',
-                fontWeight: 600,
-                color: '#888',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap' as const,
-                transition: 'color 150ms',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+              key={tab.id}
+              onClick={() => navigateTo(href)}
+              style={tabStyle(isActive)}
+              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#ccc' }}
+              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = isActive ? '#fff' : '#555' }}
             >
-              ← Studio
+              {tab.label}
             </button>
+          )
+        })}
 
-            {/* Separator */}
-            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
-
-            {/* Project selector */}
-            <ProjectSelector
-              projects={projects}
-              loading={projectsLoading}
-              activeProjectId={projectId}
-              onChange={handleProjectChange}
-            />
-
-            {/* Separator */}
-            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
-
-            {/* Project tabs */}
-            {PROJECT_TABS.map((tab) => {
-              const isActive = activeTab === tab.id
-              // Cap Table links directly to brochure page — no in-app duplicate
-              const isCaptable = tab.id === 'captable'
-              const href = isCaptable
-                ? `/captable.html?id=${projectId}`
-                : `/account?project=${projectId}&tab=${tab.id}`
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => isCaptable ? (window.location.href = href) : navigateTo(href)}
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    fontFamily: "'Inter', -apple-system, sans-serif",
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase' as const,
-                    color: isActive ? '#fff' : '#666',
-                    background: 'transparent',
-                    border: 'none',
-                    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
-                    whiteSpace: 'nowrap' as const,
-                    cursor: 'pointer',
-                    transition: 'color 150ms',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              )
-            })}
-          </>
-        )}
-
-        {/* ═══ TOOLS LEVEL ═══ */}
-        {navLevel === 'tools' && (
-          <>
-            {/* Back button */}
-            <button
-              onClick={() => navigateTo(`/account?project=${projectId}&tab=room`)}
-              style={{
-                padding: '0.65rem 0.75rem',
-                fontFamily: "'Inter', -apple-system, sans-serif",
-                fontSize: '0.6rem',
-                fontWeight: 600,
-                color: '#888',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap' as const,
-                transition: 'color 150ms',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
-            >
-              ← Project
-            </button>
-
-            {/* Separator */}
-            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
-
-            {/* Project selector */}
-            <ProjectSelector
-              projects={projects}
-              loading={projectsLoading}
-              activeProjectId={projectId}
-              onChange={handleProjectChange}
-            />
-
-            {/* Separator */}
-            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
-
-            {/* Tool tabs */}
-            {TOOL_TABS.map((tab) => {
-              const isActive = activeTool === tab.id
-              const href = `/account?project=${projectId}&tool=${tab.id}`
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => navigateTo(href)}
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    fontFamily: "'Inter', -apple-system, sans-serif",
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase' as const,
-                    color: isActive ? '#fff' : '#666',
-                    background: 'transparent',
-                    border: 'none',
-                    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
-                    whiteSpace: 'nowrap' as const,
-                    cursor: 'pointer',
-                    transition: 'color 150ms',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              )
-            })}
-          </>
-        )}
-
-        {/* Sign out — always visible, pushed to right */}
+        {/* Sign out — pushed right */}
         <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
           <button
             onClick={() => {
@@ -442,6 +315,52 @@ export function AccountToolbar() {
           </button>
         </div>
       </div>
+
+      {/* ═══ ROW 2: Project tabs — only when inside a project ═══ */}
+      {projectId && (
+        <div style={{ ...rowStyle, borderTop: '1px solid #111' }}>
+          {/* Back + project selector */}
+          <button
+            onClick={() => navigateTo('/account')}
+            style={{ ...subTabStyle(false), color: '#888', fontSize: '0.55rem' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+          >
+            ← Studio
+          </button>
+          <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
+          <ProjectSelector
+            projects={projects}
+            loading={projectsLoading}
+            activeProjectId={projectId}
+            onChange={handleProjectChange}
+          />
+          <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
+
+          {/* All project + tool tabs in one row */}
+          {PROJECT_ALL_TABS.map((tab) => {
+            const isActive = tab.type === 'tool'
+              ? activeTool === tab.id
+              : (!activeTool && activeTab === tab.id)
+            const isCaptable = tab.id === 'captable'
+            const href = tab.type === 'tool'
+              ? `/account?project=${projectId}&tool=${tab.id}`
+              : isCaptable
+                ? `/captable.html?id=${projectId}`
+                : `/account?project=${projectId}&tab=${tab.id}`
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => isCaptable ? (window.location.href = href) : navigateTo(href)}
+                style={subTabStyle(isActive)}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
