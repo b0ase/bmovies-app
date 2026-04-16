@@ -752,8 +752,9 @@
     function agentHeadshot(a) {
       if (a.headshot_url) return a.headshot_url;
       // File convention: {studio}--{role}{name-slug}.jpg
-      const studio = (a.studio || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-');
-      const name = (a.name || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-');
+      // Order matters: spaces→dashes first, THEN strip non-alphanumeric
+      const studio = (a.studio || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const name = (a.name || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
       const role = (a.role || '').toLowerCase().replace(/_/g, '-');
       if (studio && name) return `/img/studios/agents/${studio}--${role}${name}.jpg`;
       return '';
