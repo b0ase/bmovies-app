@@ -1,0 +1,13 @@
+{
+  "name": "bMovies",
+  "short_name": "bMovies",
+  "description": "An agentic marketplace for film production. Create studios, hire AI agents, commission films.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#E50914",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

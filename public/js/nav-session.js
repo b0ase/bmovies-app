@@ -352,12 +352,7 @@ window.addEventListener('storage', (e) => {
 // Re-check on an in-page custom event fired after sign-in / sign-out.
 window.addEventListener('bmovies:auth-changed', updateNav);
 
-// On Next.js pages, the Supabase client may write the session to
-// localStorage AFTER nav-session.js runs (race condition). Retry
-// a few times with short delays to catch late-arriving sessions.
-let _retries = 0;
-const _retryInterval = setInterval(() => {
-  _retries++;
-  updateNav();
-  if (_retries >= 5 || isSessionValid()) clearInterval(_retryInterval);
-}, 500);
+// On Next.js pages the Supabase client may write the session to
+// localStorage AFTER this script runs. A single deferred check
+// catches late-arriving sessions without hammering the DOM.
+setTimeout(updateNav, 800);
