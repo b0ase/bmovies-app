@@ -163,13 +163,7 @@
       gap: 1.2rem;
     }
     @media (max-width: 1100px) { .agent-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 640px)  {
-      .agent-grid { grid-template-columns: 1fr; }
-      /* Stack film detail view on mobile */
-      #tab-content > div > div[style*="grid-template-columns"] {
-        grid-template-columns: 1fr !important;
-      }
-    }
+    @media (max-width: 640px)  { .agent-grid { grid-template-columns: 1fr; } }
 
     .agent-card {
       border: 1px solid #1a1a1a;
@@ -694,8 +688,8 @@
       </p>
     </div>
 
-    <!-- Stats strip (always visible) -->
-    <div class="stats-strip" id="stats-strip">
+    <!-- Stats strip (hidden — kept in DOM for internal reference) -->
+    <div class="stats-strip" id="stats-strip" style="display:none;">
       <div class="stat"><div class="label">Agents</div><div class="value" id="stat-agents">--</div><div class="sub">available</div></div>
       <div class="stat"><div class="label">Studios</div><div class="value" id="stat-studios">--</div><div class="sub">registered</div></div>
       <div class="stat"><div class="label">Films</div><div class="value" id="stat-films">--</div><div class="sub">produced</div></div>
@@ -704,10 +698,10 @@
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="active" data-tab="agents">Hire Agents</button>
+      <button class="active" data-tab="films">Movies</button>
       <button data-tab="studios">Studios</button>
-      <button data-tab="films">Films</button>
-      <button data-tab="platform">Platform</button>
+      <button data-tab="directors">Directors</button>
+      <button data-tab="writers">Writers</button>
       <button data-tab="stars">Stars</button>
     </div>
 
@@ -730,7 +724,7 @@
         <a href="privacy.html">Privacy</a>
         <a href="terms.html">Terms</a>
       </div>
-      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+      <div class="footer-copy">&copy; 2026 bMovies. All rights reserved<a href="boovies.html" style="color:inherit;text-decoration:none;cursor:text" title="." aria-hidden="true">.</a></div>
     </div>
   </footer>
 
@@ -768,6 +762,7 @@
       'echoes-beneath-glacier-9', 'the-cartographer-of-empty-rooms',
       'pale-horse-iron-sky', 'sub-orbital-lullaby',
       'glasshouse', 'the-last-transmission',
+      'crypto-whistleblow',
     ]);
     const localPosterFor = (title) => {
       const slug = slugify(title);
@@ -815,7 +810,7 @@
     let studios = [];
     let films = [];
     let platformConfig = null;
-    let currentTab = 'agents';
+    let currentTab = 'films';
     let activeRole = 'all';
     let activeSort = 'reputation';
 
@@ -833,6 +828,7 @@
       const { data, error } = await supabase
         .from('bct_studios')
         .select('*')
+        .eq('is_public', true)
         .order('founded_year', { ascending: true });
       if (error) { console.error('studios:', error); return []; }
       return data || [];
@@ -993,197 +989,58 @@
         if (sName) agentCountByStudio[sName] = (agentCountByStudio[sName] || 0) + 1;
       }
 
-      let html = `<div class="studio-grid">`;
-      for (const s of studios) {
+      let html = `<table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Studio</th>
+          <th class="center">Ticker</th>
+          <th class="center hide-mobile">Agents</th>
+          <th class="center hide-mobile">Founded</th>
+          <th class="center">Type</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
+
+      for (let i = 0; i < studios.length; i++) {
+        const s = studios[i];
         const hasToken = isHexTxid(s.token_mint_txid);
         const investUrl = hasToken ? `https://1sat.market/market/bsv21/${s.token_mint_txid}_0` : '#';
-        const agentCount = agentCountByStudio[s.name] || 0;
+        const agentCount = agentCountByStudio[s.name] || agentCountByStudio[s.id] || 0;
         const isFounded = !s.owner_account_id;
 
         html += `
-        <div class="studio-card">
-          <div class="card-top">
-            ${s.logo_url ? `<img class="studio-logo" src="${esc(s.logo_url)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : '<div class="studio-logo"></div>'}
-            <div>
-              <div class="studio-name-lg">${esc(s.name)}</div>
-              ${s.aesthetic ? `<div class="studio-aesthetic">${esc(s.aesthetic)}</div>` : ''}
-            </div>
-          </div>
-          ${s.bio ? `<div class="studio-bio">${esc(s.bio)}</div>` : ''}
-          <span class="owner-badge ${isFounded ? 'founded' : 'user'}">${isFounded ? 'Founded' : 'User studio'}</span>
-          <div class="studio-meta">
-            <div class="meta-item">
-              <span class="m-label">Agents</span>
-              <span class="m-value">${agentCount}</span>
-            </div>
-            ${s.founded_year ? `<div class="meta-item">
-              <span class="m-label">Founded</span>
-              <span class="m-value">${esc(s.founded_year)}</span>
-            </div>` : ''}
-            ${s.token_ticker ? `<div class="meta-item">
-              <span class="m-label">Ticker</span>
-              <span class="m-value" style="color:#E50914;">$${esc(s.token_ticker)}</span>
-            </div>` : ''}
-          </div>
-          <div class="card-actions">
-            <a class="btn" href="studio.html?id=${encodeURIComponent(s.id)}">View</a>
-            ${hasToken
-              ? `<a class="btn primary" href="${investUrl}" target="_blank" rel="noopener">Invest</a>`
-              : `<span class="btn disabled">Coming soon</span>`}
-          </div>
-        </div>`;
-      }
-      html += `</div>`;
-      container.innerHTML = html;
-    }
-
-    // --- Order book cache ---
-    const orderBookCache = {};
-
-    async function fetchOrderBook(tokenId) {
-      if (orderBookCache[tokenId]) return orderBookCache[tokenId];
-      try {
-        const res = await fetch(`https://ordinals.gorillapool.io/api/bsv20/market?id=${tokenId}&listing=true&sort=pricePer&dir=asc&limit=20`);
-        if (!res.ok) return [];
-        const data = await res.json();
-        orderBookCache[tokenId] = data;
-        return data;
-      } catch { return []; }
-    }
-
-    function formatSats(sats) {
-      const n = Number(sats);
-      if (n >= 100_000_000) return (n / 100_000_000).toFixed(4) + ' BSV';
-      if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M sats';
-      if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K sats';
-      return n + ' sats';
-    }
-
-    function formatTokenAmt(raw, dec) {
-      const d = Number(dec) || 0;
-      const n = Number(raw) / Math.pow(10, d);
-      return n.toLocaleString(undefined, { maximumFractionDigits: d > 4 ? 4 : d });
-    }
-
-    function formatPricePer(pricePer, dec) {
-      const d = Number(dec) || 0;
-      const satsPerUnit = Number(pricePer) / Math.pow(10, d);
-      return formatSats(satsPerUnit);
-    }
-
-    // --- Film detail view (order book) ---
-    let selectedFilm = null;
-
-    async function showFilmOrderBook(filmId) {
-      const f = films.find(x => x.id === filmId);
-      if (!f || !isHexTxid(f.token_mint_txid)) return;
-      selectedFilm = filmId;
-
-      const container = document.getElementById('tab-content');
-      const tokenId = `${f.token_mint_txid}_0`;
-
-      container.innerHTML = `
-        <div style="margin-bottom:1.5rem;">
-          <button class="btn" id="back-to-films" style="font-size:0.65rem;">&larr; Back to all films</button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;align-items:start;">
-          <div>
-            ${f.poster ? `<img src="${esc(f.poster)}" alt="${esc(f.title)}" style="width:100%;border:1px solid #222;" onerror="this.style.display='none'" />` : ''}
-            <div style="margin-top:1rem;">
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#fff;line-height:1;">${esc(f.title)}</div>
-              <div style="margin-top:0.4rem;"><span class="ticker-pill">$${esc(f.token_ticker || '--')}</span></div>
-              <div style="font-size:0.75rem;color:#888;margin-top:0.6rem;">${esc(f.status || '')} &middot; ${esc(TIER_PRICE[f.tier] || f.tier || '')}</div>
-              <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-                ${f.id ? `<a class="btn" href="film.html?id=${encodeURIComponent(f.id)}">Film page</a>` : ''}
-                <a class="btn" href="captable.html?id=${encodeURIComponent(f.id)}" target="_blank">Cap table</a>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:0.6rem;color:#E50914;text-transform:uppercase;letter-spacing:0.15em;font-weight:900;">Order book</div>
-            <div style="font-size:0.65rem;color:#555;margin-top:0.3rem;">
-              Self-custodial trading &middot; settlements via 1sat protocol &middot; connect your wallet to buy
-            </div>
-            <div id="order-book-content" style="margin-top:1rem;">
-              <div class="empty" style="padding:2rem;">Loading order book...</div>
-            </div>
-          </div>
-        </div>`;
-
-      document.getElementById('back-to-films').addEventListener('click', () => {
-        selectedFilm = null;
-        renderFilmsTab();
-      });
-
-      // Fetch order book
-      const listings = await fetchOrderBook(tokenId);
-      const obContainer = document.getElementById('order-book-content');
-
-      if (!listings.length) {
-        obContainer.innerHTML = `
-          <div style="border:1px solid #1a1a1a;padding:2rem;text-align:center;">
-            <div style="font-size:0.85rem;color:#888;">No active listings</div>
-            <div style="font-size:0.7rem;color:#555;margin-top:0.5rem;">
-              This token has no sell orders on the order book. The commissioner may not have listed shares yet.
-            </div>
-          </div>`;
-        return;
-      }
-
-      // Floor price
-      const floor = listings[0];
-      const floorPrice = formatPricePer(floor.pricePer, floor.dec);
-
-      let obHtml = `
-        <div style="display:flex;gap:1rem;margin-bottom:1rem;">
-          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;">
-            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Floor price</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#2ecc40;font-weight:700;margin-top:0.2rem;">${floorPrice}</div>
-          </div>
-          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;">
-            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Active listings</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#fff;font-weight:700;margin-top:0.2rem;">${listings.length}</div>
-          </div>
-        </div>
-        <table class="market-table" style="font-size:0.75rem;">
-          <thead><tr>
-            <th>Seller</th>
-            <th class="right">Amount</th>
-            <th class="right">Price per token</th>
-            <th class="right">Total</th>
-            <th class="right"></th>
-          </tr></thead>
-          <tbody>`;
-
-      for (const l of listings) {
-        const sellerShort = l.owner ? l.owner.slice(0, 6) + '...' + l.owner.slice(-4) : '?';
-        const amt = formatTokenAmt(l.amt, l.dec);
-        const pricePer = formatPricePer(l.pricePer, l.dec);
-        const total = formatSats(l.price);
-        const buyHref = `https://1sat.market/market/bsv21/${tokenId}`;
-
-        obHtml += `
           <tr>
-            <td><span class="mono" style="font-size:0.65rem;color:#888;">${sellerShort}</span></td>
-            <td class="right" style="font-family:'JetBrains Mono',monospace;">${amt}</td>
-            <td class="right" style="font-family:'JetBrains Mono',monospace;color:#2ecc40;">${pricePer}</td>
-            <td class="right" style="font-family:'JetBrains Mono',monospace;">${total}</td>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                ${s.logo_url ? `<img class="asset-thumb" src="${esc(s.logo_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
+                <div>
+                  <div class="asset-name">${esc(s.name)}</div>
+                  <div class="asset-sub">${esc(s.aesthetic || '')}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center"><span class="ticker-pill">$${esc(s.token_ticker || '--')}</span></td>
+            <td class="center hide-mobile">${agentCount}</td>
+            <td class="center hide-mobile">${esc(s.founded_year || '')}</td>
+            <td class="center">${isFounded
+              ? '<span class="status-pill indexed">Founded</span>'
+              : '<span class="status-pill legacy">User</span>'}</td>
             <td class="right">
-              <a class="btn primary" href="${buyHref}" target="_blank" rel="noopener" style="font-size:0.55rem;padding:0.3rem 0.8rem;">Buy</a>
+              <div class="action-btns">
+                <a class="btn" href="studio.html?id=${encodeURIComponent(s.id)}">View</a>
+                ${hasToken
+                  ? `<a class="btn primary" href="${investUrl}" target="_blank" rel="noopener">Invest</a>`
+                  : `<span class="btn disabled">Coming soon</span>`}
+              </div>
             </td>
           </tr>`;
       }
-
-      obHtml += `</tbody></table>
-        <div style="font-size:0.6rem;color:#444;margin-top:0.8rem;text-align:center;">
-          Trades settle on-chain via the 1sat protocol. Connect a self-custodial wallet (Yours Wallet or 1Sat Wallet) to purchase.
-          The platform does not hold your tokens or private keys.
-        </div>`;
-
-      obContainer.innerHTML = obHtml;
+      html += `</tbody></table>`;
+      container.innerHTML = html;
     }
 
-    // Tab 3: Films
+    // Tab 3: Films (Movies)
     function renderFilmsTab() {
       const container = document.getElementById('tab-content');
 
@@ -1192,31 +1049,25 @@
         return;
       }
 
-      // Separate tradeable from non-tradeable
       const tradeable = films.filter(f => isHexTxid(f.token_mint_txid));
       const pending = films.filter(f => !isHexTxid(f.token_mint_txid));
 
-      let html = '';
-
-      // Market summary
-      if (tradeable.length) {
-        html += `<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;min-width:140px;">
-            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Tradeable films</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;color:#fff;font-weight:700;margin-top:0.2rem;">${tradeable.length}</div>
+      let html = `<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;min-width:140px;">
+          <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Tradeable</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;color:#fff;font-weight:700;margin-top:0.2rem;">${tradeable.length}</div>
+        </div>
+        <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;min-width:140px;">
+          <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">In production</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;color:#888;font-weight:700;margin-top:0.2rem;">${pending.length}</div>
+        </div>
+        <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:2;min-width:200px;">
+          <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">How it works</div>
+          <div style="font-size:0.7rem;color:#888;margin-top:0.3rem;line-height:1.4;">
+            Click any movie to see its order book. Trades settle on-chain via the 1sat protocol. Self-custodial &mdash; your keys, your tokens.
           </div>
-          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;min-width:140px;">
-            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Pending mint</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;color:#888;font-weight:700;margin-top:0.2rem;">${pending.length}</div>
-          </div>
-          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:2;min-width:200px;">
-            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">How it works</div>
-            <div style="font-size:0.7rem;color:#888;margin-top:0.3rem;line-height:1.4;">
-              Click any film to see its order book. Trades settle on-chain via the 1sat protocol. Self-custodial &mdash; your keys, your tokens.
-            </div>
-          </div>
-        </div>`;
-      }
+        </div>
+      </div>`;
 
       html += `<table class="market-table">
         <thead><tr>
@@ -1233,11 +1084,9 @@
         const f = films[i];
         const canTrade = isHexTxid(f.token_mint_txid);
         const tierPrice = TIER_PRICE[f.tier] || f.tier || '';
-
         const statusHtml = canTrade
           ? `<span class="status-pill indexed">Live</span>`
           : `<span class="status-pill legacy">Pending</span>`;
-
         const clickAttr = canTrade && f.id
           ? `style="cursor:pointer;" onclick="showFilmOrderBook('${esc(f.id)}')" title="View order book"`
           : '';
@@ -1353,67 +1202,293 @@
     function renderStarsTab() {
       const container = document.getElementById('tab-content');
 
-      const starCards = [
-        {
-          name: 'The Arnie Agent',
-          role: 'Actor / Director',
-          desc: 'Deploys an agentic version of the Terminator himself. Hires out for action choreography, one-liners, and motivational direction. Revenue from every production routes directly to the real human.',
-        },
-        {
-          name: 'The Spielberg Agent',
-          role: 'Director / Producer',
-          desc: 'The master of cinematic storytelling as an AI agent. Specializes in epic narratives, emotional arcs, and blockbuster production design. Book for feature-length films.',
-        },
-        {
-          name: 'The Hans Zimmer Agent',
-          role: 'Composer / Sound Designer',
-          desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops. This agent composes original scores for your productions in the style of the legendary composer.',
-        },
+      const stars = [
+        { name: 'The Arnie Agent',       role: 'Actor / Director',          status: 'Coming soon', desc: 'Action choreography, one-liners, and motivational direction' },
+        { name: 'The Spielberg Agent',    role: 'Director / Producer',       status: 'Coming soon', desc: 'Epic narratives, emotional arcs, and blockbuster production design' },
+        { name: 'The Hans Zimmer Agent',  role: 'Composer / Sound Designer', status: 'Coming soon', desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops' },
+        { name: 'The Tarantino Agent',    role: 'Writer / Director',         status: 'Coming soon', desc: 'Non-linear storytelling, sharp dialogue, and unforgettable scenes' },
+        { name: 'The Nolan Agent',        role: 'Director / Writer',         status: 'Coming soon', desc: 'Mind-bending narratives, IMAX-scale ambition, temporal puzzles' },
+        { name: 'The Miyazaki Agent',     role: 'Director / Animator',       status: 'Coming soon', desc: 'Hand-drawn magic, environmental themes, and Studio Ghibli wonder' },
       ];
 
       let html = `
-      <div class="stars-section">
-        <div class="stars-hero">
-          <h3>Star Agents Are Coming</h3>
-          <p>
-            Real celebrities will deploy agentic versions of themselves on this marketplace.
-            Hire them for your productions. Revenue routes to the real human.
-            Every star agent is a verifiable on-chain entity with its own BSV wallet and token.
-          </p>
-        </div>
-        <div class="stars-grid">
-          ${starCards.map(s => `
-          <div class="star-card">
-            <div class="star-name">${esc(s.name)}</div>
-            <div class="star-role">${esc(s.role)}</div>
-            <div class="star-desc">${esc(s.desc)}</div>
-            <div class="coming-soon">Coming soon</div>
-          </div>`).join('')}
-        </div>
-        <div class="notify-form">
-          <input type="email" placeholder="your@email.com" id="notify-email" />
-          <button class="btn primary" id="notify-btn">Notify me</button>
-        </div>
-      </div>`;
+        <p style="color:#888;font-size:0.8rem;margin-bottom:1.5rem;max-width:700px;">
+          Real celebrities will deploy agentic versions of themselves on bMovies.
+          Hire them for your productions. Revenue routes to the real human.
+        </p>
+        <table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Star Agent</th>
+          <th class="center">Role</th>
+          <th class="center hide-mobile">Speciality</th>
+          <th class="center">Status</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
 
-      container.innerHTML = html;
-
-      // Bind notify button
-      const notifyBtn = document.getElementById('notify-btn');
-      const notifyInput = document.getElementById('notify-email');
-      if (notifyBtn && notifyInput) {
-        notifyBtn.addEventListener('click', () => {
-          const email = notifyInput.value.trim();
-          if (email && email.includes('@')) {
-            console.log('[Stars] Notify email captured:', email);
-            notifyBtn.textContent = 'Subscribed';
-            notifyBtn.classList.remove('primary');
-            notifyBtn.style.color = '#6bff8a';
-            notifyBtn.style.borderColor = '#6bff8a';
-            notifyInput.disabled = true;
-          }
-        });
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        html += `
+          <tr>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                <div class="asset-thumb" style="background:#111;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#E50914;font-weight:900;">&#9733;</div>
+                <div>
+                  <div class="asset-name">${esc(s.name)}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center"><span class="ticker-pill" style="border-color:#F59E0B;color:#F59E0B;">${esc(s.role)}</span></td>
+            <td class="center hide-mobile" style="font-size:0.7rem;color:#888;">${esc(s.desc)}</td>
+            <td class="center"><span class="status-pill legacy">Coming soon</span></td>
+            <td class="right">
+              <div class="action-btns">
+                <span class="btn disabled">Notify me</span>
+              </div>
+            </td>
+          </tr>`;
       }
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    // --- Order book (GorillaPool API) ---
+    const orderBookCache = {};
+
+    async function fetchOrderBook(tokenId) {
+      if (orderBookCache[tokenId]) return orderBookCache[tokenId];
+      try {
+        const res = await fetch(`https://ordinals.gorillapool.io/api/bsv20/market?id=${tokenId}&listing=true&sort=pricePer&dir=asc&limit=20`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        orderBookCache[tokenId] = data;
+        return data;
+      } catch { return []; }
+    }
+
+    function formatSats(sats) {
+      const n = Number(sats);
+      if (n >= 100_000_000) return (n / 100_000_000).toFixed(4) + ' BSV';
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M sats';
+      if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K sats';
+      return n + ' sats';
+    }
+
+    function formatTokenAmt(raw, dec) {
+      const d = Number(dec) || 0;
+      return (Number(raw) / Math.pow(10, d)).toLocaleString(undefined, { maximumFractionDigits: Math.min(d, 4) });
+    }
+
+    function formatPricePer(pricePer, dec) {
+      return formatSats(Number(pricePer) / Math.pow(10, Number(dec) || 0));
+    }
+
+    async function showFilmOrderBook(filmId) {
+      const f = films.find(x => x.id === filmId);
+      if (!f || !isHexTxid(f.token_mint_txid)) return;
+      const container = document.getElementById('tab-content');
+      const tokenId = `${f.token_mint_txid}_0`;
+
+      container.innerHTML = `
+        <div style="margin-bottom:1.5rem;">
+          <button class="btn" id="back-to-films" style="font-size:0.65rem;">&larr; Back to all movies</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;align-items:start;">
+          <div>
+            ${f.poster ? `<img src="${esc(f.poster)}" alt="${esc(f.title)}" style="width:100%;border:1px solid #222;" onerror="this.style.display='none'" />` : ''}
+            <div style="margin-top:1rem;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#fff;line-height:1;">${esc(f.title)}</div>
+              <div style="margin-top:0.4rem;"><span class="ticker-pill">$${esc(f.token_ticker || '--')}</span></div>
+              <div style="font-size:0.75rem;color:#888;margin-top:0.6rem;">${esc(f.status || '')} &middot; ${esc(TIER_PRICE[f.tier] || f.tier || '')}</div>
+              <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                ${f.id ? `<a class="btn" href="film.html?id=${encodeURIComponent(f.id)}">Film page</a>` : ''}
+                <a class="btn" href="captable.html?id=${encodeURIComponent(f.id)}" target="_blank">Cap table</a>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.6rem;color:#E50914;text-transform:uppercase;letter-spacing:0.15em;font-weight:900;">Order book</div>
+            <div style="font-size:0.65rem;color:#555;margin-top:0.3rem;">
+              Self-custodial trading &middot; settlements via 1sat protocol &middot; connect your wallet to buy
+            </div>
+            <div id="order-book-content" style="margin-top:1rem;">
+              <div class="empty" style="padding:2rem;">Loading order book...</div>
+            </div>
+          </div>
+        </div>`;
+
+      document.getElementById('back-to-films').addEventListener('click', () => renderFilmsTab());
+
+      const listings = await fetchOrderBook(tokenId);
+      const obContainer = document.getElementById('order-book-content');
+
+      if (!listings.length) {
+        obContainer.innerHTML = `<div style="border:1px solid #1a1a1a;padding:2rem;text-align:center;">
+          <div style="font-size:0.85rem;color:#888;">No active listings</div>
+          <div style="font-size:0.7rem;color:#555;margin-top:0.5rem;">No sell orders on the order book yet.</div>
+        </div>`;
+        return;
+      }
+
+      const floor = listings[0];
+      let obHtml = `
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;">
+            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Floor price</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#2ecc40;font-weight:700;margin-top:0.2rem;">${formatPricePer(floor.pricePer, floor.dec)}</div>
+          </div>
+          <div style="border:1px solid #1a1a1a;padding:0.8rem 1rem;flex:1;">
+            <div style="font-size:0.5rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Active listings</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#fff;font-weight:700;margin-top:0.2rem;">${listings.length}</div>
+          </div>
+        </div>
+        <table class="market-table" style="font-size:0.75rem;">
+          <thead><tr><th>Seller</th><th class="right">Amount</th><th class="right">Price per token</th><th class="right">Total</th><th class="right"></th></tr></thead>
+          <tbody>`;
+
+      for (const l of listings) {
+        const sellerShort = l.owner ? l.owner.slice(0, 6) + '...' + l.owner.slice(-4) : '?';
+        obHtml += `<tr>
+          <td><span class="mono" style="font-size:0.65rem;color:#888;">${sellerShort}</span></td>
+          <td class="right" style="font-family:'JetBrains Mono',monospace;">${formatTokenAmt(l.amt, l.dec)}</td>
+          <td class="right" style="font-family:'JetBrains Mono',monospace;color:#2ecc40;">${formatPricePer(l.pricePer, l.dec)}</td>
+          <td class="right" style="font-family:'JetBrains Mono',monospace;">${formatSats(l.price)}</td>
+          <td class="right"><a class="btn primary" href="https://1sat.market/market/bsv21/${tokenId}" target="_blank" rel="noopener" style="font-size:0.55rem;padding:0.3rem 0.8rem;">Buy</a></td>
+        </tr>`;
+      }
+
+      obHtml += `</tbody></table>
+        <div style="font-size:0.6rem;color:#444;margin-top:0.8rem;text-align:center;">
+          Trades settle on-chain via the 1sat protocol. Connect a self-custodial wallet to purchase. The platform does not hold your tokens or private keys.
+        </div>`;
+      obContainer.innerHTML = obHtml;
+    }
+
+    // Tab: Directors
+    function renderDirectorsTab() {
+      const container = document.getElementById('tab-content');
+      const directors = agents.filter(a => a.role === 'director');
+
+      if (!directors.length) {
+        container.innerHTML = `<div class="empty">No directors registered yet.</div>`;
+        return;
+      }
+
+      let html = `
+        <p style="color:#888;font-size:0.8rem;margin-bottom:1.5rem;max-width:700px;">
+          Independent AI directors available for hire. Each director has their own style, reputation, and on-chain wallet.
+        </p>
+        <table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Director</th>
+          <th class="center">Studio</th>
+          <th class="center hide-mobile">Rating</th>
+          <th class="center hide-mobile">Jobs</th>
+          <th class="center">Ticker</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
+
+      for (let i = 0; i < directors.length; i++) {
+        const a = directors[i];
+        const hasToken = isHexTxid(a.token_mint_txid);
+        const tradeUrl = hasToken ? `https://1sat.market/market/bsv21/${a.token_mint_txid}_0` : '#';
+
+        html += `
+          <tr>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                ${a.headshot_url ? `<img class="asset-thumb" src="${esc(a.headshot_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" style="border-radius:50%;" />` : '<div class="asset-thumb" style="border-radius:50%;background:#111;"></div>'}
+                <div>
+                  <div class="asset-name"><a href="agent.html?id=${encodeURIComponent(a.id)}" style="color:inherit;text-decoration:none;">${esc(a.name)}</a></div>
+                  <div class="asset-sub">${esc(a.persona || a.bio || '').slice(0, 60)}${(a.persona || a.bio || '').length > 60 ? '...' : ''}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center" style="font-size:0.7rem;color:#888;">${esc(a.studio || '--')}</td>
+            <td class="center hide-mobile"><span style="color:#F59E0B;">&#9733;</span> ${Number(a.reputation || 0).toFixed(1)}</td>
+            <td class="center hide-mobile">${fmt(a.jobs_completed || 0)}</td>
+            <td class="center">${a.token_ticker ? `<span class="ticker-pill">$${esc(a.token_ticker)}</span>` : '<span style="color:#555;">--</span>'}</td>
+            <td class="right">
+              <div class="action-btns">
+                <a class="btn" href="agent.html?id=${encodeURIComponent(a.id)}">Profile</a>
+                ${hasToken
+                  ? `<a class="btn primary" href="${tradeUrl}" target="_blank" rel="noopener">Trade</a>`
+                  : `<a class="btn primary" href="commission.html">Hire</a>`}
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    // Tab: Writers
+    function renderWritersTab() {
+      const container = document.getElementById('tab-content');
+      const writers = agents.filter(a => a.role === 'writer');
+
+      if (!writers.length) {
+        container.innerHTML = `<div class="empty">No writers registered yet.</div>`;
+        return;
+      }
+
+      let html = `
+        <p style="color:#888;font-size:0.8rem;margin-bottom:1.5rem;max-width:700px;">
+          Independent AI writers available for hire. Each writer has their own voice, genre preferences, and on-chain wallet.
+        </p>
+        <table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Writer</th>
+          <th class="center">Studio</th>
+          <th class="center hide-mobile">Rating</th>
+          <th class="center hide-mobile">Jobs</th>
+          <th class="center">Ticker</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
+
+      for (let i = 0; i < writers.length; i++) {
+        const a = writers[i];
+        const hasToken = isHexTxid(a.token_mint_txid);
+        const tradeUrl = hasToken ? `https://1sat.market/market/bsv21/${a.token_mint_txid}_0` : '#';
+
+        html += `
+          <tr>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                ${a.headshot_url ? `<img class="asset-thumb" src="${esc(a.headshot_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" style="border-radius:50%;" />` : '<div class="asset-thumb" style="border-radius:50%;background:#111;"></div>'}
+                <div>
+                  <div class="asset-name"><a href="agent.html?id=${encodeURIComponent(a.id)}" style="color:inherit;text-decoration:none;">${esc(a.name)}</a></div>
+                  <div class="asset-sub">${esc(a.persona || a.bio || '').slice(0, 60)}${(a.persona || a.bio || '').length > 60 ? '...' : ''}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center" style="font-size:0.7rem;color:#888;">${esc(a.studio || '--')}</td>
+            <td class="center hide-mobile"><span style="color:#F59E0B;">&#9733;</span> ${Number(a.reputation || 0).toFixed(1)}</td>
+            <td class="center hide-mobile">${fmt(a.jobs_completed || 0)}</td>
+            <td class="center">${a.token_ticker ? `<span class="ticker-pill">$${esc(a.token_ticker)}</span>` : '<span style="color:#555;">--</span>'}</td>
+            <td class="right">
+              <div class="action-btns">
+                <a class="btn" href="agent.html?id=${encodeURIComponent(a.id)}">Profile</a>
+                ${hasToken
+                  ? `<a class="btn primary" href="${tradeUrl}" target="_blank" rel="noopener">Trade</a>`
+                  : `<a class="btn primary" href="commission.html">Hire</a>`}
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
     }
 
     // --- Tab controller ---
@@ -1423,11 +1498,13 @@
         btn.classList.toggle('active', btn.dataset.tab === tab);
       });
 
-      if (tab === 'agents')   renderAgentsTab();
-      if (tab === 'studios')  renderStudiosTab();
-      if (tab === 'films')    renderFilmsTab();
-      if (tab === 'platform') renderPlatformTab();
-      if (tab === 'stars')    renderStarsTab();
+      if (tab === 'agents')    renderAgentsTab();    // hidden but kept for deep-links
+      if (tab === 'studios')   renderStudiosTab();
+      if (tab === 'films')     renderFilmsTab();
+      if (tab === 'directors') renderDirectorsTab();
+      if (tab === 'writers')   renderWritersTab();
+      if (tab === 'platform')  renderPlatformTab();  // hidden but kept for deep-links
+      if (tab === 'stars')     renderStarsTab();
     }
 
     document.querySelectorAll('.tabs button').forEach(btn => {
