@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bMovies — Compliance Architecture</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #e8e8e8; background: #0a0a0a;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .page {
+      width: 210mm; height: 297mm; page-break-after: always;
+      background: #0a0a0a; position: relative; overflow: hidden;
+    }
+    .page:last-child { page-break-after: auto; }
+    .page-inner { padding: 18mm 18mm 16mm; height: 100%; position: relative; }
+    .screen-bar {
+      max-width: 210mm; margin: 0 auto; padding: 1rem 18mm;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #222;
+    }
+    .screen-bar a { color: #999; text-decoration: none; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+    .screen-bar .actions button {
+      padding: 0.5rem 1rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; border: 1px solid #E50914; background: #E50914;
+      color: #fff; cursor: pointer; font-family: inherit;
+    }
+    @media print { .screen-bar { display: none; } }
+
+    .eyebrow { font-size: 7pt; letter-spacing: 0.25em; text-transform: uppercase; color: #E50914; font-weight: 700; }
+    .section-title { font-size: 22pt; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; line-height: 1; margin-top: 3mm; color: #fff; }
+    .section-sub { font-size: 14pt; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; line-height: 1; margin-top: 5mm; color: #fff; }
+    .accent-line { width: 40mm; height: 3px; background: #E50914; margin: 4mm 0; }
+    .body-text { font-size: 9pt; line-height: 1.6; color: #ccc; max-width: 160mm; }
+    .body-text strong { color: #fff; }
+    .small { font-size: 7pt; line-height: 1.5; color: #888; }
+    .bullet-list { list-style: none; padding: 0; margin-top: 3mm; }
+    .bullet-list li { font-size: 8.5pt; line-height: 1.5; color: #ccc; padding: 1.5mm 0 1.5mm 4mm; border-left: 2px solid #E50914; margin-bottom: 2mm; }
+    .bullet-list li strong { color: #fff; }
+    table.dt { width: 100%; border-collapse: collapse; margin-top: 3mm; font-size: 8pt; }
+    table.dt th { text-align: left; font-size: 6.5pt; color: #888; text-transform: uppercase; letter-spacing: 0.12em; padding: 2mm 3mm; border-bottom: 1px solid #333; }
+    table.dt td { padding: 2.5mm 3mm; border-bottom: 1px solid #1a1a1a; color: #ccc; }
+    .safe-box { border: 1px solid #2ecc40; padding: 4mm; margin-top: 4mm; }
+    .warn-box { border: 1px solid #E50914; padding: 4mm; margin-top: 4mm; }
+    .page-num { position: absolute; bottom: 8mm; right: 18mm; font-size: 6pt; color: #444; letter-spacing: 0.1em; }
+    .footer-line {
+      position: absolute; bottom: 14mm; left: 18mm; right: 18mm;
+      border-top: 1px solid #1a1a1a; padding-top: 2mm; font-size: 5.5pt; color: #444;
+      display: flex; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="screen-bar">
+    <a href="index.html">&larr; Back to bMovies</a>
+    <div class="actions">
+      <button onclick="window.print()">Save as PDF (Cmd+P)</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 1 — OVERVIEW + TOKEN CLASSIFICATION
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Compliance architecture</div>
+      <div class="section-title">How bMovies handles securities, trading &amp; KYC</div>
+      <div class="accent-line"></div>
+
+      <p class="body-text" style="margin-top:3mm;font-size:10pt;">
+        bMovies is an autonomous AI film studio where customers commission films and receive 99% of the royalty shares. The platform retains 1% of ticket revenue. This document explains how the platform addresses securities classification, marketplace compliance, and investor protection.
+      </p>
+
+      <div class="section-sub">Token classification</div>
+      <p class="body-text" style="margin-top:2mm;">
+        Film royalty tokens distribute revenue to holders. Under the SEC/CFTC joint interpretation of <strong>March 17, 2026</strong>, revenue-sharing tokens are flagged as potential securities. bMovies treats its tokens accordingly and structures its offering to comply.
+      </p>
+
+      <table class="dt" style="margin-top:3mm;">
+        <thead><tr><th>Component</th><th>Classification</th><th>Compliance approach</th></tr></thead>
+        <tbody>
+          <tr><td>Film royalty tokens</td><td>Likely securities (Howey)</td><td>Offered under registration exemption (Reg D for US investors)</td></tr>
+          <tr><td>$bMovies platform share</td><td>Revenue-share instrument</td><td>KYC-gated, identity-verified buyers only</td></tr>
+          <tr><td>Commission fees ($0.99&ndash;$999)</td><td>Service payment</td><td>Standard payment processing (Stripe, HandCash)</td></tr>
+          <tr><td>Ticket revenue</td><td>Content purchase</td><td>Per-view payment, 1% platform rake disclosed</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-sub">Marketplace architecture (SEC April 2026 guidance)</div>
+      <p class="body-text" style="margin-top:2mm;">
+        On <strong>April 13, 2026</strong>, the SEC issued staff guidance exempting certain trading user interfaces from broker-dealer registration. bMovies' marketplace is designed to qualify.
+      </p>
+
+      <div class="safe-box">
+        <div class="eyebrow" style="color:#2ecc40;">bMovies marketplace design</div>
+        <ul class="bullet-list" style="margin-top:2mm;">
+          <li style="border-color:#2ecc40;"><strong>Self-custodial</strong> &mdash; users connect their own wallets. The platform never holds tokens or private keys.</li>
+          <li style="border-color:#2ecc40;"><strong>External settlement</strong> &mdash; trades execute through the 1sat protocol. bMovies provides the UI, not the matching engine.</li>
+          <li style="border-color:#2ecc40;"><strong>Flat fees</strong> &mdash; per-listing fee, not a percentage of trade value.</li>
+          <li style="border-color:#2ecc40;"><strong>No solicitation</strong> &mdash; no "hot picks," no "trending," no investment recommendations.</li>
+          <li style="border-color:#2ecc40;"><strong>Full disclosure</strong> &mdash; non-registered status, routing, and risks are disclosed to users.</li>
+        </ul>
+      </div>
+
+      <div class="section-sub" style="margin-top:5mm;">Structural safeguards against market manipulation</div>
+      <p class="body-text" style="margin-top:2mm;">
+        The platform is designed so that insider trading and wash trading are <strong>architecturally impossible</strong>, not just policy-prohibited.
+      </p>
+      <ul class="bullet-list" style="margin-top:2mm;">
+        <li><strong>No insider trading</strong> &mdash; platform employees are contractually and technically prohibited from holding film tokens.</li>
+        <li><strong>No secret budget manipulation</strong> &mdash; production spend is recorded on-chain. The platform cannot secretly boost a film's budget to inflate perceived value.</li>
+        <li><strong>No proprietary trading</strong> &mdash; the platform's only film revenue is the 1% ticket rake. Fixed, disclosed, automatic. The platform never buys or sells film tokens.</li>
+        <li><strong>Full on-chain transparency</strong> &mdash; all wallets, trades, and holdings are publicly verifiable. Anyone can confirm no insider wallet holds film tokens.</li>
+      </ul>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Compliance Architecture</span>
+        <span>The Bitcoin Corporation Ltd</span>
+      </div>
+      <div class="page-num">1 / 2</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 2 — KYC + LEGAL STRUCTURE + REGULATORY ROADMAP
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-sub">Identity verification &amp; KYC</div>
+      <p class="body-text" style="margin-top:2mm;">
+        Every investor on the platform is identity-verified before purchasing shares. bMovies uses <strong>Veriff</strong> for KYC, supporting document verification and biometric checks across 190+ countries.
+      </p>
+      <ul class="bullet-list" style="margin-top:2mm;">
+        <li><strong>$bMovies platform shares</strong> &mdash; KYC required before purchase</li>
+        <li><strong>Film token investment</strong> &mdash; KYC required for investors buying during production</li>
+        <li><strong>Secondary market trading</strong> &mdash; KYC required for all marketplace participants</li>
+        <li><strong>Film commissioning</strong> &mdash; standard Stripe identity verification for card payments</li>
+      </ul>
+
+      <div class="section-sub" style="margin-top:5mm;">Corporate structure</div>
+      <table class="dt" style="margin-top:2mm;">
+        <thead><tr><th>Detail</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Operator</td><td>The Bitcoin Corporation Ltd</td></tr>
+          <tr><td>Company number</td><td>16735102</td></tr>
+          <tr><td>Jurisdiction</td><td>England &amp; Wales</td></tr>
+          <tr><td>Token standard</td><td>BSV-21 (canonical 1sat ordinals)</td></tr>
+          <tr><td>Custody model</td><td>Non-custodial &mdash; users hold their own keys</td></tr>
+          <tr><td>Revenue model</td><td>Commission fees (service) + 1% ticket rake (disclosed)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-sub" style="margin-top:5mm;">Regulatory roadmap</div>
+      <table class="dt" style="margin-top:2mm;">
+        <thead><tr><th>Phase</th><th>Action</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Now</td><td>KYC-gated platform, on-chain transparency, employee trading ban</td><td style="color:#2ecc40;">Live</td></tr>
+          <tr><td>Month 1&ndash;2</td><td>US securities counsel: Reg D structuring + Form D filing</td><td style="color:#888;">Planned</td></tr>
+          <tr><td>Month 1&ndash;2</td><td>UK solicitor: FCA perimeter review + prospectus sign-off</td><td style="color:#888;">Planned</td></tr>
+          <tr><td>Month 2&ndash;3</td><td>Marketplace launch as self-custodial UI (April 2026 exemption)</td><td style="color:#888;">Planned</td></tr>
+          <tr><td>Month 6+</td><td>Evaluate Reg CF for retail offering (up to $5M/year)</td><td style="color:#888;">Future</td></tr>
+          <tr><td>Ongoing</td><td>Monitor SEC Token Safe Harbor rulemaking (proposed March 2026)</td><td style="color:#888;">Watching</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-sub" style="margin-top:5mm;">Legal documents (live)</div>
+      <ul class="bullet-list" style="margin-top:2mm;">
+        <li><a href="legal/platform-token-prospectus.html" style="color:#ccc;text-decoration:none;border-bottom:1px dashed #555;"><strong>Platform token prospectus</strong></a> &mdash; risk disclosure, offering summary, bonding curve</li>
+        <li><a href="legal/film-token-risk-disclosure.html" style="color:#ccc;text-decoration:none;border-bottom:1px dashed #555;"><strong>Film token risk disclosure</strong></a> &mdash; per-film investment risks</li>
+        <li><a href="legal/non-custodial-disclosure.html" style="color:#ccc;text-decoration:none;border-bottom:1px dashed #555;"><strong>Non-custodial disclosure</strong></a> &mdash; custody model, key management</li>
+        <li><a href="terms.html" style="color:#ccc;text-decoration:none;border-bottom:1px dashed #555;"><strong>Terms of service</strong></a> &mdash; platform usage terms</li>
+        <li><a href="privacy.html" style="color:#ccc;text-decoration:none;border-bottom:1px dashed #555;"><strong>Privacy policy</strong></a> &mdash; data handling and GDPR compliance</li>
+      </ul>
+
+      <div style="border:1px solid #333;padding:5mm;margin-top:5mm;text-align:center;">
+        <p class="body-text" style="margin:0;text-align:center;max-width:145mm;margin-left:auto;margin-right:auto;">
+          bMovies builds compliance into its architecture rather than bolting it on. On-chain transparency, KYC-gated access, non-custodial wallets, and structural prohibitions on insider trading provide the audit trail and investor protection that regulators require &mdash; while maintaining the speed and openness that makes decentralised film financing possible.
+        </p>
+      </div>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Compliance Architecture</span>
+        <span>&copy; 2026 The Bitcoin Corporation Ltd</span>
+      </div>
+      <div class="page-num">2 / 2</div>
+    </div>
+  </div>
+
+</body>
+</html>
