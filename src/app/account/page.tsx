@@ -1398,7 +1398,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               </a>
             </div>
           )}
-          <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 ${!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}`}>
+          <div className={`grid grid-cols-2 md:grid-cols-5 gap-2 ${!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}`}>
             <button
               onClick={async () => {
                 try {
@@ -1457,11 +1457,10 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               <span className="text-[0.6rem] font-bold text-white">MetaMask</span>
               <span className="text-[0.5rem] text-[#F6851B]">Ethereum</span>
             </button>
-          </div>
             <button
               onClick={() => {
                 window.open('https://handcash.io', '_blank')
-                alert('HandCash uses OAuth — once connected, your HandCash handle becomes your payment identity on bMovies. Integration completing soon.')
+                alert('HandCash uses OAuth. Your HandCash handle becomes your payment identity on bMovies. Integration completing soon.')
               }}
               className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#38C032] transition-colors cursor-pointer"
             >
@@ -1472,7 +1471,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           </div>
           <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
             BSV Desktop is recommended for the full bMovies experience (x402 payments, token purchases, KYC certificates).
-            HandCash uses OAuth for seamless BSV payments. Phantom and MetaMask are experimental — cross-chain coming post-launch.
+            HandCash uses OAuth for seamless BSV payments. Phantom and MetaMask are experimental - cross-chain coming post-launch.
           </p>
         </div>
       )}

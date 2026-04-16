@@ -153,14 +153,11 @@ function wireHamburger(header) {
 function mountNav() {
   const header = document.querySelector('header.site-header');
   if (!header) return;
-  // Only inject if the header is empty (or only contains whitespace).
-  // This way pages that still have the legacy hardcoded markup aren't
-  // double-rendered. Once every page is migrated to the empty stub,
-  // this check becomes a no-op.
-  const hasContent = header.querySelector('a.logo') && header.querySelector('nav a.signin-cta');
-  if (!hasContent) {
-    header.innerHTML = buildNavHtml();
-  }
+  // Always inject the full nav — this ensures social icons, hamburger,
+  // and invest token icon are present even on Next.js pages that pre-
+  // render a basic nav in LayoutShell.tsx (which prevents the empty-
+  // header flash but lacks the social/hamburger/invest elements).
+  header.innerHTML = buildNavHtml();
   wireHamburger(header);
 }
 
