@@ -56,7 +56,6 @@ type NavLevel = 'account' | 'project'
 const ACCOUNT_TABS = [
   { id: 'studio',  label: 'Studio' },
   { id: 'wallet',  label: 'Wallet' },
-  { id: 'coupons', label: 'Coupons' },
 ] as const
 
 // All project-level tabs in one row (merged from old PROJECT_TABS + TOOL_TABS)
