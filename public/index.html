@@ -499,6 +499,7 @@
       const { data } = await supabase
         .from('bct_offers')
         .select('id, title, bct_artifacts(kind, url, role)')
+        .in('status', ['published', 'auto_published', 'released'])
         .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(20);

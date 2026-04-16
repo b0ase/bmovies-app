@@ -859,6 +859,7 @@
           bct_artifacts ( role, kind, url, step_id, superseded_by )
         `)
         .in('tier', ['pitch','trailer','short','feature'])
+        .in('status', ['published', 'auto_published', 'released'])
         .not('token_mint_txid', 'is', null)
         .is('archived_at', null)
         .order('created_at', { ascending: false });

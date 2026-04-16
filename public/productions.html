@@ -293,6 +293,8 @@
       // Pull offers + their most recent artifact via a join.
       // We deliberately order by bct_artifacts.created_at DESC so
       // newly generated content bubbles to the top.
+      // Only show published/released films — NOT drafts, producing, or funded.
+      // User commissions stay private in their /account until they click Publish.
       const { data: offers, error: offersErr } = await supabase
         .from('bct_offers')
         .select(`
@@ -301,6 +303,7 @@
           production_phase, current_step, created_at,
           bct_artifacts ( id, kind, url, model, prompt, payment_txid, created_at, role )
         `)
+        .in('status', ['published', 'auto_published', 'released'])
         .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(200);

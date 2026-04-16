@@ -355,7 +355,7 @@
           id, title, status, token_ticker, created_at,
           bct_artifacts ( id, kind, url, role )
         `)
-        .in('status', ['producing', 'released'])
+        .in('status', ['published', 'auto_published', 'released'])
         .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(60);
