@@ -304,51 +304,21 @@ function updateNav() {
   const nav = link.parentElement;
   let signOutBtn = nav?.querySelector('.signout-btn');
 
+  // Clean up any stale elements from previous nav versions
+  const oldDropdown = nav?.querySelector('.account-dropdown');
+  if (oldDropdown) oldDropdown.remove();
+  const oldBtn = nav?.querySelector('.signout-btn');
+  if (oldBtn) oldBtn.remove();
+  link.style.position = '';
+
   if (isSessionValid()) {
-    // Account button links DIRECTLY to /account — no dropdown, no preventDefault.
     link.textContent = 'Account';
     link.href = '/account';
     link.classList.add('signed-in');
-    // Clean up any old dropdown from previous versions
-    const oldDropdown = nav?.querySelector('.account-dropdown');
-    if (oldDropdown) oldDropdown.remove();
-    link.style.position = '';
-    // Add a small Sign Out button next to it
-    let signOutBtn = nav?.querySelector('.signout-btn');
-    if (nav && !signOutBtn) {
-      signOutBtn = document.createElement('button');
-      signOutBtn.className = 'signout-btn';
-      signOutBtn.textContent = '✕';
-      signOutBtn.title = 'Sign out';
-      signOutBtn.style.cssText =
-        'background:none;border:1px solid #333;color:#666;font-size:0.7rem;' +
-        'padding:0.3rem 0.5rem;cursor:pointer;margin-left:0.3rem;line-height:1;';
-      signOutBtn.addEventListener('mouseover', () => {
-        signOutBtn.style.borderColor = '#E50914';
-        signOutBtn.style.color = '#ff6b7a';
-      });
-      signOutBtn.addEventListener('mouseout', () => {
-        signOutBtn.style.borderColor = '#333';
-        signOutBtn.style.color = '#666';
-      });
-      signOutBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        localStorage.removeItem('bmovies-auth');
-        window.dispatchEvent(new Event('bmovies:auth-changed'));
-        window.location.href = '/';
-      });
-      link.after(signOutBtn);
-    }
   } else {
     link.textContent = 'Sign In';
     link.href = '/login';
     link.classList.remove('signed-in');
-    // Clean up
-    const oldDropdown = nav?.querySelector('.account-dropdown');
-    if (oldDropdown) oldDropdown.remove();
-    const oldBtn = nav?.querySelector('.signout-btn');
-    if (oldBtn) oldBtn.remove();
-    link.style.position = '';
   }
 }
 
@@ -381,3 +351,13 @@ window.addEventListener('storage', (e) => {
 
 // Re-check on an in-page custom event fired after sign-in / sign-out.
 window.addEventListener('bmovies:auth-changed', updateNav);
+
+// On Next.js pages, the Supabase client may write the session to
+// localStorage AFTER nav-session.js runs (race condition). Retry
+// a few times with short delays to catch late-arriving sessions.
+let _retries = 0;
+const _retryInterval = setInterval(() => {
+  _retries++;
+  updateNav();
+  if (_retries >= 5 || isSessionValid()) clearInterval(_retryInterval);
+}, 500);
