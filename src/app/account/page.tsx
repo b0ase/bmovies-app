@@ -477,7 +477,7 @@ function ProjectCards({
 
   if (films.length === 0) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-2xl">
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8">
         <div
           className="text-3xl font-black mb-3 leading-none"
           style={{ fontFamily: 'var(--font-bebas)' }}
@@ -604,7 +604,7 @@ function CouponsView() {
         </p>
       </header>
 
-      <div className="border border-[#222] bg-[#0a0a0a] p-8 max-w-2xl">
+      <div className="border border-[#222] bg-[#0a0a0a] p-8">
         <div
           className="text-2xl font-black mb-3 leading-none"
           style={{ fontFamily: 'var(--font-bebas)' }}
@@ -711,7 +711,7 @@ function ProjectView({
 
   if (!currentFilm) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8">
         <div
           className="text-2xl font-black mb-3 leading-none"
           style={{ fontFamily: 'var(--font-bebas)' }}
@@ -1021,7 +1021,7 @@ function ProjectCrewView({ projectId, accountId }: { projectId: string; accountI
 
   if (agents.length === 0) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-2xl">
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8">
         <p className="text-[#888] text-sm leading-relaxed mb-3">
           Create a studio to get your own team of 8 specialist agents. Each
           agent has a unique name, persona, wallet address, and token ticker.
@@ -1092,7 +1092,7 @@ function ProjectCrewView({ projectId, accountId }: { projectId: string; accountI
 
 function ProjectDeckView({ film }: { film: Film }) {
   return (
-    <div className="max-w-4xl">
+    <div>
       <h2
         className="text-3xl font-black mb-4 leading-none"
         style={{ fontFamily: 'var(--font-bebas)' }}
@@ -1140,7 +1140,7 @@ function ProjectDeckView({ film }: { film: Film }) {
 function ProjectRoomView({ film }: { film: Film }) {
   const router = useRouter()
   return (
-    <div className="max-w-4xl">
+    <div>
       <h2
         className="text-3xl font-black mb-4 leading-none"
         style={{ fontFamily: 'var(--font-bebas)' }}
@@ -2006,7 +2006,7 @@ function StudioInfoSection({
 
   if (provisioning) {
     return (
-      <div className="max-w-4xl">
+      <div>
         <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-8">
           <div className="animate-pulse">
             <div
@@ -2036,7 +2036,7 @@ function StudioInfoSection({
 
   if (provisionError) {
     return (
-      <div className="max-w-4xl">
+      <div>
         <div className="border border-[#E50914] bg-[#1a0003] p-6">
           <div className="text-[#ff6b7a] text-xs font-bold uppercase tracking-wider mb-2">
             Studio provisioning failed
@@ -2055,7 +2055,7 @@ function StudioInfoSection({
 
   if (studioLoading) {
     return (
-      <div className="max-w-2xl animate-pulse">
+      <div className="animate-pulse">
         <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-6">
           <div className="h-6 w-48 bg-[#1a1a1a] mb-4" />
           <div className="h-3 w-full bg-[#151515] mb-2" />
@@ -2067,7 +2067,7 @@ function StudioInfoSection({
 
   if (studio) {
     return (
-      <div className="max-w-4xl">
+      <div>
         <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
           <div className="flex items-start gap-5">
             {studio.logo_url ? (
@@ -2145,7 +2145,7 @@ function StudioInfoSection({
 
   // No studio: show create form
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
         <h3
           className="text-2xl font-black mb-2 leading-none"
@@ -2444,7 +2444,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
             </div>
           </div>
         )}
-        <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
+        <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8">
           <div
             className="text-xl font-black mb-2 leading-none"
             style={{ fontFamily: 'var(--font-bebas)' }}
