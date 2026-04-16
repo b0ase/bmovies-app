@@ -20,6 +20,17 @@ const nextConfig: NextConfig = {
       { source: '/', destination: '/index.html' },
     ];
   },
+  // Allow captable.html to be embedded in an iframe on the same origin
+  async headers() {
+    return [
+      {
+        source: '/captable.html',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

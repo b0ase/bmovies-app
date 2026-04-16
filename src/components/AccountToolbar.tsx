@@ -244,11 +244,9 @@ export function AccountToolbar() {
 
   const rowStyle = {
     display: 'flex',
+    flexWrap: 'wrap' as const,
     alignItems: 'center',
-    padding: '0 max(1.5rem, calc((100% - 1400px) / 2))',
-    overflowX: 'auto' as const,
-    WebkitOverflowScrolling: 'touch' as const,
-    scrollbarWidth: 'none' as const,
+    padding: '0 max(1rem, calc((100% - 1400px) / 2))',
     gap: '0',
   }
 

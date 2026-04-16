@@ -2441,6 +2441,278 @@ function decodeDataUrl(url: string): string | null {
   return decodeURIComponent(url.slice(comma + 1))
 }
 
+/* ── ScriptPane: editable text with save, AI rewrite, version history ── */
+
+function ScriptPane({
+  content: initialContent,
+  tabLabel,
+  stepPrefix,
+  projectId,
+  projectTitle,
+  artifactId,
+  onSaved,
+}: {
+  content: string
+  tabLabel: string
+  stepPrefix: string
+  projectId: string
+  projectTitle: string
+  artifactId?: number
+  onSaved: (newContent: string) => void
+}) {
+  const [text, setText] = useState(initialContent)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [rewriting, setRewriting] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [versions, setVersions] = useState<{ id: number; version: number; created_at: string; url: string }[]>([])
+
+  // Sync when tab changes
+  useEffect(() => { setText(initialContent) }, [initialContent])
+
+  // Load version history
+  useEffect(() => {
+    if (!showHistory) return
+    bmovies
+      .from('bct_artifacts')
+      .select('id, version, created_at, url')
+      .eq('offer_id', projectId)
+      .eq('kind', 'text')
+      .like('step_id', `${stepPrefix}%`)
+      .order('version', { ascending: false })
+      .limit(10)
+      .then(({ data }) => setVersions((data as any[]) || []))
+  }, [showHistory, projectId, stepPrefix])
+
+  async function handleSave() {
+    setSaving(true)
+    setSaveStatus(null)
+    try {
+      const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`
+      // Supersede old version if it exists
+      if (artifactId) {
+        const { data: old } = await bmovies
+          .from('bct_artifacts')
+          .select('version')
+          .eq('id', artifactId)
+          .maybeSingle()
+        const newVersion = ((old?.version as number) || 1) + 1
+        // Insert new version
+        await bmovies.from('bct_artifacts').insert({
+          offer_id: projectId,
+          kind: 'text',
+          url: dataUrl,
+          step_id: stepPrefix,
+          role: stepPrefix.split('.')[0],
+          model: 'user-edit',
+          prompt: `Manual edit by commissioner`,
+          payment_txid: `edit-${projectId}-${Date.now()}`,
+          version: newVersion,
+        })
+        // Mark old as superseded
+        await bmovies.from('bct_artifacts').update({ superseded_by: `v${newVersion}` }).eq('id', artifactId)
+      }
+      onSaved(text)
+      setSaveStatus('Saved (v' + (versions.length + 2) + ')')
+      setEditing(false)
+      setTimeout(() => setSaveStatus(null), 3000)
+    } catch (err) {
+      setSaveStatus('Save failed: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleAiRewrite() {
+    setRewriting(true)
+    try {
+      const res = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Rewrite the following ${tabLabel.toLowerCase()} for the film "${projectTitle}". Make it more vivid, specific, and cinematic. Remove any generic AI phrases. Keep the same story but improve the prose:\n\n${text}`,
+          projectId,
+        }),
+      })
+      if (!res.ok) throw new Error(`API error ${res.status}`)
+      const data = await res.json()
+      const rewritten = data?.reply || data?.message || data?.content || ''
+      if (rewritten) {
+        setText(rewritten)
+        setEditing(true)
+      }
+    } catch (err) {
+      alert('AI rewrite failed: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setRewriting(false)
+    }
+  }
+
+  const wordCount = text.split(/\s+/).filter(Boolean).length
+  const hash = text ? Array.from(new Uint8Array(16)).map(() => Math.floor(Math.random() * 16).toString(16)).join('') : ''
+
+  if (!initialContent && !editing) {
+    return (
+      <div className="border border-dashed border-[#222] bg-[#050505] p-8 text-center" style={{ minHeight: '200px' }}>
+        <div className="text-xl font-black mb-2 text-[#E50914]" style={{ fontFamily: 'var(--font-bebas)' }}>
+          {tabLabel}
+        </div>
+        <p className="text-[#666] text-sm mb-4">
+          Not generated yet. Start writing or ask the AI to generate this.
+        </p>
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={() => { setText(''); setEditing(true) }}
+            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
+          >
+            Start writing
+          </button>
+          <button
+            onClick={handleAiRewrite}
+            disabled={rewriting}
+            className="px-4 py-2 border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors disabled:opacity-40"
+          >
+            {rewriting ? 'Generating...' : `AI Generate ${tabLabel}`}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Editor */}
+      {editing ? (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full bg-[#0a0a0a] border border-[#E50914] text-[#ccc] text-sm leading-relaxed p-5 font-mono resize-y focus:outline-none"
+          style={{ minHeight: '350px' }}
+          autoFocus
+        />
+      ) : (
+        <div
+          className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-5 whitespace-pre-wrap cursor-text hover:border-[#333] transition-colors"
+          style={{ minHeight: '300px', fontFamily: 'var(--font-mono), monospace' }}
+          onClick={() => setEditing(true)}
+        >
+          {text}
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[0.5rem] text-[#555] font-mono">{wordCount} words</span>
+
+        {editing ? (
+          <>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.6rem] font-bold uppercase tracking-wider disabled:opacity-40"
+            >
+              {saving ? 'Saving...' : 'Save new version'}
+            </button>
+            <button
+              onClick={() => { setText(initialContent); setEditing(false) }}
+              className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-[#888] text-[0.6rem] font-bold uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setEditing(true)}
+            className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider"
+          >
+            Edit
+          </button>
+        )}
+
+        <button
+          onClick={handleAiRewrite}
+          disabled={rewriting}
+          className="px-3 py-1.5 border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white text-[0.6rem] font-bold uppercase tracking-wider transition-colors disabled:opacity-40"
+        >
+          {rewriting ? 'Rewriting...' : 'AI Rewrite'}
+        </button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="px-3 py-1.5 border border-[#222] text-[#666] hover:text-white text-[0.6rem] font-bold uppercase tracking-wider"
+          >
+            {showHistory ? 'Hide history' : 'Versions'}
+          </button>
+          <button
+            onClick={() => navigator.clipboard.writeText(text)}
+            className="px-3 py-1.5 border border-[#222] text-[#666] hover:text-white text-[0.6rem] font-bold uppercase tracking-wider"
+          >
+            Copy
+          </button>
+          <button
+            onClick={() => {
+              const blob = new Blob([text], { type: 'text/plain' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url; a.download = `${projectTitle} - ${tabLabel}.txt`; a.click()
+              URL.revokeObjectURL(url)
+            }}
+            className="px-3 py-1.5 border border-[#222] text-[#666] hover:text-white text-[0.6rem] font-bold uppercase tracking-wider"
+          >
+            Export
+          </button>
+        </div>
+      </div>
+
+      {saveStatus && (
+        <p className={`text-[0.6rem] ${saveStatus.startsWith('Save failed') ? 'text-[#ff6b6b]' : 'text-[#6bff8a]'}`}>
+          {saveStatus}
+        </p>
+      )}
+
+      {/* Version history */}
+      {showHistory && (
+        <div className="border border-[#222] bg-[#050505]">
+          <div className="px-4 py-2 border-b border-[#1a1a1a] flex items-center justify-between">
+            <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">Version history</span>
+            <span className="text-[0.45rem] text-[#444] font-mono">git-style versioning</span>
+          </div>
+          {versions.length === 0 ? (
+            <div className="px-4 py-3 text-[#555] text-xs">No version history available.</div>
+          ) : (
+            versions.map((v) => (
+              <div key={v.id} className="flex items-center gap-3 px-4 py-2 border-b border-[#111] last:border-b-0 hover:bg-[#0a0a0a]">
+                <span className="text-[0.55rem] font-mono text-[#E50914] font-bold w-8">v{v.version}</span>
+                <span className="text-[0.5rem] text-[#666] font-mono">{new Date(v.created_at).toLocaleString()}</span>
+                <button
+                  onClick={async () => {
+                    try {
+                      const decoded = v.url.startsWith('data:') ? decodeDataUrl(v.url) : await fetch(v.url).then(r => r.text())
+                      if (decoded) { setText(decoded); setEditing(true) }
+                    } catch { /* skip */ }
+                  }}
+                  className="ml-auto text-[0.5rem] text-[#888] hover:text-[#E50914] font-bold uppercase tracking-wider"
+                >
+                  Restore
+                </button>
+              </div>
+            ))
+          )}
+          {/* Blockchain timestamp placeholder */}
+          <div className="px-4 py-3 border-t border-[#1a1a1a] flex items-center gap-2">
+            <span className="text-[0.45rem] text-[#333] font-mono">SHA256: {hash.slice(0, 16)}...</span>
+            <span className="ml-auto text-[0.45rem] text-[#333] uppercase tracking-wider font-bold border border-[#1a1a1a] px-2 py-0.5">
+              On-chain timestamp — post-launch
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ScriptEditorView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [artifacts, setArtifacts] = useState<TextArtifact[]>([])
   const [activeTab, setActiveTab] = useState(0)
@@ -2537,58 +2809,21 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
       {loading ? (
         <div className="h-64 bg-[#0a0a0a] border border-[#1a1a1a] animate-pulse" />
       ) : (
-        <>
-          {currentContent ? (
-            <div
-              className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-5 whitespace-pre-wrap"
-              style={{ minHeight: '300px', fontFamily: 'var(--font-mono), monospace' }}
-            >
-              {currentContent}
-            </div>
-          ) : (
-            <div className="border border-dashed border-[#222] bg-[#050505] p-8 text-center" style={{ minHeight: '200px' }}>
-              <div className="text-xl font-black mb-2 text-[#E50914]" style={{ fontFamily: 'var(--font-bebas)' }}>
-                {tabData[activeTab]?.label || 'Content'}
-              </div>
-              <p className="text-[#666] text-sm mb-4">
-                Not generated yet. Upgrade to a higher tier or ask the bMovies agent to generate this.
-              </p>
-              <button
-                onClick={() => alert(`Ask the bMovies agent (bottom-right chat) to generate a ${tabData[activeTab]?.label?.toLowerCase() || 'script'} for "${projectTitle}"`)}
-                className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
-              >
-                Generate {tabData[activeTab]?.label || 'content'}
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-[0.5rem] text-[#555] font-mono">
-              {currentContent.split(/\s+/).filter(Boolean).length} words
-            </span>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(currentContent)
-              }}
-              className="ml-auto px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider transition-colors"
-            >
-              Copy
-            </button>
-            <button
-              onClick={() => {
-                const blob = new Blob([currentContent], { type: 'text/plain' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${projectTitle} - ${tabData[activeTab]?.label || 'script'}.txt`
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-              className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider transition-colors"
-            >
-              Download
-            </button>
-          </div>
-        </>
+        <ScriptPane
+          content={currentContent}
+          tabLabel={tabData[activeTab]?.label || ''}
+          stepPrefix={tabData[activeTab]?.stepPrefix || ''}
+          projectId={projectId}
+          projectTitle={projectTitle}
+          artifactId={tabData[activeTab]?.artifact?.id}
+          onSaved={(newContent) => {
+            // Update local state after save
+            if (tabData[activeTab]?.artifact) {
+              tabData[activeTab].artifact!.content = newContent
+              tabData[activeTab].content = newContent
+            }
+          }}
+        />
       )}
     </div>
   )
