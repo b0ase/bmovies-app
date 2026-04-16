@@ -1093,7 +1093,7 @@ function StudioTab({
               onChange={(e) => setStudioName(e.target.value)}
               placeholder="e.g. Midnight Forge Pictures"
               maxLength={50}
-              className="w-full bg-[#050505] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#444]"
+              className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#555]"
             />
             <div className="text-[0.55rem] text-[#444] mt-1">
               {studioName.trim().length}/50 characters
@@ -1102,20 +1102,19 @@ function StudioTab({
 
           <div>
             <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
-              Aesthetic (optional)
+              Describe your studio
             </label>
-            <select
+            <textarea
               value={studioAesthetic}
               onChange={(e) => setStudioAesthetic(e.target.value)}
-              className="w-full bg-[#050505] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none"
-            >
-              <option value="">Choose an aesthetic...</option>
-              {AESTHETIC_OPTIONS.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
+              placeholder="What kind of films does your studio make? What's the aesthetic, the mood, the genre? The AI uses this to shape your logo, your bio, and your agents' personas. Write as much or as little as you like."
+              rows={5}
+              maxLength={500}
+              className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#555] leading-relaxed resize-y"
+            />
+            <div className="text-[0.55rem] text-[#444] mt-1">
+              {(studioAesthetic || '').length}/500 characters
+            </div>
           </div>
         </div>
 
