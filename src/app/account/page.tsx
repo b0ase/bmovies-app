@@ -1885,6 +1885,7 @@ interface StudioData {
   treasury_address: string
   bio: string | null
   logo_url: string | null
+  poster_url: string | null
   founded_year: number
   aesthetic: string | null
   owner_account_id: string | null
@@ -2121,12 +2122,24 @@ function StudioInfoSection({
             </div>
           </div>
 
+          {/* Roster poster — the cinematic team card generated at studio creation */}
+          {studio.poster_url && (
+            <div className="mb-5">
+              <img
+                src={studio.poster_url}
+                alt={`${studio.name} roster poster`}
+                className="w-full object-cover border border-[#E50914]/30"
+                style={{ maxHeight: '400px' }}
+              />
+            </div>
+          )}
+
           {/* Upgrade banner for placeholder studios */}
           {isPlaceholder && (
             <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-4 mb-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <p className="text-[#bbb] text-sm">
-                  <span className="text-[#E50914] font-bold">Upgrade</span> for $0.99 to get an AI-generated logo, bio, and 8 specialist agents.
+                  <span className="text-[#E50914] font-bold">Upgrade</span> for $0.99 to get an AI-generated logo, roster poster, bio, and 8 specialist agents.
                 </p>
                 <button
                   onClick={async () => {

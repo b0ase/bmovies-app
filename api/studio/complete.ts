@@ -296,10 +296,15 @@ export default async function handler(
   const treasuryKey = PrivateKey.fromRandom();
   const treasuryAddress = treasuryKey.toAddress().toString();
 
-  // Parallel: logo + bio + agent names
+  // ─── Batch 1 (parallel): logo + bio + agent names ───
+  // These three have no interdependencies — fire simultaneously.
+
   const logoPrompt =
-    `Minimalist film studio logo for '${studioName}'. Clean vector-style mark on solid black background. ` +
-    `Professional, cinematic, modern. No text — just the symbol.`;
+    `Cinematic branded logo for '${studioName}' film studio. ` +
+    `Bold, impactful mark on solid black background. ` +
+    `Style: ${aestheticLabel}. Professional Hollywood studio quality. ` +
+    `Metallic or subtle glow effect. No text — symbol/monogram only. ` +
+    `Clean vector aesthetic, cinematic lighting. --ar 1:1 --stylize 100`;
 
   const [logoUrl, bio, agentNamesRaw] = await Promise.all([
     grokImagine(xaiKey, logoPrompt),
@@ -326,22 +331,45 @@ export default async function handler(
     .filter((l) => l.length > 0)
     .slice(0, 8);
 
-  // Pad if Grok returned fewer than 8
   while (agentNames.length < 8) {
     agentNames.push(`Agent-${agentNames.length + 1}`);
   }
 
-  // Generate personas in a single batch call
+  // ─── Batch 2 (parallel): roster poster + personas ───
+  // Both need agent names from batch 1.
+
+  // Build the credit block for the poster prompt
+  const creditBlock = AGENT_ROLES
+    .map((role, i) => `${ROLE_LABELS[role]} ${agentNames[i]} ★3.0`)
+    .join('\n');
+
+  const posterPrompt =
+    `Cinematic branded roster poster for ${studioName} — ${aestheticLabel}. ` +
+    `Large, bold, impactful studio title "${studioName}" at the very top in a stylish font with subtle glow or metallic effect. ` +
+    `Clean 2x4 grid of 8 circular profile portraits in the center. Each portrait is a professional headshot of an AI film agent. ` +
+    `Under each circle, clearly display the agent's full name and ★3.0 rating. ` +
+    `Below the grid, a clean and well-organized credit block listing all 8 agents with their exact roles:\n` +
+    creditBlock + `\n` +
+    `At the bottom, an elegant tagline that captures the studio's signature style. ` +
+    `Background should match the studio's aesthetic: ${aestheticLabel}, ` +
+    `but keep it elegant and not too busy so the profiles and text remain clearly readable. ` +
+    `Include a subtle studio logo or watermark in the bottom corner. ` +
+    `Overall style: professional theatrical movie studio promotional poster, clean modern layout, ` +
+    `high detail, cinematic lighting, balanced composition --ar 16:9 --stylize 100`;
+
   const personaPrompt =
     `Write one-sentence personas (under 30 words each) for these 8 AI film agents at studio '${studioName}' (aesthetic: ${aestheticLabel}).\n\n` +
     AGENT_ROLES.map((role, i) => `${i + 1}. ${agentNames[i]} — ${ROLE_LABELS[role]}`).join('\n') +
     `\n\nReturn ONLY the personas, one per line, in order. Be vivid and specific. No numbering, no names, no role labels, just the persona sentence.`;
 
-  const personasRaw = await grokChat(
-    xaiKey,
-    'You are a creative consultant building AI agent backstories for a film studio.',
-    personaPrompt,
-  );
+  const [posterUrl, personasRaw] = await Promise.all([
+    grokImagine(xaiKey, posterPrompt),
+    grokChat(
+      xaiKey,
+      'You are a creative consultant building AI agent backstories for a film studio.',
+      personaPrompt,
+    ),
+  ]);
 
   const personas = personasRaw
     .split('\n')
@@ -361,6 +389,8 @@ export default async function handler(
     treasury_address: treasuryAddress,
     bio: bio || null,
     logo_url: logoUrl || null,
+    poster_url: posterUrl || null,
+    poster_prompt: posterPrompt,
     founded_year: new Date().getFullYear(),
     aesthetic: aesthetic || null,
     owner_account_id: accountId,
