@@ -1335,7 +1335,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
     addr.length > 16 ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : addr
 
   return (
-    <div className="max-w-[1200px] mx-auto">
+    <div className="">
       {/* Header */}
       <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
         <h1
