@@ -36,7 +36,8 @@ const NAV_LINKS = [
   { href: 'about.html',       label: 'About' },
   { href: 'commission.html',  label: 'Commission' },
   { href: 'exchange.html',    label: 'Exchange' },
-  { href: 'jobboard.html',    label: 'Jobs' },
+  // jobboard.html — surfaced on /judges.html tour, not in consumer nav.
+  // { href: 'jobboard.html',    label: 'Jobs' },
   // { href: 'invest.html',   label: 'Invest' },  // $bMovies — temporarily
   //   removed from nav until the platform-token mechanics (on-chain
   //   mint, tranche schedule, legal disclosures, non-custodial payout
