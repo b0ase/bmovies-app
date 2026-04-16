@@ -113,7 +113,10 @@ export default async function handler(
       },
       body: JSON.stringify({
         verification: {
-          callback: `${origin}/api/kyc-webhook`,
+          // callback = where Veriff REDIRECTS the user after they finish.
+          // NOT the webhook URL — Veriff posts webhooks to a separate URL
+          // configured in the Veriff dashboard (Settings > Webhooks).
+          callback: `${origin}/kyc.html?veriff=complete`,
           person: {
             firstName: '',
             lastName: '',
