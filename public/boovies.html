@@ -19,16 +19,19 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      overflow: hidden;
+      padding-bottom: 4rem;
     }
 
     .boovies-wrapper {
       text-align: center;
-      padding: 3rem 2rem;
+      padding: 3rem 2rem 2rem;
       max-width: 800px;
       position: relative;
       z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     /* Wordmark — Bebas Neue like the real one, but PINK OO */
@@ -203,6 +206,252 @@
     @media (max-width: 480px) {
       .boovies-wordmark { font-size: 3.5rem; padding: 0.2rem 0.8rem; }
     }
+
+    /* ─────────── JIGGLE LAB ─────────── */
+    .section {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 1100px;
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+    .section-header {
+      margin-bottom: 2.5rem;
+    }
+    .section-eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #FF69B4;
+      font-weight: 900;
+      margin-bottom: 0.75rem;
+    }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3rem;
+      letter-spacing: 0.04em;
+      color: #fff;
+      line-height: 1;
+    }
+    .section-title .oo-inline {
+      color: #FF69B4;
+      display: inline-block;
+    }
+    .section-sub {
+      font-size: 0.95rem;
+      color: #888;
+      margin-top: 0.75rem;
+      max-width: 540px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
+    .jiggle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .jiggle-card {
+      background: rgba(255, 105, 180, 0.06);
+      border: 1px solid rgba(255, 105, 180, 0.18);
+      padding: 1.25rem 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 140px;
+      transition: all 0.2s;
+    }
+    .jiggle-card:hover {
+      background: rgba(255, 105, 180, 0.12);
+      border-color: rgba(255, 105, 180, 0.4);
+      transform: translateY(-2px);
+    }
+    .oo-big {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.5rem;
+      color: #FF69B4;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      text-shadow: 0 0 24px rgba(255, 105, 180, 0.5);
+      display: inline-block;
+      transform-origin: center center;
+    }
+    .oo-jig   { animation: jig    1.4s ease-in-out infinite; }
+    .oo-wob   { animation: wob    1.8s ease-in-out infinite; }
+    .oo-bnc   { animation: bnc    1.0s cubic-bezier(.5,0,.5,1) infinite; }
+    .oo-shk   { animation: shk    0.4s ease-in-out infinite; }
+    .oo-twst  { animation: twst   3.0s linear infinite; }
+    .oo-puls  { animation: puls   1.2s ease-in-out infinite; }
+    .oo-drp   { animation: drp    2.0s ease-in-out infinite; }
+    .oo-tilt  { animation: tilt   1.6s ease-in-out infinite; }
+
+    @keyframes jig   { 0%,100%{transform:translateY(0)} 25%{transform:translateY(-6px)} 75%{transform:translateY(6px)} }
+    @keyframes wob   { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} }
+    @keyframes bnc   { 0%,100%{transform:translateY(0) scaleY(1)} 40%{transform:translateY(-22px) scaleY(1.05)} 55%{transform:translateY(0) scaleY(.75) scaleX(1.2)} 70%{transform:translateY(0) scaleY(1)} }
+    @keyframes shk   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+    @keyframes twst  { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    @keyframes puls  { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.2);opacity:.85} }
+    @keyframes drp   { 0%{transform:translateY(-12px);opacity:.4} 30%{transform:translateY(0);opacity:1} 50%{transform:translateY(0) scaleY(.8) scaleX(1.15)} 65%{transform:translateY(0) scaleY(1.05) scaleX(.95)} 100%{transform:translateY(0)} }
+    @keyframes tilt  { 0%,100%{transform:skewX(0)} 50%{transform:skewX(-12deg)} }
+
+    .jiggle-name {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: #fff;
+      margin-top: 0.75rem;
+    }
+    .jiggle-tag {
+      font-size: 0.65rem;
+      color: #666;
+      margin-top: 0.2rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ─────────── NOW SHOWING ─────────── */
+    .poster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    .poster-card {
+      background: #0a0a0a;
+      border: 1px solid rgba(255, 105, 180, 0.2);
+      text-align: left;
+      overflow: hidden;
+      transition: all 0.25s;
+      display: flex;
+      flex-direction: column;
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .poster-card:hover {
+      border-color: #FF69B4;
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(255, 105, 180, 0.25);
+    }
+    .poster-svg {
+      width: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      shape-rendering: crispEdges;
+      aspect-ratio: 2 / 3;
+    }
+    .poster-info {
+      padding: 1rem 1.1rem 1.2rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .poster-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1.05;
+      margin-bottom: 0.1rem;
+    }
+    .poster-title .pink { color: #FF69B4; }
+    .poster-logline {
+      font-size: 0.78rem;
+      color: #aaa;
+      line-height: 1.4;
+      margin: 0.5rem 0 0.75rem;
+      flex: 1;
+    }
+    .poster-meta {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #FF69B4;
+      font-weight: 700;
+      padding-top: 0.5rem;
+      border-top: 1px dashed rgba(255, 105, 180, 0.25);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .poster-meta .box-office { color: #666; }
+
+    /* ─────────── PITCH CARDS ─────────── */
+    .pitch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .pitch-card {
+      background: linear-gradient(135deg, rgba(255, 105, 180, 0.08), rgba(229, 9, 20, 0.04));
+      border: 1px solid rgba(255, 105, 180, 0.22);
+      padding: 1.5rem 1.4rem 1.4rem;
+      text-align: left;
+      position: relative;
+      transition: all 0.25s;
+    }
+    .pitch-card:hover {
+      border-color: #FF69B4;
+      transform: translateY(-3px);
+    }
+    .pitch-stamp {
+      position: absolute;
+      top: 0.9rem;
+      right: 0.9rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #FF69B4;
+      color: #FF69B4;
+      font-weight: 900;
+    }
+    .pitch-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      margin-bottom: 0.4rem;
+      padding-right: 4rem;
+    }
+    .pitch-xby {
+      font-size: 0.7rem;
+      color: #FF69B4;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+    .pitch-body {
+      font-size: 0.82rem;
+      color: #bbb;
+      line-height: 1.55;
+      margin-bottom: 0.9rem;
+    }
+    .pitch-body em { color: #FF69B4; font-style: normal; font-weight: 700; }
+    .pitch-budget {
+      font-size: 0.7rem;
+      color: #666;
+      letter-spacing: 0.08em;
+      padding-top: 0.6rem;
+      border-top: 1px dashed rgba(255, 105, 180, 0.2);
+    }
+    .pitch-budget b { color: #fff; }
+
+    @media (max-width: 600px) {
+      .section { padding: 3rem 1rem; }
+      .section-title { font-size: 2.2rem; }
+      .oo-big { font-size: 2.8rem; }
+    }
   </style>
 </head>
 <body>
@@ -256,7 +505,426 @@
       The management accepts no responsibility for snickering.
       All royalties still settle on BSV mainnet because we're professionals, actually.
     </p>
+  </div>
 
+  <!-- ═══════════ JIGGLE LAB ═══════════ -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-eyebrow">R&amp;D Division</div>
+      <h2 class="section-title">The Jiggle <span class="oo-inline">Lab</span></h2>
+      <p class="section-sub">
+        Eight patent-pending O<span style="color:#FF69B4">O</span> motion profiles.
+        Hover for a closer look. Our animators are contractually obligated to deny any of this was fun.
+      </p>
+    </div>
+
+    <div class="jiggle-grid">
+      <div class="jiggle-card">
+        <span class="oo-big oo-jig">OO</span>
+        <div>
+          <div class="jiggle-name">The Classic</div>
+          <div class="jiggle-tag">industry standard</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-wob">OO</span>
+        <div>
+          <div class="jiggle-name">The Wobble</div>
+          <div class="jiggle-tag">tipsy but charming</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-bnc">OO</span>
+        <div>
+          <div class="jiggle-name">The Bouncer</div>
+          <div class="jiggle-tag">squash &amp; stretch</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-shk">OO</span>
+        <div>
+          <div class="jiggle-name">The Shiver</div>
+          <div class="jiggle-tag">espresso overdose</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-twst">OO</span>
+        <div>
+          <div class="jiggle-name">The Spinner</div>
+          <div class="jiggle-tag">center of gravity: unknown</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-puls">OO</span>
+        <div>
+          <div class="jiggle-name">The Pulse</div>
+          <div class="jiggle-tag">cardio edition</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-drp">OO</span>
+        <div>
+          <div class="jiggle-name">The Drop</div>
+          <div class="jiggle-tag">gravity: on</div>
+        </div>
+      </div>
+      <div class="jiggle-card">
+        <span class="oo-big oo-tilt">OO</span>
+        <div>
+          <div class="jiggle-name">The Lean</div>
+          <div class="jiggle-tag">italic by accident</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ NOW SHOWING ═══════════ -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-eyebrow">Pink Carpet Premiere</div>
+      <h2 class="section-title">Now Showing at the <span class="oo-inline">bOO</span>vies Drive-In</h2>
+      <p class="section-sub">
+        Six cinematic masterpieces. Pixel-perfect. Legally distinct. All proceeds go to a very expensive lawyer.
+      </p>
+    </div>
+
+    <div class="poster-grid">
+
+      <!-- 1. The bOObfather -->
+      <a class="poster-card" href="boovies-boobfather.html">
+        <svg class="poster-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#1a0508"/>
+          <rect y="0" width="200" height="50" fill="#2a0a10"/>
+          <rect y="250" width="200" height="50" fill="#2a0a10"/>
+          <!-- OO as the "family eyes" -->
+          <g fill="#FF69B4">
+            <rect x="52" y="130" width="36" height="36"/>
+            <rect x="46" y="136" width="48" height="24"/>
+            <rect x="58" y="124" width="24" height="48"/>
+          </g>
+          <rect x="64" y="140" width="12" height="16" fill="#1a0508"/>
+          <g fill="#FF69B4">
+            <rect x="112" y="130" width="36" height="36"/>
+            <rect x="106" y="136" width="48" height="24"/>
+            <rect x="118" y="124" width="24" height="48"/>
+          </g>
+          <rect x="124" y="140" width="12" height="16" fill="#1a0508"/>
+          <!-- rose stem -->
+          <rect x="98" y="180" width="4" height="50" fill="#4a0f1a"/>
+          <rect x="92" y="180" width="16" height="8" fill="#E50914"/>
+          <rect x="88" y="184" width="24" height="10" fill="#E50914"/>
+          <rect x="84" y="192" width="32" height="8" fill="#B0060F"/>
+          <!-- top label -->
+          <text x="100" y="28" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="14" fill="#FF69B4" letter-spacing="3">THEY MADE AN OFFER</text>
+          <text x="100" y="44" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="9" fill="#888" letter-spacing="2">YOU COULDN'T JIGGLE OUT OF</text>
+          <!-- title -->
+          <text x="100" y="282" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="22" fill="#fff" letter-spacing="2">THE B<tspan fill="#FF69B4">OO</tspan>BFATHER</text>
+        </svg>
+        <div class="poster-info">
+          <div class="poster-title">The b<span class="pink">OO</span>bfather</div>
+          <div class="poster-logline">A Sicilian crime dynasty passes its cheekiest asset from father to son. Keep your enemies close. Keep your OOs closer.</div>
+          <div class="poster-meta"><span>RATED B OO BS</span><span class="box-office">177 min</span></div>
+        </div>
+      </a>
+
+      <!-- 2. JurassOOic Park -->
+      <a class="poster-card" href="boovies-jurassic.html">
+        <svg class="poster-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="jungle" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0b3d1f"/>
+              <stop offset="100%" stop-color="#04130a"/>
+            </linearGradient>
+          </defs>
+          <rect width="200" height="300" fill="url(#jungle)"/>
+          <!-- jungle silhouettes -->
+          <g fill="#02080a">
+            <rect x="0" y="230" width="200" height="70"/>
+            <polygon points="0,230 20,190 40,230"/>
+            <polygon points="30,230 50,200 70,230"/>
+            <polygon points="140,230 165,195 190,230"/>
+            <polygon points="170,230 200,205 200,230"/>
+          </g>
+          <!-- dino silhouette -->
+          <g fill="#111">
+            <rect x="60" y="215" width="80" height="20"/>
+            <rect x="62" y="205" width="12" height="15"/>
+            <rect x="128" y="200" width="20" height="20"/>
+            <rect x="146" y="195" width="14" height="12"/>
+            <rect x="160" y="200" width="6" height="8"/>
+          </g>
+          <!-- OO as dino eyes glowing -->
+          <rect x="150" y="200" width="4" height="4" fill="#FF69B4"/>
+          <rect x="158" y="202" width="3" height="3" fill="#FF69B4"/>
+          <!-- big OO floating over scene -->
+          <g fill="#FF69B4" opacity="0.95">
+            <rect x="52" y="90" width="36" height="36"/>
+            <rect x="46" y="96" width="48" height="24"/>
+            <rect x="58" y="84" width="24" height="48"/>
+          </g>
+          <rect x="64" y="100" width="12" height="16" fill="url(#jungle)"/>
+          <g fill="#FF69B4" opacity="0.95">
+            <rect x="112" y="90" width="36" height="36"/>
+            <rect x="106" y="96" width="48" height="24"/>
+            <rect x="118" y="84" width="24" height="48"/>
+          </g>
+          <rect x="124" y="100" width="12" height="16" fill="url(#jungle)"/>
+          <!-- top label -->
+          <text x="100" y="34" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="11" fill="#FF69B4" letter-spacing="3">65 MILLION YEARS IN THE MAKING</text>
+          <!-- title -->
+          <text x="100" y="270" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="22" fill="#fff" letter-spacing="2">JURASS<tspan fill="#FF69B4">OO</tspan>IC</text>
+          <text x="100" y="290" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="18" fill="#fff" letter-spacing="4">PARK</text>
+        </svg>
+        <div class="poster-info">
+          <div class="poster-title">Jurass<span class="pink">OO</span>ic Park</div>
+          <div class="poster-logline">Scientists clone two ancient OOs from amber. Containment lasts 14 minutes. Jiggle finds a way.</div>
+          <div class="poster-meta"><span>RATED PG-OO</span><span class="box-office">$1.02B</span></div>
+        </div>
+      </a>
+
+      <!-- 3. The bOOning -->
+      <a class="poster-card" href="boovies-booning.html">
+        <svg class="poster-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#c9d0d8"/>
+          <!-- blood drip from top -->
+          <g fill="#9a0c1a">
+            <rect x="0" y="0" width="200" height="20"/>
+            <rect x="20" y="20" width="8" height="14"/>
+            <rect x="56" y="20" width="6" height="22"/>
+            <rect x="88" y="20" width="10" height="34"/>
+            <rect x="128" y="20" width="7" height="18"/>
+            <rect x="160" y="20" width="9" height="26"/>
+          </g>
+          <!-- door -->
+          <rect x="60" y="90" width="80" height="160" fill="#3a2418"/>
+          <rect x="66" y="96" width="68" height="148" fill="#5a3a26"/>
+          <!-- broken hole -->
+          <polygon points="70,120 90,100 130,106 134,150 110,160 74,150" fill="#0a0a0a"/>
+          <!-- OO peering through -->
+          <g fill="#FF69B4">
+            <rect x="82" y="124" width="14" height="14"/>
+            <rect x="110" y="124" width="14" height="14"/>
+          </g>
+          <rect x="86" y="128" width="5" height="6" fill="#0a0a0a"/>
+          <rect x="114" y="128" width="5" height="6" fill="#0a0a0a"/>
+          <!-- top blood tagline -->
+          <text x="100" y="74" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="10" fill="#9a0c1a" letter-spacing="3">HERE'S JIGGLY</text>
+          <!-- title -->
+          <text x="100" y="280" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="26" fill="#9a0c1a" letter-spacing="2">THE B<tspan fill="#FF69B4">OO</tspan>NING</text>
+        </svg>
+        <div class="poster-info">
+          <div class="poster-title">The b<span class="pink">OO</span>ning</div>
+          <div class="poster-logline">A writer-in-residence snaps at a haunted hotel. Redrum, redrum, red<em>OO</em>m. All jiggle and no wobble makes Jack a dull boy.</div>
+          <div class="poster-meta"><span>RATED OO-17</span><span class="box-office">146 min</span></div>
+        </div>
+      </a>
+
+      <!-- 4. Pulp FictOOn -->
+      <a class="poster-card" href="boovies-pulp.html">
+        <svg class="poster-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#f6d64e"/>
+          <!-- retro sunburst from center -->
+          <g fill="#e8a61c" opacity="0.45">
+            <polygon points="100,150 0,0 40,0"/>
+            <polygon points="100,150 60,0 100,0"/>
+            <polygon points="100,150 120,0 160,0"/>
+            <polygon points="100,150 180,0 200,0"/>
+            <polygon points="100,150 0,300 40,300"/>
+            <polygon points="100,150 60,300 100,300"/>
+            <polygon points="100,150 120,300 160,300"/>
+            <polygon points="100,150 180,300 200,300"/>
+          </g>
+          <!-- cigarette -->
+          <rect x="120" y="150" width="40" height="4" fill="#fff"/>
+          <rect x="158" y="149" width="4" height="6" fill="#E50914"/>
+          <!-- OO -->
+          <g fill="#FF69B4">
+            <rect x="52" y="110" width="36" height="36"/>
+            <rect x="46" y="116" width="48" height="24"/>
+            <rect x="58" y="104" width="24" height="48"/>
+          </g>
+          <rect x="64" y="120" width="12" height="16" fill="#f6d64e"/>
+          <g fill="#FF69B4">
+            <rect x="112" y="110" width="36" height="36"/>
+            <rect x="106" y="116" width="48" height="24"/>
+            <rect x="118" y="104" width="24" height="48"/>
+          </g>
+          <rect x="124" y="120" width="12" height="16" fill="#f6d64e"/>
+          <!-- "TEN STORIES" style banner -->
+          <rect x="0" y="30" width="200" height="28" fill="#0a0a0a"/>
+          <text x="100" y="50" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="14" fill="#f6d64e" letter-spacing="4">ROYALE WITH OOS</text>
+          <!-- bottom banner -->
+          <rect x="0" y="230" width="200" height="50" fill="#0a0a0a"/>
+          <text x="100" y="262" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="26" fill="#f6d64e" letter-spacing="3">PULP FICT<tspan fill="#FF69B4">OO</tspan>N</text>
+        </svg>
+        <div class="poster-info">
+          <div class="poster-title">Pulp Fict<span class="pink">OO</span>n</div>
+          <div class="poster-logline">Two hitmen debate what they call a Quarter Pounder in Europe. They don't call it anything, because their mouths are full of <em>OOs</em>.</div>
+          <div class="poster-meta"><span>RATED R-OO</span><span class="box-office">154 min</span></div>
+        </div>
+      </a>
+
+      <!-- 5. Raid-OO-rs of the Lost Ark -->
+      <a class="poster-card" href="boovies-raiders.html">
+        <svg class="poster-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="desert" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1a0a00"/>
+              <stop offset="50%" stop-color="#8a3a12"/>
+              <stop offset="100%" stop-color="#e8b464"/>
+            </linearGradient>
+          </defs>
+          <rect width="200" height="300" fill="url(#desert)"/>
+          <!-- pyramid silhouettes -->
+          <polygon points="20,240 60,160 100,240" fill="#3a1a08"/>
+          <polygon points="80,240 130,140 180,240" fill="#4a2410"/>
+          <polygon points="150,240 190,180 200,240" fill="#3a1a08"/>
+          <!-- hat brim shadow -->
+          <ellipse cx="100" cy="92" rx="62" ry="10" fill="#0a0503"/>
+          <rect x="60" y="72" width="80" height="22" fill="#0a0503"/>
+          <rect x="70" y="62" width="60" height="14" fill="#1a0a00"/>
+          <!-- OO under hat (shadowed face) -->
+          <g fill="#FF69B4">
+            <rect x="62" y="108" width="30" height="30"/>
+            <rect x="56" y="114" width="42" height="20"/>
+            <rect x="68" y="102" width="18" height="42"/>
+          </g>
+          <rect x="72" y="116" width="10" height="14" fill="#1a0a00"/>
+          <g fill="#FF69B4">
+            <rect x="108" y="108" width="30" height="30"/>
+            <rect x="102" y="114" width="42" height="20"/>
+            <rect x="114" y="102" width="18" height="42"/>
+          </g>
+          <rect x="118" y="116" width="10" height="14" fill="#1a0a00"/>
+          <!-- whip -->
+          <path d="M 40,260 Q 80,200 120,220 Q 160,240 180,200" stroke="#5a2a12" stroke-width="3" fill="none"/>
+          <!-- title -->
+          <text x="100" y="30" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="22" fill="#f6d64e" letter-spacing="2">RAID<tspan fill="#FF69B4">OO</tspan>RS</text>
+          <text x="100" y="48" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="10" fill="#fff" letter-spacing="3">OF THE LOST ARK</text>
+          <text x="100" y="292" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="9" fill="#fff" letter-spacing="3">IT BELONGS IN A MUSEUM</text>
+        </svg>
+        <div class="poster-info">
+          <div class="poster-title">Raid<span class="pink">OO</span>rs of the Lost Ark</div>
+          <div class="poster-logline">Archaeologist Indiana Jiggles races the Nazis to recover a pair of ancient artifacts that, frankly, refuse to sit still.</div>
+          <div class="poster-meta"><span>RATED PG-OO</span><span class="box-office">115 min</span></div>
+        </div>
+      </a>
+
+      <!-- 6. Star bOOrs -->
+      <a class="poster-card" href="boovies-star.html">
+        <svg class="poster-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#02030a"/>
+          <!-- stars -->
+          <g fill="#fff">
+            <rect x="20" y="30" width="2" height="2"/>
+            <rect x="55" y="18" width="2" height="2"/>
+            <rect x="80" y="50" width="1" height="1"/>
+            <rect x="140" y="35" width="2" height="2"/>
+            <rect x="170" y="60" width="1" height="1"/>
+            <rect x="30" y="80" width="1" height="1"/>
+            <rect x="185" y="120" width="2" height="2"/>
+            <rect x="10" y="140" width="1" height="1"/>
+            <rect x="60" y="220" width="2" height="2"/>
+            <rect x="175" y="240" width="1" height="1"/>
+          </g>
+          <!-- planet -->
+          <circle cx="40" cy="260" r="50" fill="#3a1a08"/>
+          <circle cx="40" cy="260" r="50" fill="#5a2a12" opacity="0.5" transform="translate(-6,-4)"/>
+          <!-- lightsabers crossed -->
+          <rect x="45" y="100" width="4" height="90" fill="#FF69B4" transform="rotate(-30 47 145)"/>
+          <rect x="151" y="100" width="4" height="90" fill="#FF69B4" transform="rotate(30 153 145)"/>
+          <rect x="45" y="186" width="4" height="14" fill="#888" transform="rotate(-30 47 193)"/>
+          <rect x="151" y="186" width="4" height="14" fill="#888" transform="rotate(30 153 193)"/>
+          <!-- OO in center -->
+          <g fill="#FF69B4">
+            <rect x="58" y="120" width="32" height="32"/>
+            <rect x="52" y="126" width="44" height="20"/>
+            <rect x="64" y="114" width="20" height="44"/>
+          </g>
+          <rect x="68" y="128" width="12" height="16" fill="#02030a"/>
+          <g fill="#FF69B4">
+            <rect x="110" y="120" width="32" height="32"/>
+            <rect x="104" y="126" width="44" height="20"/>
+            <rect x="116" y="114" width="20" height="44"/>
+          </g>
+          <rect x="120" y="128" width="12" height="16" fill="#02030a"/>
+          <!-- title -->
+          <text x="100" y="36" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="11" fill="#888" letter-spacing="3">A LONG TIME AGO IN A</text>
+          <text x="100" y="52" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="11" fill="#888" letter-spacing="3">CHEEKIER GALAXY</text>
+          <text x="100" y="280" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="26" fill="#FFE81F" letter-spacing="3">STAR B<tspan fill="#FF69B4">OO</tspan>RS</text>
+        </svg>
+        <div class="poster-info">
+          <div class="poster-title">Star b<span class="pink">OO</span>rs</div>
+          <div class="poster-logline">A farmboy discovers his destiny: to restore balance to the Force and the roundest binary pair in the galaxy.</div>
+          <div class="poster-meta"><span>RATED PG-OO</span><span class="box-office">$775M</span></div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ═══════════ PITCH DECK ═══════════ -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-eyebrow">Development Hell</div>
+      <h2 class="section-title">Upcoming <span class="oo-inline">Pitches</span></h2>
+      <p class="section-sub">
+        Fresh from the bOOvies writers' room. Every pitch is one "X meets Y" away from a green light.
+      </p>
+    </div>
+
+    <div class="pitch-grid">
+      <div class="pitch-card">
+        <div class="pitch-stamp">Tier 1 · $0.99</div>
+        <div class="pitch-title">Inceptioo<span style="color:#FF69B4">O</span></div>
+        <div class="pitch-xby">"Inception" × "your uncle's dream journal"</div>
+        <div class="pitch-body">A thief who enters people's dreams is hired to plant an idea six dreams deep. The idea is <em>"buy more OOs"</em>. It works.</div>
+        <div class="pitch-budget"><b>Runtime:</b> 148 min · <b>Expected ROI:</b> existential</div>
+      </div>
+
+      <div class="pitch-card">
+        <div class="pitch-stamp">Tier 2 · $9.99</div>
+        <div class="pitch-title">The Sh<span style="color:#FF69B4">OO</span>shank Redemption</div>
+        <div class="pitch-xby">"Prison drama" × "slow but meaningful"</div>
+        <div class="pitch-body">Andy spends 19 years tunneling out of Sh<em>OO</em>shank State Penitentiary with a rock hammer and an unshakable belief in round things.</div>
+        <div class="pitch-budget"><b>Runtime:</b> 142 min · <b>Rotten Tomatoes:</b> projected 98%</div>
+      </div>
+
+      <div class="pitch-card">
+        <div class="pitch-stamp">Tier 2 · $9.99</div>
+        <div class="pitch-title">The Matrix Rel<span style="color:#FF69B4">OO</span>ded</div>
+        <div class="pitch-xby">"Sci-fi action" × "someone's second pass"</div>
+        <div class="pitch-body">Neo discovers the real simulation was the O<em>O</em>s we added along the way. Contains one (1) highway scene, negotiable.</div>
+        <div class="pitch-budget"><b>Runtime:</b> 138 min · <b>CGI budget:</b> entire GDP of small nation</div>
+      </div>
+
+      <div class="pitch-card">
+        <div class="pitch-stamp">Tier 3 · $99</div>
+        <div class="pitch-title">Cit<span style="color:#FF69B4">OO</span>zen Kane</div>
+        <div class="pitch-xby">"Orson Welles" × "a reporter with nothing better to do"</div>
+        <div class="pitch-body">A dying tycoon whispers the name "Rosebud". It was, it turns out, his affectionate nickname for <em>them</em>. Critics called it "brave".</div>
+        <div class="pitch-budget"><b>Runtime:</b> 119 min · <b>Oscar nominations:</b> all of them</div>
+      </div>
+
+      <div class="pitch-card">
+        <div class="pitch-stamp">Tier 3 · $99</div>
+        <div class="pitch-title">The Silence of the Lam<span style="color:#FF69B4">OO</span>s</div>
+        <div class="pitch-xby">"Psychological thriller" × "lotion industry"</div>
+        <div class="pitch-body">A young FBI trainee consults an imprisoned cannibal psychiatrist to catch a killer. "It puts the lotion on the <em>OO</em>s or else it gets the hose again."</div>
+        <div class="pitch-budget"><b>Runtime:</b> 118 min · <b>Night lights sold:</b> 14M</div>
+      </div>
+
+      <div class="pitch-card">
+        <div class="pitch-stamp">Tier 4 · $999</div>
+        <div class="pitch-title">2<span style="color:#FF69B4">OO</span>1: A Space Odyssey</div>
+        <div class="pitch-xby">"Kubrick" × "an AI that got too into jiggling"</div>
+        <div class="pitch-body">An onboard computer named HAL starts making unauthorized aesthetic choices. "I'm sorry Dave, I can't let you disable the jiggle physics."</div>
+        <div class="pitch-budget"><b>Runtime:</b> 149 min · <b>Monolith budget:</b> $40 (used lumber)</div>
+      </div>
+    </div>
+  </section>
+
+  <div style="text-align:center; padding: 1rem 2rem 3rem; position: relative; z-index: 2;">
     <a href="index.html" class="back-link">&larr; Back to the grown-up version</a>
   </div>
 
