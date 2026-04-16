@@ -456,15 +456,21 @@
 
     function render(offer) {
       const root = document.getElementById('root');
-      const arts = offer.bct_artifacts || [];
+      // xAI temp CDN URLs expire in ~24h. Reject them everywhere so
+      // they can never win the priority chain against a local POSTER_MAP.
+      const isEphemeralUrl = (u) => typeof u === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(u);
+      const rawArts = offer.bct_artifacts || [];
+      const arts = rawArts.filter((a) => !isEphemeralUrl(a.url));
       const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
       const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
-      const writer = arts.find(a => a.role === 'writer' && a.kind === 'text');
+      const writer = rawArts.find(a => a.role === 'writer' && a.kind === 'text');
       const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
-      // Priority: generated poster → commissioner-curated key art → storyboard frame.
-      // The static poster map wins over a generic storyboard role because legacy
-      // pipelines didn't produce a dedicated poster artifact.
-      const heroImage = posterArt?.url || posterUrl || storyboard?.url || null;
+      // Priority: POSTER_MAP override (commissioner-curated static JPG,
+      // always permanent) → non-ephemeral poster artifact → non-ephemeral
+      // storyboard frame. POSTER_MAP wins because anything in the DB
+      // that isn't already filtered out is still a potential time-bomb
+      // (e.g. an un-mirrored upstream URL we haven't seen before).
+      const heroImage = posterUrl || posterArt?.url || storyboard?.url || null;
       const studio = findStudio(offer.id);
 
       const writerText = writer ? decodeDataUrl(writer.url) : null;

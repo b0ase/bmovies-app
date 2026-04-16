@@ -395,18 +395,23 @@
       'the last transmission':               'img/films/the-last-transmission.jpg',
     };
 
+    // xAI temp CDN URLs expire in ~24h. Reject them so POSTER_MAP wins.
+    const isEphemeralUrl = (u) => typeof u === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(u);
+
     function pickHeroImage(arts, title) {
-      // Priority: generated poster → commissioner-curated static poster →
-      // storyboard frame → any other image. The POSTER_MAP override wins
-      // over a generic storyboard role for legacy films where the pipeline
-      // only produced storyboard frames and no dedicated poster.
-      const posterArt = arts.find((a) => a.role === 'poster' && a.kind === 'image');
-      if (posterArt) return posterArt;
+      // Priority:
+      //   1. POSTER_MAP override — permanent static JPG, always wins.
+      //   2. Non-ephemeral poster artifact from the DB.
+      //   3. Non-ephemeral storyboard frame.
+      //   4. Any other non-ephemeral image.
       const posterMap = POSTER_MAP[(title || '').toLowerCase()];
       if (posterMap) return { url: posterMap, kind: 'image', role: 'poster' };
-      const sb = arts.find((a) => a.role === 'storyboard' && a.kind === 'image');
+      const liveArts = (arts || []).filter((a) => !isEphemeralUrl(a.url));
+      const posterArt = liveArts.find((a) => a.role === 'poster' && a.kind === 'image');
+      if (posterArt) return posterArt;
+      const sb = liveArts.find((a) => a.role === 'storyboard' && a.kind === 'image');
       if (sb) return sb;
-      const img = arts.find((a) => a.kind === 'image');
+      const img = liveArts.find((a) => a.kind === 'image');
       if (img) return img;
       return null;
     }

@@ -399,8 +399,16 @@
       const editorText = editor ? decodeDataUrl(editor.url) : null;
       const soundText = soundDesigner ? decodeDataUrl(soundDesigner.url) : null;
 
+      // xAI temp CDN URLs expire in ~24h — reject them so a live
+      // POSTER_MAP static JPG wins over a dead DB URL.
+      const isEphemeralUrl = (u) => typeof u === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(u);
       const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
-      const heroImage = storyboard?.url || posterUrl || null;
+      // Deck hero priority is inverted vs film.html — the deck wants a
+      // storyboard frame if one exists (investor packs traditionally use
+      // a shot, not a one-sheet). But we still reject ephemeral URLs and
+      // fall through to POSTER_MAP so nothing broken ever renders.
+      const liveStoryboardUrl = storyboard?.url && !isEphemeralUrl(storyboard.url) ? storyboard.url : null;
+      const heroImage = liveStoryboardUrl || posterUrl || null;
 
       const required = Number(offer.required_sats) || 0;
       const raised = Number(offer.raised_sats) || 0;
