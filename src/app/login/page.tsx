@@ -289,7 +289,7 @@ function LoginContent() {
             </p>
           </div>
 
-          {/* ── Google (primary) ── */}
+          {/* ── Social sign-in (Google + X) ── */}
           <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-5 mb-5">
             <div className="flex justify-center">
               <div ref={googleBtnRef} style={{ minHeight: 40, minWidth: 240 }} />
@@ -299,9 +299,38 @@ function LoginContent() {
                 Loading Google sign-in…
               </div>
             )}
+
+            <div className="my-3 flex items-center gap-3">
+              <div className="flex-1 border-t border-[#333]" />
+              <span className="text-[0.55rem] text-[#666] uppercase tracking-wider font-bold">or</span>
+              <div className="flex-1 border-t border-[#333]" />
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setError(null)
+                setBusy(true)
+                try {
+                  const { error } = await bmovies.auth.signInWithOAuth({
+                    provider: 'twitter',
+                    options: { redirectTo: window.location.origin + '/account' },
+                  })
+                  if (error) throw error
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'X sign-in failed')
+                  setBusy(false)
+                }
+              }}
+              disabled={busy}
+              className="w-full px-4 py-3 bg-black hover:bg-[#111] disabled:bg-[#1a1a1a] disabled:text-[#666] text-white text-xs font-black uppercase tracking-wider border border-[#333] flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width:'14px',height:'14px'}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              {busy ? 'Redirecting…' : 'Continue with X'}
+            </button>
+
             <div className="text-center text-[0.55rem] text-[#666] mt-3">
-              Once signed in, you can link a BRC-100 wallet (BSV Desktop / Yours)<br/>
-              from your account dashboard to enable BSV payments and token purchases.
+              Once signed in, link a BRC-100 wallet from your dashboard to enable BSV payments.
             </div>
           </div>
 
