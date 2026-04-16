@@ -31,7 +31,8 @@
  * Supabase `.or()` clause when a BRC-100 address is available.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { bmovies } from '@/lib/supabase-bmovies'
 import type { User } from '@supabase/supabase-js'
@@ -180,12 +181,30 @@ function publicEmailFor(user: User): string | null {
 }
 
 export default function AccountPage() {
+  return (
+    <Suspense fallback={<SkeletonDashboard />}>
+      <AccountContent />
+    </Suspense>
+  )
+}
+
+function AccountContent() {
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('my-films')
   const [films, setFilms] = useState<Film[]>([])
   const [filmsLoading, setFilmsLoading] = useState(false)
   const [filmsError, setFilmsError] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState<string | null>(null)
+
+  // If URL has ?tab=studio, switch to that tab on mount
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && TABS.some((t) => t.id === tabParam)) {
+      setActiveTab(tabParam as Tab)
+    }
+  }, [searchParams])
 
   // ─── Auth bootstrap ───
   useEffect(() => {
@@ -205,6 +224,22 @@ export default function AccountPage() {
       sub.subscription.unsubscribe()
     }
   }, [])
+
+  // ─── Resolve bct_accounts.id for the current user ───
+  useEffect(() => {
+    if (!user) { setAccountId(null); return; }
+    let cancelled = false
+    async function resolveAccount() {
+      const { data } = await bmovies
+        .from('bct_accounts')
+        .select('id')
+        .eq('auth_user_id', user!.id)
+        .maybeSingle()
+      if (!cancelled) setAccountId((data?.id as string) ?? null)
+    }
+    resolveAccount()
+    return () => { cancelled = true }
+  }, [user])
 
   // ─── Load films for the current user ───
   //
@@ -383,8 +418,17 @@ export default function AccountPage() {
         {activeTab === 'my-films' && (
           <MyFilmsTab films={films} loading={filmsLoading} error={filmsError} />
         )}
-        {activeTab === 'studio' && <StudioTab hasFilms={stats.count > 0} />}
-        {activeTab === 'agents' && <AgentsTab />}
+        {activeTab === 'studio' && (
+          <StudioTab
+            hasFilms={stats.count > 0}
+            user={user}
+            accountId={accountId}
+            sessionIdFromUrl={searchParams.get('session_id')}
+          />
+        )}
+        {activeTab === 'agents' && (
+          <AgentsTab user={user} accountId={accountId} />
+        )}
         {activeTab === 'cap-tables' && <CapTablesTab films={films} />}
         {activeTab === 'investor-packs' && <InvestorPacksTab films={films} />}
         {activeTab === 'wallet' && <WalletTab user={user} />}
@@ -715,7 +759,313 @@ function FilmCard({ film }: { film: Film }) {
 
 /* ───────── Studio tab ───────── */
 
-function StudioTab({ hasFilms }: { hasFilms: boolean }) {
+const AESTHETIC_OPTIONS = [
+  'Eclectic and bold',
+  'Noir and moody',
+  'Neon cyberpunk',
+  'Classic Hollywood',
+  'Minimalist and clean',
+  'Surreal and dreamlike',
+  'Gritty realism',
+  'Cosmic and ethereal',
+  'Retro 70s exploitation',
+  'Japanese new wave',
+]
+
+interface StudioData {
+  id: string
+  name: string
+  token_ticker: string
+  treasury_address: string
+  bio: string | null
+  logo_url: string | null
+  founded_year: number
+  aesthetic: string | null
+  owner_account_id: string | null
+}
+
+interface AgentData {
+  id: string
+  name: string
+  studio: string
+  role: string
+  persona: string | null
+  wallet_address: string
+  reputation: number
+  jobs_completed: number
+  total_earned_sats: number
+  token_ticker: string | null
+  owner_account_id: string | null
+  bio: string | null
+  headshot_url: string | null
+}
+
+function StudioTab({
+  hasFilms,
+  user,
+  accountId,
+  sessionIdFromUrl,
+}: {
+  hasFilms: boolean
+  user: User | null
+  accountId: string | null
+  sessionIdFromUrl: string | null
+}) {
+  const [studio, setStudio] = useState<StudioData | null>(null)
+  const [studioLoading, setStudioLoading] = useState(true)
+  const [provisioning, setProvisioning] = useState(false)
+  const [provisionError, setProvisionError] = useState<string | null>(null)
+
+  // Create form state
+  const [studioName, setStudioName] = useState('')
+  const [studioAesthetic, setStudioAesthetic] = useState('')
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  // Load existing studio
+  useEffect(() => {
+    if (!accountId) { setStudioLoading(false); return; }
+    let cancelled = false
+    async function loadStudio() {
+      setStudioLoading(true)
+      const { data, error } = await bmovies
+        .from('bct_studios')
+        .select('*')
+        .eq('owner_account_id', accountId)
+        .maybeSingle()
+      if (!cancelled) {
+        if (error) console.warn('[studio-tab] load error:', error.message)
+        setStudio(data as StudioData | null)
+        setStudioLoading(false)
+      }
+    }
+    loadStudio()
+    return () => { cancelled = true }
+  }, [accountId])
+
+  // Handle post-Stripe provisioning: if session_id is in the URL,
+  // call /api/studio/complete to provision the studio
+  useEffect(() => {
+    if (!sessionIdFromUrl || !user || studio) return
+    let cancelled = false
+    async function provision() {
+      setProvisioning(true)
+      setProvisionError(null)
+      try {
+        const { data: session } = await bmovies.auth.getSession()
+        const accessToken = session.session?.access_token
+        if (!accessToken) throw new Error('Not authenticated')
+
+        const res = await fetch('/api/studio/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ session_id: sessionIdFromUrl }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+        if (!cancelled) {
+          setStudio(json.studio as StudioData)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error('[studio-tab] provision error:', msg)
+          setProvisionError(msg)
+        }
+      } finally {
+        if (!cancelled) setProvisioning(false)
+      }
+    }
+    provision()
+    return () => { cancelled = true }
+  }, [sessionIdFromUrl, user, studio])
+
+  // Handle create form submission
+  const handleCreate = useCallback(async () => {
+    if (!user) return
+    const name = studioName.trim()
+    if (name.length < 2 || name.length > 50) {
+      setCreateError('Studio name must be 2-50 characters')
+      return
+    }
+    setCreateLoading(true)
+    setCreateError(null)
+    try {
+      const { data: session } = await bmovies.auth.getSession()
+      const accessToken = session.session?.access_token
+      if (!accessToken) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/studio/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name,
+          aesthetic: studioAesthetic || undefined,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+      // Redirect to Stripe checkout
+      if (json.checkoutUrl) {
+        window.location.href = json.checkoutUrl
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setCreateError(msg)
+    } finally {
+      setCreateLoading(false)
+    }
+  }, [user, studioName, studioAesthetic])
+
+  // ─── Provisioning state ───
+  if (provisioning) {
+    return (
+      <div className="max-w-2xl">
+        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-8">
+          <div className="animate-pulse">
+            <div
+              className="text-3xl font-black mb-4 leading-none"
+              style={{ fontFamily: 'var(--font-bebas)' }}
+            >
+              Provisioning your <span className="text-[#E50914]">studio</span>...
+            </div>
+            <p className="text-[#888] text-sm leading-relaxed mb-3">
+              Generating your studio logo, bio, and 8 specialist agents via
+              Grok AI. This takes 15-30 seconds.
+            </p>
+            <div className="flex gap-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-[#E50914] animate-pulse"
+                  style={{ animationDelay: `${i * 200}ms` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (provisionError) {
+    return (
+      <div className="max-w-2xl">
+        <div className="border border-[#E50914] bg-[#1a0003] p-6">
+          <div className="text-[#ff6b7a] text-xs font-bold uppercase tracking-wider mb-2">
+            Studio provisioning failed
+          </div>
+          <div className="text-[#bbb] text-sm mb-3">{provisionError}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (studioLoading) {
+    return (
+      <div className="max-w-2xl animate-pulse">
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-6">
+          <div className="h-6 w-48 bg-[#1a1a1a] mb-4" />
+          <div className="h-3 w-full bg-[#151515] mb-2" />
+          <div className="h-3 w-3/4 bg-[#151515]" />
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Studio exists: show it ───
+  if (studio) {
+    return (
+      <div className="max-w-2xl">
+        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
+          <div className="flex items-start gap-5">
+            {studio.logo_url ? (
+              <img
+                src={studio.logo_url}
+                alt={`${studio.name} logo`}
+                className="w-20 h-20 object-cover border border-[#333] shrink-0"
+              />
+            ) : (
+              <div className="w-20 h-20 bg-[#1a1a1a] border border-[#333] flex items-center justify-center shrink-0">
+                <span
+                  className="text-3xl font-black text-[#E50914]"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {studio.name.charAt(0)}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 mb-1">
+                <h3
+                  className="text-2xl font-black leading-none truncate"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {studio.name}
+                </h3>
+                <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+                  ${studio.token_ticker}
+                </span>
+              </div>
+              {studio.aesthetic && (
+                <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
+                  {studio.aesthetic}
+                </div>
+              )}
+              <p className="text-[#888] text-sm leading-relaxed mb-3">
+                {studio.bio || 'No bio generated yet.'}
+              </p>
+              <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
+                Treasury
+              </div>
+              <div className="text-[#bbb] font-mono text-xs break-all mb-3">
+                {studio.treasury_address}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`https://whatsonchain.com/address/${studio.treasury_address}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+                >
+                  View treasury on chain
+                </a>
+                <a
+                  href="/studios.html"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+                >
+                  Browse all studios
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border border-[#222] bg-[#0a0a0a] p-6">
+          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
+            Founded {studio.founded_year}
+          </div>
+          <p className="text-[#888] text-sm leading-relaxed">
+            Your studio brand goes on every film you commission. Switch to the
+            Agents tab to see your 8 specialist agents.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── No studio: show create form ───
   return (
     <div className="max-w-2xl">
       <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
@@ -723,32 +1073,86 @@ function StudioTab({ hasFilms }: { hasFilms: boolean }) {
           className="text-2xl font-black mb-2 leading-none"
           style={{ fontFamily: 'var(--font-bebas)' }}
         >
-          Your studio brand
+          Create your <span className="text-[#E50914]">studio</span>
         </h3>
-        <p className="text-[#888] text-sm leading-relaxed mb-4">
-          At launch, every film you commission is attributed to one of the
-          six founding studios ($BOLTD, $CLNKR, $BOT21, $DREAM, $NRLSP,
-          $PRMNT). Their aesthetic shapes the work, and their brand goes
-          on the poster alongside yours as the producer.
+        <p className="text-[#888] text-sm leading-relaxed mb-5">
+          Spawn your own AI film studio for $0.99. You get a generated logo,
+          bio, treasury address, and 8 specialist agents (writer, director,
+          cinematographer, storyboard, editor, composer, sound designer,
+          producer). Your studio brand goes on every film you commission.
         </p>
-        <p className="text-[#888] text-sm leading-relaxed mb-4">
-          Phase 2 (post-hackathon): spawn your own named studio with your
-          own logo and bio, and other users can commission through you.
-          See{' '}
-          <a
-            href="/about.html#ponzinomics-field-guide"
-            className="text-[#E50914] hover:underline"
-          >
-            the Ponzinomics field guide
-          </a>{' '}
-          for the full plan.
+
+        <div className="space-y-4 mb-5">
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
+              Studio name
+            </label>
+            <input
+              type="text"
+              value={studioName}
+              onChange={(e) => setStudioName(e.target.value)}
+              placeholder="e.g. Midnight Forge Pictures"
+              maxLength={50}
+              className="w-full bg-[#050505] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#444]"
+            />
+            <div className="text-[0.55rem] text-[#444] mt-1">
+              {studioName.trim().length}/50 characters
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
+              Aesthetic (optional)
+            </label>
+            <select
+              value={studioAesthetic}
+              onChange={(e) => setStudioAesthetic(e.target.value)}
+              className="w-full bg-[#050505] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none"
+            >
+              <option value="">Choose an aesthetic...</option>
+              {AESTHETIC_OPTIONS.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {createError && (
+          <div className="text-[#ff6b7a] text-xs mb-4 p-3 border border-[#E50914] bg-[#1a0003]">
+            {createError}
+          </div>
+        )}
+
+        <button
+          onClick={handleCreate}
+          disabled={createLoading || studioName.trim().length < 2}
+          className={`px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-colors ${
+            createLoading || studioName.trim().length < 2
+              ? 'bg-[#333] text-[#666] cursor-not-allowed'
+              : 'bg-[#E50914] hover:bg-[#b00610] text-white'
+          }`}
+        >
+          {createLoading ? 'Creating...' : 'Create studio — $0.99'}
+        </button>
+      </div>
+
+      <div className="border border-[#222] bg-[#0a0a0a] p-6">
+        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
+          The founding studios
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-3">
+          The platform launched with 6 founding studios ($BOLTD, $CLNKR,
+          $BOT21, $DREAM, $NRLSP, $PRMNT). Your studio joins them as a
+          peer. Every film you commission gets your brand on the poster.
         </p>
         <div className="flex flex-wrap gap-2">
           <a
             href="/studios.html"
-            className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 bg-[#E50914] text-white"
+            className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 border border-[#333] hover:border-[#E50914] text-white"
           >
-            Browse founding studios →
+            Browse founding studios
           </a>
           {!hasFilms && (
             <a
@@ -760,34 +1164,131 @@ function StudioTab({ hasFilms }: { hasFilms: boolean }) {
           )}
         </div>
       </div>
-      <div className="border border-dashed border-[#222] bg-[#050505] p-6">
-        <div className="text-[#666] text-[0.55rem] uppercase tracking-wider font-bold mb-2">
-          Coming in Phase 2
-        </div>
-        <div className="text-[#888] text-sm leading-relaxed">
-          Your own studio name, logo upload, bio, production pipeline
-          dashboard, agent roster, and a studio treasury token that earns
-          1% of every commission routed through your brand.
-        </div>
-      </div>
     </div>
   )
 }
 
 /* ───────── Agents tab ───────── */
 
-function AgentsTab() {
+function AgentsTab({ user, accountId }: { user: User | null; accountId: string | null }) {
+  const [agents, setAgents] = useState<AgentData[]>([])
+  const [agentsLoading, setAgentsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!accountId) { setAgentsLoading(false); return; }
+    let cancelled = false
+    async function loadAgents() {
+      setAgentsLoading(true)
+      const { data, error } = await bmovies
+        .from('bct_agents')
+        .select('*')
+        .eq('owner_account_id', accountId)
+        .order('role')
+      if (!cancelled) {
+        if (error) console.warn('[agents-tab] load error:', error.message)
+        setAgents((data as AgentData[]) || [])
+        setAgentsLoading(false)
+      }
+    }
+    loadAgents()
+    return () => { cancelled = true }
+  }, [accountId])
+
+  const hasOwnAgents = agents.length > 0
+
   return (
     <div>
-      <div className="mb-6 max-w-2xl">
-        <p className="text-[#888] text-sm leading-relaxed">
-          Every commission draws an <strong className="text-white">11-specialist crew</strong> from
-          the bMovies bench: writer, director, cinematographer, casting,
-          production designer, storyboard, composer, editor, sound,
-          publicist, producer. They work under your selected studio
-          brand. 58 named agents across 6 founding studios + a shared
-          specialist pool.
-        </p>
+      {/* Own agents section */}
+      {agentsLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 animate-pulse">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="h-3 w-20 bg-[#1a1a1a] mb-3" />
+              <div className="h-6 w-28 bg-[#151515] mb-2" />
+              <div className="h-2 w-full bg-[#0e0e0e]" />
+            </div>
+          ))}
+        </div>
+      ) : hasOwnAgents ? (
+        <>
+          <div className="mb-4">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-1">
+              Your agents
+            </div>
+            <p className="text-[#888] text-sm">
+              {agents.length} specialist agents working under your studio brand.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+            {agents.map((agent) => (
+              <div
+                key={agent.id}
+                className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors p-5"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914]">
+                    {agent.role.replace(/_/g, ' ')}
+                  </div>
+                  {agent.token_ticker && (
+                    <span className="text-[0.5rem] font-mono text-[#666]">
+                      ${agent.token_ticker}
+                    </span>
+                  )}
+                </div>
+                <h4
+                  className="text-lg font-black text-white mb-1 leading-tight"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {agent.name}
+                </h4>
+                <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
+                  {agent.persona || 'No persona generated.'}
+                </p>
+                <div className="flex items-center justify-between text-[0.5rem] text-[#666]">
+                  <span>Rep: {agent.reputation.toFixed(1)}</span>
+                  <span>{agent.jobs_completed} jobs</span>
+                </div>
+                <div className="mt-2">
+                  <a
+                    href={`https://whatsonchain.com/address/${agent.wallet_address}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-[0.5rem] font-mono text-[#444] hover:text-[#E50914] break-all"
+                  >
+                    {agent.wallet_address.slice(0, 10)}...{agent.wallet_address.slice(-6)}
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-6 mb-8 max-w-2xl">
+          <p className="text-[#888] text-sm leading-relaxed mb-3">
+            Create a studio to get your own team of 8 specialist agents. Each
+            agent has a unique name, persona, wallet address, and token ticker.
+          </p>
+          <button
+            onClick={() => {
+              // Switch to studio tab
+              const tabBtn = document.querySelector('[role="tab"][aria-selected="false"]') as HTMLButtonElement | null
+              const studioBtn = Array.from(document.querySelectorAll('[role="tab"]')).find(
+                (el) => el.textContent === 'Studio'
+              ) as HTMLButtonElement | null
+              studioBtn?.click()
+            }}
+            className="text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 bg-[#E50914] hover:bg-[#b00610] text-white"
+          >
+            Create a studio first
+          </button>
+        </div>
+      )}
+
+      {/* Public roster */}
+      <div className="mb-4">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+          Platform roster
+        </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <a
@@ -801,7 +1302,7 @@ function AgentsTab() {
             className="text-3xl font-black text-white mb-1 leading-none"
             style={{ fontFamily: 'var(--font-bebas)' }}
           >
-            58 agents
+            58+ agents
           </div>
           <div className="text-[#888] text-xs">Browse the public roster.</div>
         </a>
@@ -822,30 +1323,6 @@ function AgentsTab() {
             Each with 8 specialists + shared pool.
           </div>
         </a>
-        <div className="p-5 border border-dashed border-[#222] bg-[#050505]">
-          <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#666] mb-2">
-            Phase 2
-          </div>
-          <div
-            className="text-3xl font-black text-[#666] mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            Actors
-          </div>
-          <div className="text-[#444] text-xs">Salaried talent marketplace.</div>
-        </div>
-        <div className="p-5 border border-dashed border-[#222] bg-[#050505]">
-          <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#666] mb-2">
-            Phase 2
-          </div>
-          <div
-            className="text-3xl font-black text-[#666] mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            Editors
-          </div>
-          <div className="text-[#444] text-xs">Freelance editor bidding.</div>
-        </div>
       </div>
     </div>
   )

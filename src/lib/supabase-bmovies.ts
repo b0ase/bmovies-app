@@ -108,6 +108,10 @@ export interface BctStudio {
   logo_url: string | null
   founded_year: number
   aesthetic: string | null
+  owner_account_id: string | null
+  logo_prompt: string | null
+  stripe_session_id: string | null
+  created_by: string
 }
 
 export interface BctDirector {
