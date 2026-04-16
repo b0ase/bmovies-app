@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bMovies — Use of Funds</title>
+  <meta name="description" content="How bMovies deploys capital raised through the $bMovies bonding curve.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #e8e8e8; background: #0a0a0a;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .page {
+      width: 210mm; height: 297mm; page-break-after: always;
+      background: #0a0a0a; position: relative; overflow: hidden;
+    }
+    .page:last-child { page-break-after: auto; }
+    .page-inner { padding: 18mm 18mm 16mm; height: 100%; position: relative; }
+    .screen-bar {
+      max-width: 210mm; margin: 0 auto; padding: 1rem 18mm;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #222;
+    }
+    .screen-bar a { color: #999; text-decoration: none; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+    .screen-bar a:hover { color: #fff; }
+    .screen-bar .actions button {
+      padding: 0.5rem 1rem; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; border: 1px solid #E50914; background: #E50914;
+      color: #fff; cursor: pointer; font-family: inherit;
+    }
+    @media print { .screen-bar { display: none; } }
+
+    .eyebrow { font-size: 7pt; letter-spacing: 0.25em; text-transform: uppercase; color: #E50914; font-weight: 700; }
+    .section-title { font-size: 22pt; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; line-height: 1; margin-top: 3mm; color: #fff; }
+    .accent-line { width: 40mm; height: 3px; background: #E50914; margin: 4mm 0; }
+    .body-text { font-size: 9pt; line-height: 1.6; color: #ccc; max-width: 155mm; }
+    .body-text strong { color: #fff; }
+    .small { font-size: 7pt; line-height: 1.5; color: #888; }
+    .stat-row { display: flex; gap: 6mm; margin-top: 5mm; }
+    .stat-box { flex: 1; border: 1px solid #222; padding: 4mm 5mm; }
+    .stat-box .val { font-size: 22pt; font-weight: 900; color: #fff; line-height: 1; }
+    .stat-box .val.accent { color: #E50914; }
+    .stat-box .label { font-size: 6.5pt; color: #888; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 1.5mm; }
+    .bullet-list { list-style: none; padding: 0; margin-top: 3mm; }
+    .bullet-list li { font-size: 8.5pt; line-height: 1.5; color: #ccc; padding: 1.5mm 0 1.5mm 4mm; border-left: 2px solid #E50914; margin-bottom: 2mm; }
+    .bullet-list li strong { color: #fff; }
+    table.dt { width: 100%; border-collapse: collapse; margin-top: 3mm; font-size: 8pt; }
+    table.dt th { text-align: left; font-size: 6.5pt; color: #888; text-transform: uppercase; letter-spacing: 0.12em; padding: 2mm 3mm; border-bottom: 1px solid #333; }
+    table.dt td { padding: 2.5mm 3mm; border-bottom: 1px solid #1a1a1a; color: #ccc; }
+    table.dt td.num { text-align: right; font-family: "SF Mono", Monaco, Menlo, monospace; font-size: 7.5pt; }
+    table.dt tr.total td { border-top: 1px solid #333; }
+    .page-num { position: absolute; bottom: 8mm; right: 18mm; font-size: 6pt; color: #444; letter-spacing: 0.1em; }
+    .footer-line {
+      position: absolute; bottom: 14mm; left: 18mm; right: 18mm;
+      border-top: 1px solid #1a1a1a; padding-top: 2mm; font-size: 5.5pt; color: #444;
+      display: flex; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="screen-bar">
+    <a href="investor-deck.html">&larr; Back to investor deck</a>
+    <div class="actions">
+      <button onclick="window.print()">Save as PDF (Cmd+P)</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 1 — COVER + SUMMARY
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Use of funds</div>
+      <div class="section-title">How capital is deployed</div>
+      <div class="accent-line"></div>
+
+      <p class="body-text" style="margin-top:3mm;font-size:10pt;">
+        Capital raised through the $bMovies bonding curve funds the platform's growth from a working prototype to a scaled autonomous film studio. This document maps each tranche of the bonding curve to specific operational milestones, team hires, and infrastructure investments.
+      </p>
+
+      <div class="eyebrow" style="margin-top:6mm;">Capital requirement by phase</div>
+      <div class="stat-row" style="margin-top:2mm;">
+        <div class="stat-box" style="text-align:center;">
+          <div class="val accent" style="font-size:18pt;">$100K</div>
+          <div class="label">Tranche 1 &mdash; Launch</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val" style="font-size:18pt;">$500K</div>
+          <div class="label">Tranche 2 &mdash; Growth</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val" style="font-size:18pt;">$1M</div>
+          <div class="label">Tranche 3 &mdash; Scale</div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:6mm;">Tranche 1 &mdash; $100K (100M shares at $0.001)</div>
+      <p class="body-text" style="margin-top:1mm;"><strong>Goal: 12 months of runway. Prove product-market fit.</strong></p>
+      <table class="dt" style="margin-top:2mm;">
+        <thead><tr><th>Line item</th><th style="text-align:right;">Amount</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Engineering (founder + 1 contractor)</td><td class="num">$48K</td><td>Pipeline hardening, multi-provider AI, payment integrations</td></tr>
+          <tr><td>AI compute reserve</td><td class="num">$12K</td><td>12 months of xAI Grok API at ~200 films/month</td></tr>
+          <tr><td>Marketing &amp; launch</td><td class="num">$18K</td><td>Content marketing, creator outreach, social ads, PR</td></tr>
+          <tr><td>Legal &amp; compliance</td><td class="num">$12K</td><td>FCA perimeter review, solicitor sign-off on prospectus, KYC costs</td></tr>
+          <tr><td>Infrastructure</td><td class="num">$6K</td><td>Servers, CDN, hosting, domains, monitoring</td></tr>
+          <tr><td>Operating reserve</td><td class="num">$4K</td><td>Buffer for unexpected costs</td></tr>
+          <tr class="total"><td><strong style="color:#fff;">Total</strong></td><td class="num"><strong style="color:#fff;">$100K</strong></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="eyebrow" style="margin-top:6mm;">Milestones unlocked by Tranche 1</div>
+      <ul class="bullet-list">
+        <li><strong>Month 1&ndash;3:</strong> Solicitor-reviewed prospectus live. Stripe + HandCash payments active. 50+ films in catalog.</li>
+        <li><strong>Month 4&ndash;6:</strong> Marketing launch. 200 films/month run rate. First organic ticket revenue.</li>
+        <li><strong>Month 7&ndash;9:</strong> Second AI provider integrated (redundancy). White-label pilot with one partner.</li>
+        <li><strong>Month 10&ndash;12:</strong> Revenue covers monthly burn. Tranche 2 capital is growth capital, not survival capital.</li>
+      </ul>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Use of Funds</span>
+        <span>Confidential</span>
+      </div>
+      <div class="page-num">1 / 3</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 2 — TRANCHES 2 & 3
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Use of funds (continued)</div>
+      <div class="section-title">Growth &amp; scale</div>
+      <div class="accent-line"></div>
+
+      <div class="eyebrow" style="margin-top:3mm;">Tranche 2 &mdash; $500K (100M shares at $0.005)</div>
+      <p class="body-text" style="margin-top:1mm;"><strong>Goal: scale to 2,000 films/month. Build the team.</strong></p>
+      <table class="dt" style="margin-top:2mm;">
+        <thead><tr><th>Line item</th><th style="text-align:right;">Amount</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Team expansion (4&ndash;6 hires)</td><td class="num">$270K</td><td>2 engineers, 1 product/ops, 1 marketing, 1 community, 1 support</td></tr>
+          <tr><td>AI compute scale-up</td><td class="num">$60K</td><td>Multi-provider (xAI + fallback), higher throughput</td></tr>
+          <tr><td>Marketing &amp; growth</td><td class="num">$80K</td><td>Paid acquisition, partnerships, creator programmes, events</td></tr>
+          <tr><td>Solana + Ethereum integration</td><td class="num">$40K</td><td>Cross-chain payment rails, wallet support, bridge audit</td></tr>
+          <tr><td>Legal &amp; regulatory</td><td class="num">$30K</td><td>Multi-jurisdiction compliance, ongoing counsel</td></tr>
+          <tr><td>Infrastructure &amp; tooling</td><td class="num">$20K</td><td>CDN, observability, CI/CD, staging environments</td></tr>
+          <tr class="total"><td><strong style="color:#fff;">Total</strong></td><td class="num"><strong style="color:#fff;">$500K</strong></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="eyebrow" style="margin-top:6mm;">Tranche 3 &mdash; $1M (100M shares at $0.01)</div>
+      <p class="body-text" style="margin-top:1mm;"><strong>Goal: 10,000 films/month. International expansion. White-label platform.</strong></p>
+      <table class="dt" style="margin-top:2mm;">
+        <thead><tr><th>Line item</th><th style="text-align:right;">Amount</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Team scaling (10&ndash;18 headcount)</td><td class="num">$540K</td><td>Engineering, product, design, data, ops, customer success</td></tr>
+          <tr><td>AI compute &amp; model R&amp;D</td><td class="num">$120K</td><td>Fine-tuned models, quality improvements, multi-modal expansion</td></tr>
+          <tr><td>Marketing &amp; brand</td><td class="num">$150K</td><td>International campaigns, festival presence, B2B sales</td></tr>
+          <tr><td>White-label platform</td><td class="num">$100K</td><td>Self-service studio creation, API, enterprise tier</td></tr>
+          <tr><td>Legal, compliance &amp; IP</td><td class="num">$50K</td><td>International regulatory, IP protection, licensing framework</td></tr>
+          <tr><td>Reserve</td><td class="num">$40K</td><td>Contingency</td></tr>
+          <tr class="total"><td><strong style="color:#fff;">Total</strong></td><td class="num"><strong style="color:#fff;">$1M</strong></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Use of Funds</span>
+        <span>Confidential</span>
+      </div>
+      <div class="page-num">2 / 3</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 3 — CAPITAL EFFICIENCY + SUMMARY
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Capital efficiency</div>
+      <div class="section-title">Why bMovies is cheap to scale</div>
+      <div class="accent-line"></div>
+
+      <p class="body-text" style="margin-top:3mm;font-size:10pt;">
+        bMovies has structural advantages that make every dollar of capital go further than a traditional film or SaaS business.
+      </p>
+
+      <ul class="bullet-list" style="margin-top:4mm;">
+        <li><strong>Zero inventory risk</strong> &mdash; customers pay before production begins. There is no content sitting on a shelf waiting to earn. Every film is pre-funded.</li>
+        <li><strong>No content licensing</strong> &mdash; all content is AI-generated. No rights negotiations, no residuals, no union obligations, no location fees.</li>
+        <li><strong>AI costs trend to zero</strong> &mdash; model API pricing has fallen 90%+ over the last 2 years and continues to decline. Our largest variable cost shrinks every quarter.</li>
+        <li><strong>Compounding catalog</strong> &mdash; every film ever produced continues to earn ticket revenue. The catalog compounds while marginal cost per additional film stays flat.</li>
+        <li><strong>No physical distribution</strong> &mdash; all delivery is digital. No prints, no shipping, no theatrical windows, no distributor cuts.</li>
+        <li><strong>Self-sustaining by Month 10</strong> &mdash; at 200 films/month, commission revenue alone exceeds monthly burn. Tranche 1 capital provides runway; Tranches 2+ are growth capital, not survival capital.</li>
+      </ul>
+
+      <div class="eyebrow" style="margin-top:6mm;">Cumulative capital raised vs. revenue (base case)</div>
+      <table class="dt" style="margin-top:2mm;">
+        <thead><tr><th></th><th style="text-align:right;">Month 6</th><th style="text-align:right;">Month 12</th><th style="text-align:right;">Month 24</th><th style="text-align:right;">Month 36</th></tr></thead>
+        <tbody>
+          <tr><td>Cumulative capital raised</td><td class="num">$50K</td><td class="num">$100K</td><td class="num">$600K</td><td class="num">$1.6M</td></tr>
+          <tr><td>Cumulative revenue</td><td class="num">$60K</td><td class="num">$202K</td><td class="num">$3.6M</td><td class="num">$22.3M</td></tr>
+          <tr><td>Revenue / capital ratio</td><td class="num">1.2x</td><td class="num">2.0x</td><td class="num">6.0x</td><td class="num">13.9x</td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:2mm;">
+        By month 24, the business has generated 6x the capital invested. By month 36, nearly 14x. This is a capital-light model that rewards early investors disproportionately.
+      </p>
+
+      <div style="border:1px solid #E50914;padding:5mm;margin-top:6mm;text-align:center;">
+        <div class="eyebrow">Bottom line</div>
+        <p class="body-text" style="margin-top:2mm;text-align:center;max-width:145mm;margin-left:auto;margin-right:auto;">
+          Tranche 1 ($100K) funds 12 months of operations and proves product-market fit.<br>
+          Tranche 2 ($500K) builds the team and scales to 2,000 films/month.<br>
+          Tranche 3 ($1M) goes international and launches the white-label platform.<br>
+          <strong>Total capital required to reach profitability: $100K. Total to reach scale: $1.6M.</strong>
+        </p>
+      </div>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Use of Funds</span>
+        <span>&copy; 2026 The Bitcoin Corporation Ltd &middot; Confidential</span>
+      </div>
+      <div class="page-num">3 / 3</div>
+    </div>
+  </div>
+
+</body>
+</html>
