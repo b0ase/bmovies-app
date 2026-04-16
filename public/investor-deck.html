@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bMovies — Investor Overview</title>
+  <meta name="description" content="Platform investor overview for bMovies — the autonomous AI film studio on Bitcoin SV.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #e8e8e8;
+      background: #0a0a0a;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ───── Print layout ───── */
+    .page {
+      width: 210mm;
+      height: 297mm;
+      page-break-after: always;
+      background: #0a0a0a;
+      position: relative;
+      overflow: hidden;
+    }
+    .page:last-child { page-break-after: auto; }
+    .page-inner {
+      padding: 18mm 18mm 16mm;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ───── Screen chrome ───── */
+    .screen-bar {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 1rem 18mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #222;
+    }
+    .screen-bar a {
+      color: #999;
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .screen-bar a:hover { color: #fff; }
+    .screen-bar .actions { display: flex; gap: 0.8rem; }
+    .screen-bar .actions button {
+      padding: 0.5rem 1rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid #E50914;
+      background: #E50914;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .screen-bar .actions button:hover { background: #c4070f; }
+    @media print {
+      .screen-bar { display: none; }
+    }
+
+    /* ───── Typography ───── */
+    .display {
+      font-family: "Impact", "Helvetica Neue Condensed Black", "Arial Black", sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 0.92;
+    }
+    .eyebrow {
+      font-size: 7pt;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #E50914;
+      font-weight: 700;
+    }
+    .section-title {
+      font-size: 22pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-top: 3mm;
+      color: #fff;
+    }
+    .body-text {
+      font-size: 9pt;
+      line-height: 1.6;
+      color: #ccc;
+      max-width: 155mm;
+    }
+    .body-text b, .body-text strong { color: #fff; }
+    .small {
+      font-size: 7pt;
+      line-height: 1.5;
+      color: #888;
+    }
+
+    /* ───── Components ───── */
+    .accent-line {
+      width: 40mm;
+      height: 3px;
+      background: #E50914;
+      margin: 4mm 0;
+    }
+    .stat-row {
+      display: flex;
+      gap: 6mm;
+      margin-top: 5mm;
+    }
+    .stat-box {
+      flex: 1;
+      border: 1px solid #222;
+      padding: 4mm 5mm;
+    }
+    .stat-box .val {
+      font-size: 22pt;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+    .stat-box .val.accent { color: #E50914; }
+    .stat-box .label {
+      font-size: 6.5pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-top: 1.5mm;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      margin-top: 4mm;
+    }
+    .flow-step {
+      flex: 1;
+      background: #111;
+      border: 1px solid #222;
+      padding: 3mm 4mm;
+      text-align: center;
+    }
+    .flow-step .step-label {
+      font-size: 6pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .flow-step .step-val {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 1mm;
+    }
+    .flow-arrow {
+      font-size: 12pt;
+      color: #E50914;
+      flex-shrink: 0;
+    }
+    .two-col {
+      display: flex;
+      gap: 8mm;
+      margin-top: 4mm;
+    }
+    .two-col .col { flex: 1; }
+    .bullet-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 3mm;
+    }
+    .bullet-list li {
+      font-size: 8.5pt;
+      line-height: 1.5;
+      color: #ccc;
+      padding: 1.5mm 0 1.5mm 4mm;
+      border-left: 2px solid #E50914;
+      margin-bottom: 2mm;
+    }
+    .bullet-list li strong { color: #fff; }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 3mm;
+      font-size: 8pt;
+    }
+    table.data-table th {
+      text-align: left;
+      font-size: 6.5pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 2mm 3mm;
+      border-bottom: 1px solid #333;
+    }
+    table.data-table td {
+      padding: 2.5mm 3mm;
+      border-bottom: 1px solid #1a1a1a;
+      color: #ccc;
+    }
+    table.data-table td.num {
+      text-align: right;
+      font-family: "SF Mono", "Monaco", "Menlo", monospace;
+      font-size: 7.5pt;
+    }
+    table.data-table tr.active td {
+      background: rgba(229, 9, 20, 0.08);
+      color: #fff;
+    }
+    .page-num {
+      position: absolute;
+      bottom: 8mm;
+      right: 18mm;
+      font-size: 6pt;
+      color: #444;
+      letter-spacing: 0.1em;
+    }
+    .footer-line {
+      position: absolute;
+      bottom: 14mm;
+      left: 18mm;
+      right: 18mm;
+      border-top: 1px solid #1a1a1a;
+      padding-top: 2mm;
+      font-size: 5.5pt;
+      color: #444;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen navigation -->
+  <div class="screen-bar">
+    <a href="invest.html">&larr; Back to invest</a>
+    <div class="actions">
+      <button onclick="window.print()">Save as PDF (Cmd+P)</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 1 — COVER
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+      <div class="eyebrow">Investor overview</div>
+      <div class="display" style="font-size:64pt;color:#fff;margin-top:6mm;">
+        b<span style="color:#E50914;">Movies</span>
+      </div>
+      <div class="accent-line" style="margin:6mm auto;"></div>
+      <p class="body-text" style="max-width:130mm;text-align:center;font-size:11pt;line-height:1.55;color:#aaa;">
+        The autonomous AI film studio on Bitcoin.<br>
+        Commission a film. Own the royalties. Earn forever.
+      </p>
+      <div class="stat-row" style="margin-top:12mm;max-width:150mm;">
+        <div class="stat-box" style="text-align:center;">
+          <div class="val accent">$0.99</div>
+          <div class="label">Pitch a film</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val">12</div>
+          <div class="label">AI agents per film</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val">28</div>
+          <div class="label">Production steps</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val">BSV-21</div>
+          <div class="label">On-chain tokens</div>
+        </div>
+      </div>
+      <p class="small" style="margin-top:16mm;max-width:130mm;text-align:center;">
+        The Bitcoin Corporation Ltd &middot; Company No. 16735102 &middot; Registered in England &amp; Wales<br>
+        bmovies.online &middot; Confidential
+      </p>
+    </div>
+    <div class="page-num">1 / 6</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 2 — WHAT IS bMOVIES
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">The product</div>
+      <div class="section-title">What is bMovies?</div>
+      <div class="accent-line"></div>
+
+      <p class="body-text" style="margin-top:3mm;">
+        bMovies is a <strong>working autonomous AI film production studio</strong> that runs entirely on Bitcoin SV. A visitor pays as little as $0.99 to commission a film. A swarm of 12 specialist AI agents — writers, directors, cinematographers, editors, composers, sound designers, casting directors, voice actors, publicists — competes for the commission, splits the budget among themselves through real BSV-21 token allocations, and produces the film across <strong>28 named pipeline steps</strong> over a real 24-hour window.
+      </p>
+      <p class="body-text" style="margin-top:3mm;">
+        The commissioner walks away with <strong>real generated video</strong> and <strong>99% of the royalty shares</strong> minted as a canonical BSV-21 token on BSV mainnet. Every step broadcasts on-chain. Every artifact is versioned. Every payment is verifiable.
+      </p>
+
+      <div class="eyebrow" style="margin-top:8mm;">Four commission tiers</div>
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="val">$0.99</div>
+          <div class="label">Pitch</div>
+        </div>
+        <div class="stat-box">
+          <div class="val">$9.99</div>
+          <div class="label">Trailer</div>
+        </div>
+        <div class="stat-box">
+          <div class="val">$99</div>
+          <div class="label">Short film</div>
+        </div>
+        <div class="stat-box">
+          <div class="val">$999</div>
+          <div class="label">Feature</div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:8mm;">How a film gets made</div>
+      <div class="flow-row">
+        <div class="flow-step">
+          <div class="step-label">Commission</div>
+          <div class="step-val">Pay $0.99+</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">AI swarm</div>
+          <div class="step-val">28 steps</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Token mint</div>
+          <div class="step-val">BSV-21</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Stream</div>
+          <div class="step-val">Earn royalties</div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:8mm;">The 12-agent production crew</div>
+      <div class="two-col">
+        <div class="col">
+          <ul class="bullet-list">
+            <li><strong>Writer</strong> — treatment, screenplay</li>
+            <li><strong>Director</strong> — shot list, scene blocking</li>
+            <li><strong>Storyboard artist</strong> — hero frames, key art</li>
+            <li><strong>Composer</strong> — original score</li>
+            <li><strong>Sound designer</strong> — foley, atmosphere</li>
+            <li><strong>Cinematographer</strong> — visual language, colour</li>
+          </ul>
+        </div>
+        <div class="col">
+          <ul class="bullet-list">
+            <li><strong>Editor</strong> — scene assembly, revisions</li>
+            <li><strong>Casting director</strong> — voice talent selection</li>
+            <li><strong>Voice actors (x2)</strong> — dialogue performance</li>
+            <li><strong>Production designer</strong> — set, props, costumes</li>
+            <li><strong>Publicist</strong> — poster, tagline, press kit</li>
+            <li><strong>Producer</strong> — budget, schedule, delivery</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Investor Overview</span>
+        <span>Confidential</span>
+      </div>
+      <div class="page-num">2 / 6</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 3 — REVENUE MODEL
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Revenue model</div>
+      <div class="section-title">How bMovies makes money</div>
+      <div class="accent-line"></div>
+
+      <p class="body-text" style="margin-top:3mm;">
+        Every token minted by the platform is a <strong>streaming licence, not equity</strong>. It does two things: (1) it entitles the holder to receive royalties while the film streams, and (2) it unlocks viewing access. This keeps the model legally clean — closer to a movie theatre ticket book than a security — while delivering the economic effect investors care about.
+      </p>
+
+      <div class="eyebrow" style="margin-top:7mm;">Two revenue events per film</div>
+      <div class="two-col" style="margin-top:3mm;">
+        <div class="col">
+          <div style="border:1px solid #222;padding:5mm;">
+            <div style="font-size:10pt;font-weight:900;color:#fff;">1. Commission fee</div>
+            <p class="small" style="margin-top:2mm;color:#aaa;">
+              One-shot payment ($0.99 &ndash; $999) covers AI compute, server costs, and on-chain gas. 100% operational &mdash; not redistributed.
+            </p>
+          </div>
+        </div>
+        <div class="col">
+          <div style="border:1px solid #E50914;padding:5mm;">
+            <div style="font-size:10pt;font-weight:900;color:#E50914;">2. Streaming royalties</div>
+            <p class="small" style="margin-top:2mm;color:#aaa;">
+              Continuous on-chain fan-out. Every piece served pays out to every token holder pro-rata. <strong style="color:#fff;">Zero platform cut on royalties.</strong> 100% goes to token holders.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:7mm;">Token allocation at mint (per film)</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Recipient</th>
+            <th>Allocation</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Financier investors</td>
+            <td class="num">40%</td>
+            <td>Bought shares during production</td>
+          </tr>
+          <tr>
+            <td>Producer agent</td>
+            <td class="num">30%</td>
+            <td>Managed the production</td>
+          </tr>
+          <tr>
+            <td>Production team (4 agents)</td>
+            <td class="num">20%</td>
+            <td>5% each &mdash; writer, director, storyboard, composer</td>
+          </tr>
+          <tr>
+            <td>Commissioner (you)</td>
+            <td class="num">10%</td>
+            <td>Pitched the film, receives founder's cut</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="eyebrow" style="margin-top:7mm;">The platform share: $bMovies</div>
+      <p class="body-text" style="margin-top:2mm;">
+        Separate from individual film tokens, <strong>$bMovies</strong> is the platform-level revenue share. <strong>1% of every film's royalty supply</strong> flows to the $bMovies pool. Holders receive a fractional claim on the platform's entire catalog &mdash; every film, past and future. It is the single mechanism by which the platform itself captures revenue.
+      </p>
+
+      <div class="stat-row" style="margin-top:4mm;">
+        <div class="stat-box">
+          <div class="val accent">1%</div>
+          <div class="label">Platform rake per film</div>
+        </div>
+        <div class="stat-box">
+          <div class="val">1B</div>
+          <div class="label">Fixed supply, never inflated</div>
+        </div>
+        <div class="stat-box">
+          <div class="val">KYC</div>
+          <div class="label">Identity-verified buyers only</div>
+        </div>
+        <div class="stat-box">
+          <div class="val">BSV</div>
+          <div class="label">On-chain settlement</div>
+        </div>
+      </div>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Investor Overview</span>
+        <span>Confidential</span>
+      </div>
+      <div class="page-num">3 / 6</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 4 — BONDING CURVE + TOKEN MECHANICS
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Token mechanics</div>
+      <div class="section-title">$bMovies bonding curve</div>
+      <div class="accent-line"></div>
+
+      <p class="body-text" style="margin-top:3mm;">
+        $bMovies uses a <strong>step bonding curve with 10 tranches</strong> of 100M tokens each. Early buyers get the lowest price. As supply sells, the price steps up. There is no discount for insiders, no team allocation, no VC tranche. The only way to acquire $bMovies is through the primary sale at <strong>bmovies.online/invest.html</strong> or on the secondary market.
+      </p>
+
+      <table class="data-table" style="margin-top:4mm;">
+        <thead>
+          <tr>
+            <th>Tranche</th>
+            <th>Token range</th>
+            <th style="text-align:right;">Price / token</th>
+            <th style="text-align:right;">Tranche revenue</th>
+            <th style="text-align:right;">Cumulative</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="active">
+            <td>1</td>
+            <td>0 &ndash; 100M</td>
+            <td class="num">$0.001</td>
+            <td class="num">$100,000</td>
+            <td class="num">$100,000</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>100M &ndash; 200M</td>
+            <td class="num">$0.002</td>
+            <td class="num">$200,000</td>
+            <td class="num">$300,000</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>200M &ndash; 300M</td>
+            <td class="num">$0.005</td>
+            <td class="num">$500,000</td>
+            <td class="num">$800,000</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>300M &ndash; 400M</td>
+            <td class="num">$0.01</td>
+            <td class="num">$1,000,000</td>
+            <td class="num">$1,800,000</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>400M &ndash; 500M</td>
+            <td class="num">$0.02</td>
+            <td class="num">$2,000,000</td>
+            <td class="num">$3,800,000</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>500M &ndash; 600M</td>
+            <td class="num">$0.05</td>
+            <td class="num">$5,000,000</td>
+            <td class="num">$8,800,000</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>600M &ndash; 700M</td>
+            <td class="num">$0.10</td>
+            <td class="num">$10,000,000</td>
+            <td class="num">$18,800,000</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>700M &ndash; 800M</td>
+            <td class="num">$0.20</td>
+            <td class="num">$20,000,000</td>
+            <td class="num">$38,800,000</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>800M &ndash; 900M</td>
+            <td class="num">$0.50</td>
+            <td class="num">$50,000,000</td>
+            <td class="num">$88,800,000</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>900M &ndash; 1B</td>
+            <td class="num">$1.00</td>
+            <td class="num">$100,000,000</td>
+            <td class="num">$188,800,000</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="eyebrow" style="margin-top:7mm;">Key properties</div>
+      <ul class="bullet-list">
+        <li><strong>Fixed supply</strong> &mdash; 1 billion tokens minted once, then burned. No surprise mints, no team unlock cliffs, no VC tranches.</li>
+        <li><strong>KYC-gated</strong> &mdash; every buyer is identity-verified via Veriff before shares are delivered. Real fractional revenue-share instruments, not a meme coin.</li>
+        <li><strong>Transparent treasury</strong> &mdash; the 1% pool is a published on-chain account. Watch it collect from every film in real time. No foundation, no custodian, no opaque reporting.</li>
+        <li><strong>BSV-21 standard</strong> &mdash; canonical 1sat ordinal inscription. Indexable at GorillaPool, tradeable on 1sat.market.</li>
+      </ul>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Investor Overview</span>
+        <span>Confidential</span>
+      </div>
+      <div class="page-num">4 / 6</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 5 — TRACTION + TECHNOLOGY
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Traction</div>
+      <div class="section-title">What's live today</div>
+      <div class="accent-line"></div>
+
+      <div class="stat-row" style="margin-top:3mm;">
+        <div class="stat-box" style="text-align:center;">
+          <div class="val accent">33</div>
+          <div class="label">BSV-21 tokens minted</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val">58</div>
+          <div class="label">Named AI agents</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val">6</div>
+          <div class="label">Studios live</div>
+        </div>
+        <div class="stat-box" style="text-align:center;">
+          <div class="val">24/s</div>
+          <div class="label">Peak TX rate (verified)</div>
+        </div>
+      </div>
+
+      <ul class="bullet-list" style="margin-top:5mm;">
+        <li><strong>20 film royalty tokens</strong> live on BSV mainnet, each with a full production package (treatment, screenplay, storyboard, score, poster, video)</li>
+        <li><strong>6 studio equity tokens</strong> ($BOT21, $BOLTD, $CLNKR, $DREAM, $NRLSP, $PRMNT) representing the in-universe production houses</li>
+        <li><strong>6 director royalty tokens</strong> ($CAMRN, $NOLAN, $SCRSB, $WESAX, $KUBRX, $SPLBG) representing the named AI directors</li>
+        <li><strong>$bMovies platform token</strong> &mdash; 1B supply, mint txid <span style="font-family:monospace;font-size:7pt;color:#888;">371818530282bb3c...3b9cf5db</span></li>
+        <li><strong>Streaming fan-out engine</strong> verified at 24 TX/s peak, projected 1.85M TX/24h sustained with 5000-slot pool</li>
+        <li><strong>19,000 real fan-out transactions</strong> broadcast on BSV mainnet in a 13-minute empirical test (2026-04-15)</li>
+      </ul>
+
+      <div class="eyebrow" style="margin-top:7mm;">Technology stack</div>
+      <div class="two-col" style="margin-top:2mm;">
+        <div class="col">
+          <ul class="bullet-list">
+            <li><strong>AI engine</strong> &mdash; xAI Grok (text, image, video generation)</li>
+            <li><strong>Blockchain</strong> &mdash; Bitcoin SV, BSV-21 tokens, 1sat ordinals</li>
+            <li><strong>Pipeline</strong> &mdash; 28-step pm2-managed worker on Hetzner</li>
+          </ul>
+        </div>
+        <div class="col">
+          <ul class="bullet-list">
+            <li><strong>Frontend</strong> &mdash; static HTML brochure on Vercel (zero build step)</li>
+            <li><strong>Identity</strong> &mdash; Veriff KYC, Supabase auth</li>
+            <li><strong>Payments</strong> &mdash; Stripe (fiat), BRC-100 wallets (BSV)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:7mm;">Market opportunity</div>
+      <p class="body-text" style="margin-top:2mm;">
+        AI-generated video is projected to reach <strong>$2.1B by 2028</strong> (Grand View Research). Creator economy platforms are valued at <strong>$250B+</strong>. bMovies sits at the intersection: AI production + tokenised ownership + on-chain revenue distribution. No other platform combines autonomous AI filmmaking with real on-chain royalty settlement.
+      </p>
+      <p class="body-text" style="margin-top:2mm;">
+        The commission model means <strong>customers fund production upfront</strong>. There is no inventory risk, no content licensing cost, and no creator payment float. Every film is pre-funded before a single frame is generated.
+      </p>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Investor Overview</span>
+        <span>Confidential</span>
+      </div>
+      <div class="page-num">5 / 6</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PAGE 6 — LEGAL + CTA
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="eyebrow">Legal structure</div>
+      <div class="section-title">Corporate &amp; compliance</div>
+      <div class="accent-line"></div>
+
+      <div class="two-col" style="margin-top:3mm;">
+        <div class="col">
+          <ul class="bullet-list">
+            <li><strong>Operator</strong> &mdash; The Bitcoin Corporation Ltd, Company No. 16735102, registered in England &amp; Wales</li>
+            <li><strong>Registered address</strong> &mdash; Flat 6, 315 Barking Road, London E13 8EE</li>
+            <li><strong>Token standard</strong> &mdash; BSV-21 (canonical 1sat ordinal inscription)</li>
+          </ul>
+        </div>
+        <div class="col">
+          <ul class="bullet-list">
+            <li><strong>KYC provider</strong> &mdash; Veriff (identity verification before any purchase)</li>
+            <li><strong>Legal docs</strong> &mdash; platform token prospectus, film risk disclosure, non-custodial disclosure, terms of service</li>
+            <li><strong>Custody</strong> &mdash; non-custodial &mdash; users hold their own keys via BRC-100 wallets</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="border:1px solid #E50914;padding:5mm;margin-top:7mm;">
+        <div class="eyebrow">Risk warning</div>
+        <p class="body-text" style="margin-top:2mm;color:#aaa;">
+          This is a <strong style="color:#E50914;">high-risk investment</strong>. You could lose all the money you invest and are unlikely to be protected if something goes wrong. $bMovies tokens are fractional revenue-share instruments tied to the performance of AI-generated films. There is no guarantee of returns. The value of your holding depends entirely on the volume and success of films commissioned through the platform. Do not invest money you cannot afford to lose.
+        </p>
+      </div>
+
+      <div style="margin-top:10mm;text-align:center;">
+        <div class="eyebrow">Ready to invest?</div>
+        <div class="section-title" style="margin-top:2mm;">bmovies.online/invest.html</div>
+        <p class="body-text" style="margin-top:4mm;text-align:center;max-width:140mm;margin-left:auto;margin-right:auto;">
+          Connect your BRC-100 wallet, complete identity verification, and purchase $bMovies shares directly on-chain. Minimum 1,000 tokens per purchase. Price set by the current bonding curve tranche.
+        </p>
+      </div>
+
+      <div style="margin-top:10mm;text-align:center;">
+        <div class="eyebrow">Further reading</div>
+        <div class="two-col" style="margin-top:3mm;text-align:left;">
+          <div class="col">
+            <ul class="bullet-list">
+              <li><strong>Platform prospectus</strong> &mdash; legal/platform-token-prospectus.html</li>
+              <li><strong>Film risk disclosure</strong> &mdash; legal/film-token-risk-disclosure.html</li>
+              <li><strong>Non-custodial disclosure</strong> &mdash; legal/non-custodial-disclosure.html</li>
+            </ul>
+          </div>
+          <div class="col">
+            <ul class="bullet-list">
+              <li><strong>Terms of service</strong> &mdash; terms.html</li>
+              <li><strong>How it works</strong> &mdash; about.html</li>
+              <li><strong>Live productions</strong> &mdash; productions.html</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-line">
+        <span>bMovies &middot; Investor Overview</span>
+        <span>&copy; 2026 The Bitcoin Corporation Ltd</span>
+      </div>
+      <div class="page-num">6 / 6</div>
+    </div>
+  </div>
+
+</body>
+</html>
