@@ -64,6 +64,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Brochure CSS — render-blocking in <head> so nav-session.js
+            injects styled HTML. Previously loaded via useEffect which
+            caused a flash of unstyled nav icons (the "X flash"). */}
+        <link rel="stylesheet" href="/css/theme.css" />
+        <link rel="stylesheet" href="/css/mobile.css" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#E50914" />
         <meta name="mobile-web-app-capable" content="yes" />
