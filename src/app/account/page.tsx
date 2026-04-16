@@ -1249,11 +1249,13 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
       setWalletLoading(true)
       try {
         const [holdingsRes, studiosRes, agentsRes, txRes, configRes, kycRes] = await Promise.all([
+          // bct_platform_holdings may not exist yet — catch gracefully
           bmovies
             .from('bct_platform_holdings')
             .select('total_tokens')
             .eq('account_id', accountId)
-            .maybeSingle(),
+            .maybeSingle()
+            .then(r => r, () => ({ data: null, error: null })),
           bmovies
             .from('bct_studios')
             .select('id, name, token_ticker, treasury_address')
@@ -1273,12 +1275,14 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             .from('bct_platform_config')
             .select('value')
             .eq('key', 'current_tranche_price_cents')
-            .maybeSingle(),
+            .maybeSingle()
+            .then(r => r, () => ({ data: null, error: null })),
           bmovies
             .from('bct_user_kyc')
             .select('status')
             .eq('account_id', accountId)
-            .maybeSingle(),
+            .maybeSingle()
+            .then(r => r, () => ({ data: null, error: null })),
         ])
 
         if (cancelled) return
@@ -1390,74 +1394,58 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-3">
             Connect a wallet
           </div>
-          {!walletData?.kycVerified && (
-            <div className="border border-[#E50914] bg-[#1a0003] p-4 mb-3">
-              <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">KYC required</div>
-              <p className="text-[#bbb] text-xs leading-relaxed mb-2">
-                Complete identity verification before connecting wallets. One-time check via Veriff (~90 seconds).
-              </p>
-              <a href="/kyc.html" className="inline-block text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white">
-                Verify identity →
-              </a>
-            </div>
-          )}
-          <div className={`grid grid-cols-2 md:grid-cols-5 gap-2 ${!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}`}>
-            {/* BSV Desktop — primary, active */}
-            <button
-              onClick={async () => {
-                try {
-                  const { connectBsvDesktop } = await import('@/lib/brc100')
-                  const status = await connectBsvDesktop()
-                  if (status.connected) window.location.reload()
-                  else {
-                    // Show a helpful message with download link
-                    const msg = status.error || 'BSV Desktop not detected.'
-                    if (confirm(msg + '\n\nBSV Desktop must be running and unlocked on your machine.\n\nDownload it now?')) {
-                      window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
-                    }
-                  }
-                } catch (err) {
-                  console.error('[wallet] BSV Desktop connect error:', err)
-                  if (confirm('Could not connect to BSV Desktop.\n\nMake sure the app is running and unlocked, then try again.\n\nDownload BSV Desktop?')) {
+          {/* BSV Desktop — always clickable, no KYC gate */}
+          <button
+            onClick={async () => {
+              try {
+                const { connectBsvDesktop } = await import('@/lib/brc100')
+                const status = await connectBsvDesktop()
+                if (status.connected) {
+                  alert(`Connected! Address: ${status.address?.slice(0, 12)}...`)
+                  window.location.reload()
+                } else {
+                  const msg = status.error || 'BSV Desktop not detected.'
+                  if (confirm(msg + '\n\nBSV Desktop must be running and unlocked on your machine.\n\nDownload it now?')) {
                     window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
                   }
                 }
-              }}
-              className="flex flex-col items-center gap-1.5 p-3 border border-[#E50914] bg-[#111] hover:bg-[#1a0003] transition-colors cursor-pointer"
-            >
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #E50914",borderRadius:"50%",color:"#E50914",fontWeight:700,fontSize:13}}>B</span>
-              <span className="text-[0.6rem] font-bold text-white">BSV Desktop</span>
-              <span className="text-[0.5rem] text-[#E50914]">BRC-100</span>
-            </button>
-            {/* Yours Wallet — coming soon */}
-            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #444",borderRadius:"50%",color:"#444",fontWeight:700,fontSize:13}}>Y</span>
+              } catch (err) {
+                console.error('[wallet] BSV Desktop connect error:', err)
+                if (confirm('Could not connect to BSV Desktop.\n\nMake sure the app is running and unlocked, then try again.\n\nDownload BSV Desktop?')) {
+                  window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
+                }
+              }
+            }}
+            className="w-full flex items-center gap-4 p-4 border border-[#E50914] bg-[#111] hover:bg-[#1a0003] transition-colors cursor-pointer mb-3 text-left"
+          >
+            <span style={{width:36,height:36,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"2px solid #E50914",borderRadius:"50%",color:"#E50914",fontWeight:700,fontSize:18,flexShrink:0}}>B</span>
+            <div>
+              <div className="text-sm font-bold text-white">Connect BSV Desktop</div>
+              <div className="text-[0.6rem] text-[#888]">BRC-100 wallet on localhost:3321. Must be running and unlocked.</div>
+            </div>
+            <span className="ml-auto text-[#E50914] text-lg">→</span>
+          </button>
+          {/* Other wallets — greyed out */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 opacity-40">
+            <div className="flex flex-col items-center gap-1 p-2.5 border border-[#1a1a1a] bg-[#0a0a0a]">
               <span className="text-[0.6rem] font-bold text-[#555]">Yours Wallet</span>
               <span className="text-[0.45rem] text-[#444]">Coming soon</span>
             </div>
-            {/* Phantom — coming soon */}
-            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #444",borderRadius:"50%",color:"#444",fontWeight:700,fontSize:13}}>P</span>
+            <div className="flex flex-col items-center gap-1 p-2.5 border border-[#1a1a1a] bg-[#0a0a0a]">
               <span className="text-[0.6rem] font-bold text-[#555]">Phantom</span>
               <span className="text-[0.45rem] text-[#444]">Coming soon</span>
             </div>
-            {/* MetaMask — coming soon */}
-            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #444",borderRadius:"50%",color:"#444",fontWeight:700,fontSize:13}}>M</span>
+            <div className="flex flex-col items-center gap-1 p-2.5 border border-[#1a1a1a] bg-[#0a0a0a]">
               <span className="text-[0.6rem] font-bold text-[#555]">MetaMask</span>
               <span className="text-[0.45rem] text-[#444]">Coming soon</span>
             </div>
-            {/* HandCash — coming soon */}
-            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
-              <span style={{width:24,height:24,display:'inline-flex',alignItems:'center',justifyContent:'center',border:'1.5px solid #444',borderRadius:'50%',color:'#444',fontWeight:700,fontSize:13}}>H</span>
+            <div className="flex flex-col items-center gap-1 p-2.5 border border-[#1a1a1a] bg-[#0a0a0a]">
               <span className="text-[0.6rem] font-bold text-[#555]">HandCash</span>
               <span className="text-[0.45rem] text-[#444]">Coming soon</span>
             </div>
           </div>
           <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
-            BSV Desktop is the primary wallet for bMovies (x402 payments, token purchases, KYC certificates).
-            Download from <a href="https://github.com/bsv-blockchain/bsv-desktop/releases/latest" target="_blank" rel="noopener" className="text-[#E50914]">github.com/bsv-blockchain</a>.
-            Yours, Phantom, MetaMask, and HandCash integrations are coming soon.
+            <a href="https://github.com/bsv-blockchain/bsv-desktop/releases/latest" target="_blank" rel="noopener" className="text-[#E50914]">Download BSV Desktop</a> — the primary BRC-100 wallet for bMovies.
           </p>
         </div>
       )}
