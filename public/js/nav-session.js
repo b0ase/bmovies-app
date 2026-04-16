@@ -65,6 +65,7 @@ const ACTIVE_ALIASES = {
   'offer.html':       'exchange.html',
   'pitch.html':       'commission.html',
   'trade.html':       'exchange.html',
+  'agent.html':       'exchange.html',
   'studio.html':      'studios.html',
   'agents.html':      'studios.html',
   // jobboard.html now has its own top-level Jobs link — no alias needed.

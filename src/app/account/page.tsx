@@ -431,7 +431,7 @@ function AccountContent() {
         )}
         {activeTab === 'cap-tables' && <CapTablesTab films={films} />}
         {activeTab === 'investor-packs' && <InvestorPacksTab films={films} />}
-        {activeTab === 'wallet' && <WalletTab user={user} />}
+        {activeTab === 'wallet' && <WalletTab user={user} accountId={accountId} films={films} />}
       </div>
     </div>
   )
@@ -1439,16 +1439,143 @@ function InvestorPacksTab({ films }: { films: Film[] }) {
 
 /* ───────── Wallet tab ───────── */
 
-function WalletTab({ user }: { user: User }) {
+interface WalletData {
+  platformTokens: number
+  pricePerTokenCents: number
+  studioCount: number
+  filmCount: number
+  agentCount: number
+  studios: {
+    id: string
+    name: string
+    token_ticker: string
+    treasury_address: string
+    agentCount: number
+    filmCount: number
+  }[]
+  agents: {
+    id: string
+    name: string
+    role: string
+    reputation: number
+    jobs_completed: number
+    wallet_address: string
+  }[]
+  transactions: {
+    id: string
+    tokens_purchased: number
+    price_per_token_cents: number
+    status: string
+    settled_txid: string | null
+    created_at: string
+  }[]
+}
+
+function WalletTab({ user, accountId, films }: { user: User; accountId: string | null; films: Film[] }) {
   const brc100Address = brc100AddressOf(user)
   const brc100Provider = brc100ProviderOf(user)
   const email = publicEmailFor(user)
   const isBrc100 = isBrc100User(user)
+
+  const [walletData, setWalletData] = useState<WalletData | null>(null)
+  const [walletLoading, setWalletLoading] = useState(true)
+
+  useEffect(() => {
+    if (!accountId) { setWalletLoading(false); return }
+    let cancelled = false
+
+    async function loadWalletData() {
+      setWalletLoading(true)
+      try {
+        const [holdingsRes, studiosRes, agentsRes, txRes, configRes] = await Promise.all([
+          bmovies
+            .from('bct_platform_holdings')
+            .select('total_tokens')
+            .eq('account_id', accountId)
+            .maybeSingle(),
+          bmovies
+            .from('bct_studios')
+            .select('id, name, token_ticker, treasury_address')
+            .eq('owner_account_id', accountId),
+          bmovies
+            .from('bct_agents')
+            .select('id, name, role, reputation, jobs_completed, wallet_address, owner_account_id')
+            .eq('owner_account_id', accountId)
+            .order('role'),
+          bmovies
+            .from('bct_platform_investments')
+            .select('id, tokens_purchased, price_per_token_cents, status, settled_txid, created_at')
+            .eq('account_id', accountId)
+            .order('created_at', { ascending: false })
+            .limit(20),
+          bmovies
+            .from('bct_platform_config')
+            .select('value')
+            .eq('key', 'current_tranche_price_cents')
+            .maybeSingle(),
+        ])
+
+        if (cancelled) return
+
+        const studios = (studiosRes.data || []) as { id: string; name: string; token_ticker: string; treasury_address: string }[]
+        const agents = (agentsRes.data || []) as { id: string; name: string; role: string; reputation: number; jobs_completed: number; wallet_address: string; owner_account_id: string | null }[]
+
+        // Count agents and films per studio
+        const studiosWithCounts = studios.map((s) => ({
+          ...s,
+          agentCount: agents.length,
+          filmCount: films.filter((f) => f.account_id === accountId).length,
+        }))
+
+        const priceCents = configRes.data?.value
+          ? (typeof configRes.data.value === 'number' ? configRes.data.value : parseFloat(String(configRes.data.value)))
+          : 0.1 // fallback: $0.001/token
+
+        setWalletData({
+          platformTokens: (holdingsRes.data?.total_tokens as number) ?? 0,
+          pricePerTokenCents: priceCents,
+          studioCount: studios.length,
+          filmCount: films.length,
+          agentCount: agents.length,
+          studios: studiosWithCounts,
+          agents: agents.map(({ owner_account_id: _, ...a }) => a),
+          transactions: (txRes.data || []) as WalletData['transactions'],
+        })
+      } catch (err) {
+        console.error('[wallet-tab] load error:', err)
+        // Set empty data so UI still renders
+        setWalletData({
+          platformTokens: 0,
+          pricePerTokenCents: 0.1,
+          studioCount: 0,
+          filmCount: films.length,
+          agentCount: 0,
+          studios: [],
+          agents: [],
+          transactions: [],
+        })
+      } finally {
+        if (!cancelled) setWalletLoading(false)
+      }
+    }
+
+    loadWalletData()
+    return () => { cancelled = true }
+  }, [accountId, films])
+
+  const formatUsd = (n: number) =>
+    n >= 1000 ? `$${(n / 1000).toFixed(2)}k` : `$${n.toFixed(2)}`
+
+  const formatTokens = (n: number) => n.toLocaleString()
+
+  const truncAddr = (addr: string) =>
+    addr.length > 16 ? `${addr.slice(0, 8)}...${addr.slice(-6)}` : addr
+
   return (
-    <div className="max-w-2xl">
-      {/* Primary identity card */}
+    <div className="max-w-4xl">
+      {/* ── Section 1: Identity card ── */}
       {isBrc100 && brc100Address ? (
-        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
+        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-6">
           <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-2">
             BRC-100 wallet · {brc100Provider || 'unknown'}
           </div>
@@ -1468,12 +1595,12 @@ function WalletTab({ user }: { user: User }) {
               rel="noopener"
               className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
             >
-              View on WhatsOnChain →
+              View on WhatsOnChain
             </a>
           </div>
         </div>
       ) : (
-        <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
+        <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-6">
           <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
             Signed in as
           </div>
@@ -1484,36 +1611,394 @@ function WalletTab({ user }: { user: User }) {
             href="/login"
             className="inline-block text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
           >
-            Link a BRC-100 wallet →
+            Link a BRC-100 wallet
           </Link>
         </div>
       )}
 
-      {/* Secondary: internal Supabase id (collapsed) */}
-      <details className="mb-4 border border-[#222] bg-[#0a0a0a]">
+      {/* ── Section 2: Portfolio summary strip ── */}
+      {walletLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 animate-pulse">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="h-2 w-16 bg-[#1a1a1a] mb-3" />
+              <div className="h-8 w-24 bg-[#151515]" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <StatCard
+            label="$bMovies"
+            value={formatTokens(walletData?.platformTokens ?? 0)}
+            accent={(walletData?.platformTokens ?? 0) > 0}
+          />
+          <StatCard
+            label="Studios"
+            value={(walletData?.studioCount ?? 0).toLocaleString()}
+            accent={(walletData?.studioCount ?? 0) > 0}
+          />
+          <StatCard
+            label="Films"
+            value={(walletData?.filmCount ?? 0).toLocaleString()}
+            accent={(walletData?.filmCount ?? 0) > 0}
+          />
+          <StatCard
+            label="Agents"
+            value={(walletData?.agentCount ?? 0).toLocaleString()}
+          />
+        </div>
+      )}
+
+      {/* ── Section 3: Holdings list ── */}
+      <div className="mb-8">
+        <h2
+          className="text-2xl font-black mb-4 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Holdings
+        </h2>
+
+        {walletLoading ? (
+          <div className="space-y-3 animate-pulse">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+                <div className="h-4 w-48 bg-[#1a1a1a] mb-3" />
+                <div className="h-3 w-64 bg-[#151515]" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Platform tokens */}
+            {(walletData?.platformTokens ?? 0) > 0 ? (
+              <div className="border border-[#222] bg-[#0a0a0a] p-5">
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="text-xl font-black text-[#E50914] leading-none"
+                      style={{ fontFamily: 'var(--font-bebas)' }}
+                    >
+                      $bMovies
+                    </span>
+                    <span className="text-white text-sm font-bold">
+                      {formatTokens(walletData!.platformTokens)} tokens
+                    </span>
+                  </div>
+                  <span className="text-[#888] text-sm shrink-0">
+                    Value: {formatUsd((walletData!.platformTokens * walletData!.pricePerTokenCents) / 100)}
+                  </span>
+                </div>
+                <div className="text-[#666] text-xs">
+                  @ ${(walletData!.pricePerTokenCents / 100).toFixed(4)}/token
+                  {' · '}
+                  {((walletData!.platformTokens / 1_000_000_000) * 100).toFixed(4)}% of supply
+                </div>
+              </div>
+            ) : (
+              <div className="border border-dashed border-[#222] bg-[#050505] p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span
+                      className="text-lg font-black text-[#666] leading-none"
+                      style={{ fontFamily: 'var(--font-bebas)' }}
+                    >
+                      $bMovies
+                    </span>
+                    <span className="text-[#666] text-sm ml-3">No tokens yet</span>
+                  </div>
+                  <a
+                    href="/invest.html"
+                    className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
+                  >
+                    Buy $bMovies
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Studio tokens */}
+            {(walletData?.studios ?? []).length > 0 ? (
+              walletData!.studios.map((s) => (
+                <div key={s.id} className="border border-[#222] bg-[#0a0a0a] p-5">
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="text-xl font-black text-white leading-none"
+                        style={{ fontFamily: 'var(--font-bebas)' }}
+                      >
+                        ${s.token_ticker}
+                      </span>
+                      <span className="text-[#888] text-sm">Your studio</span>
+                    </div>
+                  </div>
+                  <div className="text-[#666] text-xs mb-2">
+                    {s.agentCount} agent{s.agentCount !== 1 ? 's' : ''}
+                    {' · '}
+                    {s.filmCount} film{s.filmCount !== 1 ? 's' : ''} produced
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#666] text-[0.55rem] font-bold uppercase tracking-wider">
+                      Treasury:
+                    </span>
+                    <span className="text-[#888] font-mono text-xs">
+                      {truncAddr(s.treasury_address)}
+                    </span>
+                    <a
+                      href={`https://whatsonchain.com/address/${s.treasury_address}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                    >
+                      View on WoC
+                    </a>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="border border-dashed border-[#222] bg-[#050505] p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[#666] text-sm">No studio yet</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const studioBtn = Array.from(document.querySelectorAll('[role="tab"]')).find(
+                        (el) => el.textContent === 'Studio'
+                      ) as HTMLButtonElement | null
+                      studioBtn?.click()
+                    }}
+                    className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-white"
+                  >
+                    Create your studio
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Film holdings */}
+            {films.length > 0 ? (
+              films.map((f) => (
+                <div key={f.id} className="border border-[#222] bg-[#0a0a0a] p-5">
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="text-xl font-black text-white leading-none"
+                        style={{ fontFamily: 'var(--font-bebas)' }}
+                      >
+                        ${f.token_ticker}
+                      </span>
+                      <span className="text-[#888] text-sm truncate max-w-[200px]">
+                        &quot;{f.title}&quot;
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-white text-sm font-bold">
+                        {f.commissioner_percent}% share
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap text-xs mb-2">
+                    <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                      {f.tier}
+                    </span>
+                    <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                      {f.status.replace(/_/g, ' ')}
+                    </span>
+                    {f.token_mint_txid && /^[0-9a-f]{64}$/.test(f.token_mint_txid) && (
+                      <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+                        On chain
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <a
+                      href={`/film.html?id=${encodeURIComponent(f.id)}`}
+                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                    >
+                      View film
+                    </a>
+                    <a
+                      href={`/captable.html?id=${encodeURIComponent(f.id)}`}
+                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#666] hover:text-white"
+                    >
+                      Cap table
+                    </a>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="border border-dashed border-[#222] bg-[#050505] p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[#666] text-sm">No film holdings</span>
+                  </div>
+                  <a
+                    href="/commission.html"
+                    className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
+                  >
+                    Commission your first film
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Agent roster */}
+            {(walletData?.agents ?? []).length > 0 ? (
+              walletData!.agents.map((a) => (
+                <div key={a.id} className="border border-[#222] bg-[#0a0a0a] p-5">
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <div>
+                      <span
+                        className="text-lg font-black text-white leading-none"
+                        style={{ fontFamily: 'var(--font-bebas)' }}
+                      >
+                        {a.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-[#666] shrink-0">
+                      <span>Rep: {a.reputation.toFixed(1)}</span>
+                      <span>{a.jobs_completed} job{a.jobs_completed !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                  <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914] mb-2">
+                    {a.role.replace(/_/g, ' ')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#666] text-[0.55rem] font-bold uppercase tracking-wider">
+                      Wallet:
+                    </span>
+                    <a
+                      href={`https://whatsonchain.com/address/${a.wallet_address}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-[#888] font-mono text-xs hover:text-[#E50914]"
+                    >
+                      {truncAddr(a.wallet_address)}
+                    </a>
+                  </div>
+                </div>
+              ))
+            ) : (
+              !walletLoading && (walletData?.studios ?? []).length === 0 && (
+                <div className="border border-dashed border-[#222] bg-[#050505] p-5">
+                  <span className="text-[#666] text-sm">
+                    Create a studio to get your agent crew
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 4: Transaction history ── */}
+      <div className="mb-8">
+        <h2
+          className="text-2xl font-black mb-4 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Transactions
+        </h2>
+
+        {walletLoading ? (
+          <div className="animate-pulse">
+            <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="h-3 w-full bg-[#1a1a1a] mb-3" />
+              <div className="h-3 w-3/4 bg-[#151515]" />
+            </div>
+          </div>
+        ) : (walletData?.transactions ?? []).length > 0 ? (
+          <div className="border border-[#222] bg-[#0a0a0a] overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[#1a1a1a]">
+                  <th className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold px-4 py-3">Date</th>
+                  <th className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold px-4 py-3">Type</th>
+                  <th className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold px-4 py-3 text-right">Amount</th>
+                  <th className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold px-4 py-3 text-center">Status</th>
+                  <th className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold px-4 py-3">Txid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {walletData!.transactions.map((tx) => (
+                  <tr key={tx.id} className="border-b border-[#111] hover:bg-[#111] transition-colors">
+                    <td className="text-[#888] text-xs px-4 py-3 whitespace-nowrap">
+                      {new Date(tx.created_at).toLocaleDateString('en-GB', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </td>
+                    <td className="text-white text-xs px-4 py-3 whitespace-nowrap">
+                      Buy $bMovies
+                    </td>
+                    <td className="text-white text-xs font-bold px-4 py-3 text-right whitespace-nowrap">
+                      {formatTokens(tx.tokens_purchased)} tokens
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {tx.status === 'completed' ? (
+                        <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+                          Completed
+                        </span>
+                      ) : tx.status === 'pending' ? (
+                        <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#3a3a0e] text-[#ffff6b]">
+                          Pending
+                        </span>
+                      ) : (
+                        <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                          {tx.status}
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-[#888] font-mono text-[0.6rem] px-4 py-3">
+                      {tx.settled_txid ? (
+                        <a
+                          href={`https://whatsonchain.com/tx/${tx.settled_txid}`}
+                          target="_blank"
+                          rel="noopener"
+                          className="hover:text-[#E50914]"
+                        >
+                          {tx.settled_txid.slice(0, 8)}...{tx.settled_txid.slice(-6)}
+                        </a>
+                      ) : (
+                        <span className="text-[#444]">--</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="border border-dashed border-[#222] bg-[#050505] p-5">
+            <span className="text-[#666] text-sm">No transactions yet</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 5: Technical details (collapsible) ── */}
+      <details className="border border-[#222] bg-[#0a0a0a]">
         <summary className="p-4 cursor-pointer text-[0.6rem] text-[#666] font-bold uppercase tracking-wider hover:text-white">
           Technical details
         </summary>
-        <div className="px-4 pb-4 -mt-1">
-          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
-            Supabase user id
+        <div className="px-4 pb-4 -mt-1 space-y-3">
+          <div>
+            <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
+              Supabase user id
+            </div>
+            <div className="text-[#888] font-mono text-[0.65rem] break-all">{user.id}</div>
           </div>
-          <div className="text-[#888] font-mono text-[0.65rem] break-all">{user.id}</div>
+          {accountId && (
+            <div>
+              <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
+                Account id
+              </div>
+              <div className="text-[#888] font-mono text-[0.65rem] break-all">{accountId}</div>
+            </div>
+          )}
         </div>
       </details>
-
-      {/* Roadmap card */}
-      <div className="border border-dashed border-[#222] bg-[#050505] p-6">
-        <div className="text-[#666] text-[0.55rem] uppercase tracking-wider font-bold mb-3">
-          Coming next
-        </div>
-        <ul className="text-[#888] text-sm leading-relaxed space-y-1.5">
-          <li>· $bMovies balance + tranche price + buy interface</li>
-          <li>· Per-film $TICKER balances for films you hold shares in</li>
-          <li>· Dividend history from ticket sales (paid out in $MNEE via the Runar covenant)</li>
-          <li>· Export wallet + KYC status</li>
-        </ul>
-      </div>
     </div>
   )
 }

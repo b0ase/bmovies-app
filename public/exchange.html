@@ -919,8 +919,8 @@
           <div class="agent-card">
             <div class="card-top">
               <div>
-                <div class="agent-name">${esc(a.name)}</div>
-                <div class="studio-name">${esc(a.studio || '')}</div>
+                <a class="agent-name" href="agent.html?id=${encodeURIComponent(a.id)}" style="text-decoration:none;color:inherit;">${esc(a.name)}</a>
+                <div class="studio-name"><a href="studio.html?id=${encodeURIComponent(a.studio || '')}">${esc(a.studio || '')}</a></div>
               </div>
               <span class="role-badge" style="color:${c};border-color:${c};">${esc(roleLabel(a.role))}</span>
             </div>
