@@ -694,6 +694,34 @@ function MyFilmsTab({
 function FilmCard({ film }: { film: Film }) {
   const posterUrl = resolvePosterUrl(film)
   const onChain = film.token_mint_txid && /^[0-9a-f]{64}$/.test(film.token_mint_txid)
+  const [publishing, setPublishing] = useState(false)
+  const [publishStatus, setPublishStatus] = useState<string | null>(null)
+  const [currentStatus, setCurrentStatus] = useState(film.status)
+
+  async function handlePublish() {
+    setPublishing(true)
+    setPublishStatus(null)
+    try {
+      const res = await fetch('/api/feature/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: film.id,
+          accountId: film.account_id || undefined,
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Publish failed')
+      setCurrentStatus('published')
+      setPublishStatus('Published!')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPublishStatus('Failed: ' + msg)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   return (
     <div className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors">
       {posterUrl ? (
@@ -727,7 +755,7 @@ function FilmCard({ film }: { film: Film }) {
             {film.tier}
           </span>
           <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
-            {film.status.replace(/_/g, ' ')}
+            {currentStatus.replace(/_/g, ' ')}
           </span>
           {onChain && (
             <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
@@ -738,6 +766,22 @@ function FilmCard({ film }: { film: Film }) {
         <p className="text-[#888] text-xs leading-relaxed mb-4 line-clamp-2">
           {film.synopsis || 'No synopsis yet.'}
         </p>
+        {currentStatus === 'draft' && (
+          <div className="mb-3">
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="w-full text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 bg-[#0e3a0e] border border-[#2a6a2a] text-[#6bff8a] hover:bg-[#1a4a1a] transition-colors disabled:opacity-40 disabled:cursor-wait"
+            >
+              {publishing ? 'Publishing...' : 'Publish Film'}
+            </button>
+            {publishStatus && (
+              <p className={`text-[0.6rem] mt-1 ${publishStatus.startsWith('Failed') ? 'text-[#ff6b6b]' : 'text-[#6bff8a]'}`}>
+                {publishStatus}
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap gap-1.5">
           <a
             href={`/film.html?id=${encodeURIComponent(film.id)}`}

@@ -91,7 +91,7 @@ export default async function handler(
     return;
   }
 
-  let body: { title?: string; ticker?: string; synopsis?: string; tier?: string; email?: string; parentOfferId?: string; source?: string };
+  let body: { title?: string; ticker?: string; synopsis?: string; tier?: string; email?: string; parentOfferId?: string; source?: string; supabaseUserId?: string };
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
   } catch {
@@ -175,6 +175,7 @@ export default async function handler(
         commissioner_percent: String(commissionerPercent),
         source: body.source || 'bmovies-commission',
         ...(parentOfferId ? { parentOfferId } : {}),
+        ...(body.supabaseUserId ? { supabaseUserId: body.supabaseUserId } : {}),
       },
     });
 

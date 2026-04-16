@@ -929,21 +929,29 @@
       const videoClips = arts.filter(a => a.kind === 'video');
       const storyboardFrames = arts.filter(a => a.role === 'storyboard' && a.kind === 'image');
 
+      // Store video URLs for the sequential player wired below
+      window._trailerClips = videoClips.map(v => v.url);
+
       const html = `
         ${videoClips.length > 0 ? `
           <div class="section">
-            <h2>The trailer</h2>
-            <div style="background:#000;border:1px solid #222;max-width:848px;">
-              <video controls autoplay muted loop playsinline
+            <h2>The trailer${videoClips.length > 1 ? ' \u00b7 ' + videoClips.length + ' clips' : ''}</h2>
+            <div style="background:#000;border:1px solid #222;max-width:848px;position:relative;">
+              <video controls autoplay muted playsinline
                 id="main-video"
                 src="${esc(videoClips[0].url)}"
-                style="width:100%;height:auto;aspect-ratio:848/480;display:block;"></video>
+                style="width:100%;height:auto;aspect-ratio:848/480;display:block;transition:opacity 0.3s ease;"></video>
+              ${videoClips.length > 1 ? `
+                <div id="main-video-counter" style="position:absolute;top:0.6rem;right:0.8rem;background:rgba(0,0,0,0.7);padding:0.3rem 0.6rem;font-family:monospace;font-size:0.65rem;color:#fff;pointer-events:none;">
+                  Clip <span id="main-video-idx">1</span> / ${videoClips.length}
+                </div>
+              ` : ''}
             </div>
             ${videoClips.length > 1 ? `
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.6rem;margin-top:1rem;max-width:960px;">
+              <div id="main-video-thumbs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.6rem;margin-top:1rem;max-width:960px;">
                 ${videoClips.map((v, i) => `
-                  <button onclick="document.getElementById('main-video').src='${esc(v.url)}';document.getElementById('main-video').play();"
-                    style="border:1px solid #222;background:#0a0a0a;padding:0;cursor:pointer;position:relative;aspect-ratio:16/9;overflow:hidden;">
+                  <button data-clip-idx="${i}"
+                    style="border:1px solid ${i === 0 ? '#e50914' : '#222'};background:${i === 0 ? '#1a0003' : '#0a0a0a'};padding:0;cursor:pointer;position:relative;aspect-ratio:16/9;overflow:hidden;">
                     <video src="${esc(v.url)}" muted style="width:100%;height:100%;object-fit:cover;"></video>
                     <div style="position:absolute;bottom:0;left:0;right:0;padding:0.4rem 0.6rem;background:linear-gradient(transparent,rgba(0,0,0,0.8));color:#fff;font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;text-align:left;">Clip ${i + 1}</div>
                   </button>
@@ -1006,6 +1014,55 @@
       const target = document.getElementById('full-playback');
       target.innerHTML = html;
       target.style.display = 'block';
+
+      // Wire sequential video playback — plays through all clips in order,
+      // fading between them, and loops back to clip 1 after the last.
+      (function wireSequentialPlayer() {
+        const clips = window._trailerClips || [];
+        if (clips.length < 2) return; // single clip already plays fine
+        const player = document.getElementById('main-video');
+        const idxEl = document.getElementById('main-video-idx');
+        const thumbContainer = document.getElementById('main-video-thumbs');
+        if (!player) return;
+        let current = 0;
+
+        function highlightThumb(idx) {
+          if (!thumbContainer) return;
+          thumbContainer.querySelectorAll('button[data-clip-idx]').forEach((btn, j) => {
+            btn.style.borderColor = j === idx ? '#e50914' : '#222';
+            btn.style.background = j === idx ? '#1a0003' : '#0a0a0a';
+          });
+        }
+
+        function loadClip(idx) {
+          current = idx;
+          // Fade out
+          player.style.opacity = '0';
+          setTimeout(() => {
+            player.src = clips[idx];
+            player.play().catch(() => {});
+            if (idxEl) idxEl.textContent = String(idx + 1);
+            highlightThumb(idx);
+            // Fade in
+            player.style.opacity = '1';
+          }, 300);
+        }
+
+        player.addEventListener('ended', () => {
+          const next = (current + 1) % clips.length;
+          loadClip(next);
+        });
+
+        // Manual thumb clicks
+        if (thumbContainer) {
+          thumbContainer.querySelectorAll('button[data-clip-idx]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.getAttribute('data-clip-idx'), 10);
+              if (!isNaN(idx) && idx >= 0 && idx < clips.length) loadClip(idx);
+            });
+          });
+        }
+      })();
 
       // Wire storyboard modal
       window.__storyboardFrames = storyboardFrames;

@@ -733,6 +733,7 @@
             synopsis: refined.synopsis,
             tier: selectedTier,
             email: email || undefined,
+            supabaseUserId: getSignedInSupabaseUserId() || undefined,
           }),
         });
         if (!res.ok) {
