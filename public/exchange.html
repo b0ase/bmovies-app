@@ -99,7 +99,7 @@
       white-space: nowrap;
     }
     .tabs button.active {
-      color: #fff;
+      color: #E50914;
       border-bottom-color: #E50914;
       background: #0f0f0f;
     }
@@ -1220,12 +1220,12 @@
       const container = document.getElementById('tab-content');
 
       const stars = [
-        { name: 'The Arnie Agent',       role: 'Actor / Director',          status: 'Coming soon', desc: 'Action choreography, one-liners, and motivational direction' },
-        { name: 'The Spielberg Agent',    role: 'Director / Producer',       status: 'Coming soon', desc: 'Epic narratives, emotional arcs, and blockbuster production design' },
-        { name: 'The Hans Zimmer Agent',  role: 'Composer / Sound Designer', status: 'Coming soon', desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops' },
-        { name: 'The Tarantino Agent',    role: 'Writer / Director',         status: 'Coming soon', desc: 'Non-linear storytelling, sharp dialogue, and unforgettable scenes' },
-        { name: 'The Nolan Agent',        role: 'Director / Writer',         status: 'Coming soon', desc: 'Mind-bending narratives, IMAX-scale ambition, temporal puzzles' },
-        { name: 'The Miyazaki Agent',     role: 'Director / Animator',       status: 'Coming soon', desc: 'Hand-drawn magic, environmental themes, and Studio Ghibli wonder' },
+        { name: 'The Arnie Agent',       role: 'Actor / Director',          status: 'Coming soon', desc: 'Action choreography, one-liners, and motivational direction', img: '/img/stars/arnie-agent.jpg' },
+        { name: 'The Spielberg Agent',    role: 'Director / Producer',       status: 'Coming soon', desc: 'Epic narratives, emotional arcs, and blockbuster production design', img: '/img/stars/spielberg-agent.jpg' },
+        { name: 'The Hans Zimmer Agent',  role: 'Composer / Sound Designer', status: 'Coming soon', desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops', img: '/img/stars/zimmer-agent.jpg' },
+        { name: 'The Tarantino Agent',    role: 'Writer / Director',         status: 'Coming soon', desc: 'Non-linear storytelling, sharp dialogue, and unforgettable scenes', img: '/img/stars/tarantino-agent.jpg' },
+        { name: 'The Nolan Agent',        role: 'Director / Writer',         status: 'Coming soon', desc: 'Mind-bending narratives, IMAX-scale ambition, temporal puzzles', img: '/img/stars/nolan-agent.jpg' },
+        { name: 'The Miyazaki Agent',     role: 'Director / Animator',       status: 'Coming soon', desc: 'Hand-drawn magic, environmental themes, and Studio Ghibli wonder', img: '/img/stars/miyazaki-agent.jpg' },
       ];
 
       let html = `
@@ -1251,7 +1251,7 @@
             <td class="rank-cell">${i + 1}</td>
             <td>
               <div class="asset-cell">
-                <div class="asset-thumb" style="background:#111;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#E50914;font-weight:900;">&#9733;</div>
+                <img class="asset-thumb" src="${esc(s.img)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot; style=&quot;background:#111;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#E50914;font-weight:900;&quot;>&#9733;</div>'" style="border-radius:50%;" />
                 <div>
                   <div class="asset-name">${esc(s.name)}</div>
                 </div>
