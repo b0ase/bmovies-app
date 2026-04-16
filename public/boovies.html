@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bOOvies — The Cheekier Cut</title>
+  <meta name="description" content="You weren't supposed to find this page." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Bebas+Neue&family=Oswald:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #000;
+      color: #e8e8e8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .boovies-wrapper {
+      text-align: center;
+      padding: 3rem 2rem;
+      max-width: 800px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Wordmark — Bebas Neue like the real one, but PINK OO */
+    .boovies-wordmark {
+      display: inline-block;
+      font-family: 'Bebas Neue', 'Oswald', sans-serif;
+      font-size: 12rem;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      border: 4px solid #FF69B4;
+      padding: 0.3rem 2rem;
+      line-height: 1;
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 40px rgba(255, 105, 180, 0.4);
+      max-width: 100%;
+      cursor: default;
+      animation: subtle-bounce 3s ease-in-out infinite;
+    }
+    .wm-b { color: #fff; }
+    .wm-oo {
+      color: #FF69B4;
+      display: inline-block;
+      animation: jiggle 2s ease-in-out infinite;
+    }
+    .wm-vies { color: #E50914; }
+
+    @keyframes jiggle {
+      0%, 100% { transform: translateY(0); }
+      25% { transform: translateY(-4px); }
+      75% { transform: translateY(4px); }
+    }
+
+    @keyframes subtle-bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.01); }
+    }
+
+    .tagline {
+      font-size: 1rem;
+      color: #FF69B4;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-top: 2rem;
+    }
+
+    .subtitle {
+      font-size: 1.4rem;
+      color: #ccc;
+      margin-top: 1.5rem;
+      line-height: 1.6;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .features {
+      margin-top: 3rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .feature {
+      background: rgba(255, 105, 180, 0.08);
+      border: 1px solid rgba(255, 105, 180, 0.2);
+      padding: 1.5rem 2rem;
+      max-width: 220px;
+      text-align: center;
+    }
+    .feature .emoji {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .feature .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #FF69B4;
+    }
+    .feature .desc {
+      font-size: 0.8rem;
+      color: #999;
+      margin-top: 0.4rem;
+      line-height: 1.4;
+    }
+
+    .disclaimer {
+      margin-top: 4rem;
+      font-size: 0.6rem;
+      color: #444;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      max-width: 500px;
+      line-height: 1.6;
+    }
+
+    .back-link {
+      margin-top: 2rem;
+      display: inline-block;
+      font-size: 0.75rem;
+      color: #E50914;
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border: 1px solid #E50914;
+      padding: 0.6rem 1.5rem;
+      transition: all 0.2s;
+    }
+    .back-link:hover {
+      background: #E50914;
+      color: #fff;
+    }
+
+    /* Jiggly pixel GIF */
+    .jiggle-gif {
+      width: min(340px, 70vw);
+      display: block;
+      margin: 0 auto 2rem;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* SVG logo display */
+    .logo-svg {
+      width: min(420px, 90vw);
+      margin: 0 auto 1rem;
+      display: block;
+    }
+
+    /* Floating background circles — purely decorative */
+    .bg-circle {
+      position: fixed;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,105,180,0.15) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-circle.c1 { width: 500px; height: 500px; top: -100px; left: -100px; animation: float1 8s ease-in-out infinite; }
+    .bg-circle.c2 { width: 400px; height: 400px; bottom: -80px; right: -80px; animation: float2 10s ease-in-out infinite; }
+
+    @keyframes float1 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, 20px); }
+    }
+    @keyframes float2 {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(-20px, -30px); }
+    }
+
+    /* Rating badge */
+    .rating {
+      display: inline-block;
+      margin-top: 1.5rem;
+      border: 2px solid #FF69B4;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: #FF69B4;
+    }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .boovies-wordmark { font-size: 8rem; padding: 0.3rem 1.6rem; }
+    }
+    @media (max-width: 768px) {
+      .boovies-wordmark { font-size: 5rem; padding: 0.25rem 1.1rem; border-width: 3px; }
+      .features { flex-direction: column; align-items: center; }
+    }
+    @media (max-width: 480px) {
+      .boovies-wordmark { font-size: 3.5rem; padding: 0.2rem 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative background blobs -->
+  <div class="bg-circle c1"></div>
+  <div class="bg-circle c2"></div>
+
+  <div class="boovies-wrapper">
+
+    <!-- The jiggly pixel OO -->
+    <img src="img/boovies/boovies-jiggle.gif" alt="OO" class="jiggle-gif" />
+
+    <!-- SVG logo -->
+    <img src="boovies-logo.svg" alt="bOOvies logo" class="logo-svg" />
+
+    <!-- Text wordmark -->
+    <div class="boovies-wordmark">
+      <span class="wm-b">b</span><span class="wm-oo">OO</span><span class="wm-vies">vies</span>
+    </div>
+
+    <div class="tagline">The Cheekier Cut</div>
+
+    <div class="rating">RATED: B OO BS</div>
+
+    <p class="subtitle">
+      Same AI film studio. Same on-chain royalties.<br>
+      Just&hellip; rounder.
+    </p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="emoji">&#127904;</div>
+        <div class="label">2x the O's</div>
+        <div class="desc">Because one O was never enough for this kind of cinema.</div>
+      </div>
+      <div class="feature">
+        <div class="emoji">&#128293;</div>
+        <div class="label">Hot Pink Glow</div>
+        <div class="desc">Every pixel dripping with unearned confidence.</div>
+      </div>
+      <div class="feature">
+        <div class="emoji">&#129737;</div>
+        <div class="label">Jiggle Physics</div>
+        <div class="desc">Industry-leading CSS animation. The OO bounces. You're welcome.</div>
+      </div>
+    </div>
+
+    <p class="disclaimer">
+      bOOvies is not a real product. No OO's were harmed in the making of this page.
+      The management accepts no responsibility for snickering.
+      All royalties still settle on BSV mainnet because we're professionals, actually.
+    </p>
+
+    <a href="index.html" class="back-link">&larr; Back to the grown-up version</a>
+  </div>
+
+</body>
+</html>

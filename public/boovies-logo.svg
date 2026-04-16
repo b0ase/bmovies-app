@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 100" width="420" height="100" role="img" aria-label="bOOvies — the cheekier cut">
+  <title>bOOvies</title>
+  <defs>
+    <filter id="shadow3d" x="-4%" y="-4%" width="115%" height="135%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="2.5" dy="4" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.75"/>
+    </filter>
+    <filter id="glow-red" x="-15%" y="-25%" width="140%" height="175%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blr"/>
+      <feFlood flood-color="#E50914" flood-opacity="0.45" result="clr"/>
+      <feComposite in="clr" in2="blr" operator="in" result="halo"/>
+      <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-white" x="-15%" y="-25%" width="140%" height="175%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blr"/>
+      <feFlood flood-color="#FFFFFF" flood-opacity="0.30" result="clr"/>
+      <feComposite in="clr" in2="blr" operator="in" result="halo"/>
+      <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Cheeky pink glow for the OO -->
+    <filter id="glow-pink" x="-20%" y="-30%" width="150%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blr"/>
+      <feFlood flood-color="#FF69B4" flood-opacity="0.55" result="clr"/>
+      <feComposite in="clr" in2="blr" operator="in" result="halo"/>
+      <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <linearGradient id="g-white" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="55%" stop-color="#F0F0F0"/>
+      <stop offset="100%" stop-color="#D8D8D8"/>
+    </linearGradient>
+    <linearGradient id="g-red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF2028"/>
+      <stop offset="50%" stop-color="#E50914"/>
+      <stop offset="100%" stop-color="#B0060F"/>
+    </linearGradient>
+    <!-- Hot pink gradient for the OO -->
+    <linearGradient id="g-pink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF85C8"/>
+      <stop offset="50%" stop-color="#FF69B4"/>
+      <stop offset="100%" stop-color="#DB3E8A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ── b ── (white, same as original) -->
+  <g filter="url(#glow-white)">
+    <path fill="url(#g-white)" filter="url(#shadow3d)" d="
+      M 10,6 L 24,6 L 24,41
+      C 29,35 38,30 52,30 C 72,30 88,45 88,63
+      C 88,81 72,96 52,96 C 38,96 29,91 24,85
+      L 24,96 L 10,96 Z
+      M 24,63 C 24,73 37,83 51,83 C 65,83 74,74 74,63
+      C 74,52 65,43 51,43 C 37,43 24,53 24,63 Z
+    "/>
+  </g>
+
+  <!-- ── First O ── (HOT PINK, bigger, jiggle-ready) -->
+  <g filter="url(#glow-pink)">
+    <path fill="url(#g-pink)" filter="url(#shadow3d)" fill-rule="evenodd" d="
+      M 94,62 C 94,40 107,24 123,24 C 139,24 152,40 152,62
+      C 152,84 139,100 123,100 C 107,100 94,84 94,62 Z
+      M 107,62 C 107,76 114,88 123,88 C 132,88 139,76 139,62
+      C 139,48 132,36 123,36 C 114,36 107,48 107,62 Z
+    "/>
+  </g>
+
+  <!-- ── Second O ── (HOT PINK, bigger, jiggle-ready) -->
+  <g filter="url(#glow-pink)">
+    <path fill="url(#g-pink)" filter="url(#shadow3d)" fill-rule="evenodd" d="
+      M 154,62 C 154,40 167,24 183,24 C 199,24 212,40 212,62
+      C 212,84 199,100 183,100 C 167,100 154,84 154,62 Z
+      M 167,62 C 167,76 174,88 183,88 C 192,88 199,76 199,62
+      C 199,48 192,36 183,36 C 174,36 167,48 167,62 Z
+    "/>
+  </g>
+
+  <!-- ── v ── (red) -->
+  <g filter="url(#glow-red)">
+    <path fill="url(#g-red)" filter="url(#shadow3d)" d="
+      M 218,31 L 231,31 L 238,76 L 245,31 L 258,31 L 243,96 L 233,96 Z
+    "/>
+  </g>
+
+  <!-- ── i ── (red) -->
+  <g filter="url(#glow-red)">
+    <circle cx="272" cy="21" r="7" fill="url(#g-red)" filter="url(#shadow3d)"/>
+    <rect x="266" y="31" width="12" height="65" rx="1" fill="url(#g-red)" filter="url(#shadow3d)"/>
+  </g>
+
+  <!-- ── e ── (red) -->
+  <g filter="url(#glow-red)">
+    <path fill="url(#g-red)" filter="url(#shadow3d)" d="
+      M 285,64 C 285,45 295,31 307,31 C 319,31 329,44 329,60
+      L 329,70 L 296,70 C 297,80 302,86 307,86
+      C 312,86 316,82 318,76 L 329,78
+      C 326,89 317,97 307,97 C 295,97 285,83 285,64 Z
+      M 296,61 L 318,61 C 317,51 313,42 307,42
+      C 301,42 297,50 296,61 Z
+    "/>
+  </g>
+
+  <!-- ── s ── (red) -->
+  <g filter="url(#glow-red)">
+    <path fill="url(#g-red)" filter="url(#shadow3d)" d="
+      M 337,83 L 343,74 C 347,80 353,86 361,86
+      C 368,86 373,82 373,77 C 373,72 369,69 361,67
+      L 354,64 C 344,61 337,55 337,47 C 337,37 346,31 357,31
+      C 366,31 372,35 376,41 L 370,49
+      C 366,44 362,41 357,41 C 351,41 348,44 348,48
+      C 348,52 351,55 358,57 L 365,60
+      C 375,63 380,70 380,78 C 380,89 371,97 359,97
+      C 350,97 342,92 337,83 Z
+    "/>
+  </g>
+
+  <!-- Bottom accent bar — hot pink edition -->
+  <rect x="10" y="103" width="370" height="3" rx="1.5" fill="#FF69B4" opacity="0.85"/>
+</svg>
