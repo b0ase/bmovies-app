@@ -3,58 +3,37 @@
 /**
  * /account — the bMovies studio dashboard.
  *
- * Six tabs on the authenticated user's dashboard:
+ * Hierarchical drill-down navigation:
  *
- *   My Films          — offers the user has commissioned, with
- *                       thumbnail, status, deep-links to the film /
- *                       timeline / cap table / deck brochure pages.
- *   Studio            — studio brand + current production pipeline.
- *   Agents            — agent marketplace scaffolding.
- *   Cap Tables        — per-film + $bMovies cap tables.
- *   Investor Packs    — printable per-film decks.
- *   Wallet            — BRC-100 wallet + $bMovies balance + dividends.
+ *   ACCOUNT LEVEL: [Studio] [Wallet] [Coupons]
+ *     -> STUDIO: shows studio info + project list
+ *          -> PROJECT LEVEL: [<- Studio] [project selector] [Overview] [Cap Table] [Crew] [Deck] [Production Room]
+ *               -> TOOLS LEVEL: [<- Project] [project selector] [Script] [Storyboard] [Editor] [Titles] [Score]
  *
- * Data layer: supabase-bmovies.ts (reads bct_offers, bct_artifacts,
- * bct_studios, bct_agents, bct_share_sales, bct_platform_config).
+ * URL params:
+ *   /account                            -> account level, Studio tab (default)
+ *   /account?section=wallet             -> account level, Wallet tab
+ *   /account?section=coupons            -> account level, Coupons tab
+ *   /account?project=<id>&tab=overview  -> project level
+ *   /account?project=<id>&tab=captable  -> project level
+ *   /account?project=<id>&tab=crew      -> project level
+ *   /account?project=<id>&tab=deck      -> project level
+ *   /account?project=<id>&tab=room      -> project level (Production Room)
+ *   /account?project=<id>&tool=script   -> tools level
+ *   /account?project=<id>&tool=storyboard -> tools level
+ *   /account?project=<id>&tool=editor   -> tools level
+ *   /account?project=<id>&tool=titles   -> tools level
+ *   /account?project=<id>&tool=score    -> tools level
  *
- * Auth: Supabase session via storageKey 'bmovies-auth'. Works for
- * BRC-100 sign-ins because /api/auth/brc100/verify mints a real
- * Supabase session via the service_role key; BRC-100 users surface
- * here identified by `user.user_metadata.brc100_address` (the real
- * BSV key) and `display_name` (e.g. "BSV-1RkW4dt6"), with the raw
- * `user.email` being a synthetic `<addr>@bsv.bmovies.online` address
- * that we hide from the UI.
- *
- * My Films query: to tolerate both email/Google users (producer_id =
- * Supabase UUID) AND BRC-100 users (producer_id may = Supabase UUID
- * OR producer_address = BSV key), we OR both fields in a single
- * Supabase `.or()` clause when a BRC-100 address is available.
+ * The AccountToolbar handles all navigation chrome. This page just
+ * renders the content for whatever the URL says.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { bmovies } from '@/lib/supabase-bmovies'
 import type { User } from '@supabase/supabase-js'
-import { useActiveProject, type ActiveProject } from '@/hooks/useActiveProject'
-
-type Tab =
-  | 'my-films'
-  | 'studio'
-  | 'agents'
-  | 'cap-tables'
-  | 'investor-packs'
-  | 'wallet'
-  | 'chat'
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'cap-tables',      label: 'Cap Tables' },
-  { id: 'agents',          label: 'Crew' },
-  { id: 'my-films',        label: 'Films' },
-  { id: 'investor-packs',  label: 'Investor Packs' },
-  { id: 'studio',          label: 'Studio' },
-  { id: 'wallet',          label: 'Wallet' },
-]
 
 /** USD price per tier — the four commission tiers on /commission.html */
 const PRICE_BY_TIER: Record<string, number> = {
@@ -70,9 +49,6 @@ const PRICE_BY_TIER: Record<string, number> = {
  * in public/. The DB stores xAI temp URLs that expire in ~24h, so we
  * treat the static JPGs under public/img/films/ as the source of
  * truth and the bct_artifacts rows as a last-resort fallback.
- *
- * Keys MUST be lowercased and punctuation-exact against the film
- * title's .toLowerCase() — including the apostrophe in "isn't".
  */
 const POSTER_MAP: Record<string, string> = {
   'echoes of the last signal':           '/img/films/echoes-of-the-last-signal.jpg',
@@ -101,20 +77,10 @@ const POSTER_MAP: Record<string, string> = {
   'crypto whistleblow':                  '/img/films/crypto-whistleblow.jpg',
 }
 
-/** Any URL matching the xAI imgen temp CDN is untrustworthy — it dies
- *  in ~24h. The feature-worker is supposed to mirror these to
- *  /var/www/bmovies-assets/ on Hetzner but the mirror is currently
- *  empty, so the DB rows point at dead upstreams. Treat as null. */
 function isEphemeralUrl(url: string | null | undefined): boolean {
   return typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url)
 }
 
-/** Resolve the poster for a film in priority order:
- *   1. POSTER_MAP override (static JPG in public/img/films/)
- *   2. Non-ephemeral poster artifact URL from bct_artifacts
- *   3. Non-ephemeral storyboard frame
- *   4. null — caller renders the bM placeholder badge
- */
 function resolvePosterUrl(film: Film): string | null {
   const mapHit = POSTER_MAP[(film.title || '').toLowerCase()]
   if (mapHit) return mapHit
@@ -144,20 +110,14 @@ interface Film {
   bct_artifacts: { id: number; kind: string; role: string | null; url: string; step_id: string | null; superseded_by: number | null }[]
 }
 
-/**
- * User-facing identity helpers.
- *
- * BRC-100 users have `user.email = <address>@bsv.bmovies.online` which
- * we never want to show. Prefer `user_metadata.display_name`, then the
- * raw BRC-100 address, and only fall back to `email` if neither is set
- * (email / Google users).
- */
+/* ─── User-facing identity helpers ─── */
+
 function displayNameFor(user: User): string {
   const md = (user.user_metadata ?? {}) as Record<string, unknown>
   const display = typeof md.display_name === 'string' ? md.display_name : ''
   const addr = typeof md.brc100_address === 'string' ? md.brc100_address : ''
   if (display) return display
-  if (addr) return `${addr.slice(0, 8)}…${addr.slice(-4)}`
+  if (addr) return `${addr.slice(0, 8)}...${addr.slice(-4)}`
   return user.email ?? 'Signed in'
 }
 
@@ -177,11 +137,14 @@ function brc100ProviderOf(user: User): string | null {
 }
 
 function publicEmailFor(user: User): string | null {
-  // Hide the synthetic BRC-100 email from the UI
   if (!user.email) return null
   if (user.email.endsWith('@bsv.bmovies.online')) return null
   return user.email
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  Page entry point
+ * ═══════════════════════════════════════════════════════════════════════ */
 
 export default function AccountPage() {
   return (
@@ -193,21 +156,19 @@ export default function AccountPage() {
 
 function AccountContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('studio')
   const [films, setFilms] = useState<Film[]>([])
   const [filmsLoading, setFilmsLoading] = useState(false)
   const [filmsError, setFilmsError] = useState<string | null>(null)
   const [accountId, setAccountId] = useState<string | null>(null)
 
-  // If URL has ?tab=studio, switch to that tab on mount
-  useEffect(() => {
-    const tabParam = searchParams.get('tab')
-    if (tabParam && TABS.some((t) => t.id === tabParam)) {
-      setActiveTab(tabParam as Tab)
-    }
-  }, [searchParams])
+  // ─── Read URL params ───
+  const section = searchParams.get('section')   // 'wallet' | 'coupons' | null
+  const projectId = searchParams.get('project')
+  const tab = searchParams.get('tab')            // project-level tab
+  const tool = searchParams.get('tool')          // tool-level tab
 
   // ─── Auth bootstrap ───
   useEffect(() => {
@@ -245,25 +206,6 @@ function AccountContent() {
   }, [user])
 
   // ─── Load films for the current user ───
-  //
-  // The correct linkage is via `bct_offers.account_id` →
-  // `bct_accounts.auth_user_id`, NOT `producer_id` — which is the
-  // on-chain agent slug (e.g. "spielbergx", "stripe-feature",
-  // "marketplace-producer"), not the commissioning human. Earlier
-  // iterations of this page queried by producer_id and returned
-  // zero rows for everyone because no offer records a user UUID
-  // there.
-  //
-  // Flow:
-  //   1. Resolve the user's bct_accounts row via auth_user_id
-  //      (BRC-100 users always have one — it's created by
-  //      /api/auth/brc100/verify. Email/Google users may or may
-  //      not — we insert-on-demand to keep the model consistent).
-  //   2. Query bct_offers where account_id = that row's id.
-  //   3. For BRC-100 users, also union with offers whose
-  //      producer_address matches the BSV key, to catch pre-link
-  //      commissions or direct-wallet payments that didn't pass
-  //      through the auth flow.
   useEffect(() => {
     if (!user) return
     let cancelled = false
@@ -273,7 +215,6 @@ function AccountContent() {
       setFilmsError(null)
       const address = brc100AddressOf(user)
       try {
-        // 1. Resolve the user's bct_accounts row
         const { data: accountRow, error: accErr } = await bmovies
           .from('bct_accounts')
           .select('id')
@@ -282,15 +223,9 @@ function AccountContent() {
         if (accErr) {
           console.warn('[account] bct_accounts lookup failed:', accErr.message)
         }
-        const accountId = accountRow?.id as string | undefined
+        const acctId = accountRow?.id as string | undefined
 
-        // 2. Build the query. If we have an account id, query by it;
-        //    if we ALSO have a BRC-100 address, union with the
-        //    producer_address match to catch direct-wallet flows.
-        //    If we have neither, the user has no bct_accounts row
-        //    and no wallet — return empty (they need to commission
-        //    or link a wallet first).
-        if (!accountId && !address) {
+        if (!acctId && !address) {
           setFilms([])
           setFilmsLoading(false)
           return
@@ -306,10 +241,10 @@ function AccountContent() {
           .is('archived_at', null)
           .order('created_at', { ascending: false })
 
-        if (accountId && address) {
-          q = q.or(`account_id.eq.${accountId},producer_address.eq.${address}`)
-        } else if (accountId) {
-          q = q.eq('account_id', accountId)
+        if (acctId && address) {
+          q = q.or(`account_id.eq.${acctId},producer_address.eq.${address}`)
+        } else if (acctId) {
+          q = q.eq('account_id', acctId)
         } else if (address) {
           q = q.eq('producer_address', address)
         }
@@ -334,12 +269,10 @@ function AccountContent() {
       }
     }
     loadFilms()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [user])
 
-  // ─── Derived stats for the header ───
+  // ─── Derived stats ───
   const stats = useMemo(() => {
     const count = films.length
     const committedUsd = films.reduce(
@@ -356,28 +289,100 @@ function AccountContent() {
   }, [films])
 
   // ─── Top-level branches ───
-
   if (loading) return <SkeletonDashboard />
-
   if (!user) return <SignedOutHero />
 
-  // ─── Tool view routing ───
-  // If ?tool=<name> is present, show the tool view instead of the
-  // normal tab-based dashboard. These are the AccountToolbar targets.
-  const toolParam = searchParams.get('tool')
-  if (toolParam && ['script', 'storyboard', 'editor', 'titles', 'score'].includes(toolParam)) {
-    return <ToolView tool={toolParam} user={user} accountId={accountId} />
+  // Find the active film for project/tools level
+  const activeFilm = projectId ? films.find(f => f.id === projectId) || null : null
+
+  // ═══ TOOLS LEVEL ═══
+  if (tool && projectId) {
+    if (['script', 'storyboard', 'editor', 'titles', 'score'].includes(tool)) {
+      return (
+        <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-8">
+          <ToolView tool={tool} projectId={projectId} projectTitle={activeFilm?.title || 'Untitled'} />
+        </div>
+      )
+    }
   }
 
-  // Signed-in dashboard
+  // ═══ PROJECT LEVEL ═══
+  if (projectId) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-8">
+        <ProjectView
+          projectId={projectId}
+          tab={tab || 'overview'}
+          film={activeFilm}
+          user={user}
+          accountId={accountId}
+          films={films}
+        />
+      </div>
+    )
+  }
+
+  // ═══ ACCOUNT LEVEL ═══
+  if (section === 'wallet') {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12">
+        <WalletView user={user} accountId={accountId} films={films} />
+      </div>
+    )
+  }
+  if (section === 'coupons') {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12">
+        <CouponsView />
+      </div>
+    )
+  }
+
+  // Default: Studio view
   return (
     <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12">
+      <StudioView
+        user={user}
+        accountId={accountId}
+        films={films}
+        filmsLoading={filmsLoading}
+        filmsError={filmsError}
+        stats={stats}
+        sessionIdFromUrl={searchParams.get('session_id')}
+      />
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  STUDIO VIEW — account-level default
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+function StudioView({
+  user,
+  accountId,
+  films,
+  filmsLoading,
+  filmsError,
+  stats,
+  sessionIdFromUrl,
+}: {
+  user: User
+  accountId: string | null
+  films: Film[]
+  filmsLoading: boolean
+  filmsError: string | null
+  stats: { count: number; committedUsd: number; onChainCount: number; activeCount: number }
+  sessionIdFromUrl: string | null
+}) {
+  return (
+    <>
       {/* Header */}
       <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
         <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2 truncate">
           {displayNameFor(user)}
           {isBrc100User(user) && (
-            <span className="ml-2 text-[#E50914]">· BRC-100</span>
+            <span className="ml-2 text-[#E50914]">. BRC-100</span>
           )}
         </div>
         <h1
@@ -388,8 +393,7 @@ function AccountContent() {
         </h1>
         <p className="text-[#888] text-sm mt-2 max-w-xl">
           Every film you&apos;ve commissioned, every agent you&apos;ve hired, every
-          royalty share you hold. All in one place. Share cap tables and
-          investor packs with a single click.
+          royalty share you hold. All in one place.
         </p>
       </header>
 
@@ -401,206 +405,33 @@ function AccountContent() {
         activeCount={stats.activeCount}
       />
 
-      {/* Tabs */}
-      <nav
-        className="mb-8 flex flex-wrap gap-1 border-b border-[#1a1a1a]"
-        role="tablist"
-        aria-label="Studio sections"
-      >
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={activeTab === t.id}
-            onClick={() => setActiveTab(t.id)}
-            className={`px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-              activeTab === t.id
-                ? 'text-white border-b-2 border-[#E50914]'
-                : 'text-[#666] hover:text-[#bbb]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Tab content */}
-      <div>
-        {activeTab === 'my-films' && (
-          <MyFilmsTab films={films} loading={filmsLoading} error={filmsError} />
-        )}
-        {activeTab === 'studio' && (
-          <StudioTab
-            hasFilms={stats.count > 0}
-            user={user}
-            accountId={accountId}
-            sessionIdFromUrl={searchParams.get('session_id')}
-          />
-        )}
-        {activeTab === 'agents' && (
-          <AgentsTab user={user} accountId={accountId} />
-        )}
-        {activeTab === 'cap-tables' && <CapTablesTab films={films} />}
-        {activeTab === 'investor-packs' && <InvestorPacksTab films={films} />}
-        {activeTab === 'wallet' && <WalletTab user={user} accountId={accountId} films={films} />}
-        {activeTab === 'chat' && <ChatTab user={user} accountId={accountId} />}
+      {/* Studio info */}
+      <div className="mb-10">
+        <StudioInfoSection
+          hasFilms={stats.count > 0}
+          user={user}
+          accountId={accountId}
+          sessionIdFromUrl={sessionIdFromUrl}
+        />
       </div>
-    </div>
-  )
-}
 
-/* ───────── Signed-out hero ───────── */
-
-function SignedOutHero() {
-  return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 py-12">
-      <div className="max-w-md text-center">
-        <div
-          className="text-6xl font-black mb-4 leading-none"
+      {/* Project list */}
+      <div>
+        <h2
+          className="text-3xl font-black mb-4 leading-none"
           style={{ fontFamily: 'var(--font-bebas)' }}
         >
-          Sign in to<br/>
-          open your <span className="text-[#E50914]">studio</span>
-        </div>
-        <p className="text-[#888] text-sm leading-relaxed mb-6">
-          Your account, your films, your cap tables, your agents, your
-          dividends — all live inside this dashboard. Sign in with your
-          BRC-100 wallet (recommended) or with the email you used to
-          commission a film.
-        </p>
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/login"
-            className="px-6 py-3 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
-          >
-            Sign in →
-          </Link>
-          <a
-            href="/commission.html"
-            className="px-6 py-3 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
-          >
-            Commission a film ($0.99 +)
-          </a>
-        </div>
+          Your <span className="text-[#E50914]">films</span>
+        </h2>
+        <ProjectCards films={films} loading={filmsLoading} error={filmsError} />
       </div>
-    </div>
+    </>
   )
 }
 
-/* ───────── Loading skeleton ───────── */
+/* ─── Project cards grid (for StudioView) ─── */
 
-/**
- * Rendered before the auth bootstrap completes. Matches the shape of
- * the signed-in dashboard (header + stats strip + tabs row + content
- * area) so the transition to the real UI is invisible to the eye.
- * Still animates (via Tailwind `animate-pulse`) so the user sees the
- * page is alive instead of a dead gray block.
- */
-function SkeletonDashboard() {
-  return (
-    <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12 animate-pulse">
-      {/* Header skeleton */}
-      <div className="mb-8 pb-6 border-b border-[#1a1a1a]">
-        <div className="h-2 w-32 bg-[#1a1a1a] mb-3" />
-        <div className="h-12 w-64 bg-[#1a1a1a]" />
-        <div className="h-3 w-80 bg-[#0e0e0e] mt-4" />
-      </div>
-
-      {/* Stats strip skeleton */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
-            <div className="h-2 w-16 bg-[#1a1a1a] mb-3" />
-            <div className="h-8 w-24 bg-[#151515]" />
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs skeleton */}
-      <div className="mb-8 flex gap-4 border-b border-[#1a1a1a] pb-3">
-        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="h-3 w-20 bg-[#1a1a1a]" />
-        ))}
-      </div>
-
-      {/* Tab content skeleton — 3-card grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a]">
-            <div className="aspect-[2/3] bg-[#050505]" />
-            <div className="p-4">
-              <div className="h-4 w-3/4 bg-[#1a1a1a] mb-2" />
-              <div className="h-3 w-1/2 bg-[#151515] mb-3" />
-              <div className="h-2 w-full bg-[#0e0e0e]" />
-              <div className="h-2 w-5/6 bg-[#0e0e0e] mt-1" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ───────── Stats strip ───────── */
-
-function StatsStrip({
-  filmsCount,
-  committedUsd,
-  onChainCount,
-  activeCount,
-}: {
-  filmsCount: number
-  committedUsd: number
-  onChainCount: number
-  activeCount: number
-}) {
-  const formatUsd = (n: number) =>
-    n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-      <StatCard label="Films commissioned" value={filmsCount.toLocaleString()} />
-      <StatCard label="Committed" value={formatUsd(committedUsd)} />
-      <StatCard label="On chain" value={onChainCount.toLocaleString()} accent={onChainCount > 0} />
-      <StatCard label="In production" value={activeCount.toLocaleString()} />
-    </div>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  accent = false,
-}: {
-  label: string
-  value: string
-  accent?: boolean
-}) {
-  return (
-    <div
-      className={`border bg-[#0a0a0a] p-5 transition-colors ${
-        accent ? 'border-[#E50914]' : 'border-[#1a1a1a]'
-      }`}
-    >
-      <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
-        {label}
-      </div>
-      <div
-        className="text-3xl font-black leading-none"
-        style={{ fontFamily: 'var(--font-bebas)' }}
-      >
-        {accent && value !== '0' ? (
-          <span className="text-[#E50914]">{value}</span>
-        ) : (
-          value
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ───────── My Films tab ───────── */
-
-function MyFilmsTab({
+function ProjectCards({
   films,
   loading,
   error,
@@ -609,6 +440,8 @@ function MyFilmsTab({
   loading: boolean
   error: string | null
 }) {
+  const router = useRouter()
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
@@ -618,7 +451,6 @@ function MyFilmsTab({
             <div className="p-4">
               <div className="h-4 w-3/4 bg-[#1a1a1a] mb-2" />
               <div className="h-2 w-full bg-[#0e0e0e]" />
-              <div className="h-2 w-5/6 bg-[#0e0e0e] mt-1" />
             </div>
           </div>
         ))}
@@ -637,7 +469,7 @@ function MyFilmsTab({
           onClick={() => window.location.reload()}
           className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
         >
-          Retry →
+          Retry
         </button>
       </div>
     )
@@ -654,7 +486,7 @@ function MyFilmsTab({
           <span className="text-[#E50914]">a film yet.</span>
         </div>
         <p className="text-[#888] text-sm leading-relaxed mb-5">
-          Start with a $0.99 pitch — the AI swarm writes a logline,
+          Start with a $0.99 pitch -- the AI swarm writes a logline,
           synopsis, and one poster in under 60 seconds. If you like it,
           upgrade to a trailer, short, or feature. Every film becomes a
           BSV-21 token with its own cap table.
@@ -664,7 +496,7 @@ function MyFilmsTab({
             href="/commission.html"
             className="inline-block px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
           >
-            Commission a film →
+            Commission a film
           </a>
           <a
             href="/productions.html"
@@ -683,20 +515,247 @@ function MyFilmsTab({
         {films.length} film{films.length === 1 ? '' : 's'} commissioned
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {films.map((f) => (
-          <FilmCard key={f.id} film={f} />
-        ))}
+        {films.map((f) => {
+          const posterUrl = resolvePosterUrl(f)
+          const onChain = f.token_mint_txid && /^[0-9a-f]{64}$/.test(f.token_mint_txid)
+          return (
+            <div
+              key={f.id}
+              className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors cursor-pointer"
+              onClick={() => router.push(`/account?project=${f.id}&tab=overview`, { scroll: false })}
+            >
+              {posterUrl ? (
+                <div className="aspect-[2/3] bg-[#050505] overflow-hidden">
+                  <img src={posterUrl} alt={f.title} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] flex items-center justify-center">
+                  <div
+                    className="text-[#666] text-5xl font-black"
+                    style={{ fontFamily: 'var(--font-bebas)' }}
+                  >
+                    b<span className="text-[#E50914]">M</span>
+                  </div>
+                </div>
+              )}
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3
+                    className="font-black text-lg leading-tight text-white"
+                    style={{ fontFamily: 'var(--font-bebas)' }}
+                  >
+                    {f.title}
+                  </h3>
+                  <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+                    ${f.token_ticker}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 flex-wrap mb-3">
+                  <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                    {f.tier}
+                  </span>
+                  <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                    {f.status.replace(/_/g, ' ')}
+                  </span>
+                  {onChain && (
+                    <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+                      On chain
+                    </span>
+                  )}
+                </div>
+                <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
+                  {f.synopsis || 'No synopsis yet.'}
+                </p>
+                <button
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/account?project=${f.id}&tab=overview`, { scroll: false })
+                  }}
+                >
+                  Open
+                </button>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-function FilmCard({ film }: { film: Film }) {
+/* ═══════════════════════════════════════════════════════════════════════
+ *  COUPONS VIEW — account-level placeholder
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+function CouponsView() {
+  return (
+    <>
+      <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
+        <h1
+          className="text-5xl font-black leading-none"
+          style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
+        >
+          My <span className="text-[#E50914]">coupons</span>
+        </h1>
+        <p className="text-[#888] text-sm mt-2 max-w-xl">
+          Redeemable credits for commissions. Buy them on the Commission page
+          and redeem them here when you are ready to produce.
+        </p>
+      </header>
+
+      <div className="border border-[#222] bg-[#0a0a0a] p-8 max-w-2xl">
+        <div
+          className="text-2xl font-black mb-3 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Commission <span className="text-[#E50914]">coupons</span>
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-5">
+          Coupons are redeemable credits for commissions. Buy them on the
+          Commission page. Each coupon is good for one commission at the
+          corresponding tier (pitch, trailer, short, or feature).
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {[
+            { tier: 'Pitch', price: '$0.99' },
+            { tier: 'Trailer', price: '$9.99' },
+            { tier: 'Short', price: '$99' },
+            { tier: 'Feature', price: '$999' },
+          ].map((c) => (
+            <div
+              key={c.tier}
+              className="border border-[#222] bg-[#050505] p-4 text-center"
+            >
+              <div
+                className="text-xl font-black text-white mb-1"
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                {c.tier}
+              </div>
+              <div className="text-[#E50914] text-sm font-bold">{c.price}</div>
+            </div>
+          ))}
+        </div>
+        <a
+          href="/commission.html"
+          className="inline-block px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+        >
+          Buy a coupon
+        </a>
+      </div>
+    </>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  PROJECT VIEW — project-level content router
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+function ProjectView({
+  projectId,
+  tab,
+  film,
+  user,
+  accountId,
+  films,
+}: {
+  projectId: string
+  tab: string
+  film: Film | null
+  user: User
+  accountId: string | null
+  films: Film[]
+}) {
+  const router = useRouter()
+
+  // If the film hasn't loaded yet or doesn't exist in the user's list,
+  // load it directly from Supabase
+  const [directFilm, setDirectFilm] = useState<Film | null>(null)
+  const [directLoading, setDirectLoading] = useState(!film)
+
+  useEffect(() => {
+    if (film) { setDirectLoading(false); return }
+    let cancelled = false
+    async function load() {
+      setDirectLoading(true)
+      const { data } = await bmovies
+        .from('bct_offers')
+        .select(
+          `id, title, synopsis, tier, status, token_ticker, token_mint_txid,
+           commissioner_percent, account_id, created_at,
+           bct_artifacts ( id, kind, role, url, step_id, superseded_by )`,
+        )
+        .eq('id', projectId)
+        .maybeSingle()
+      if (!cancelled) {
+        setDirectFilm(data as Film | null)
+        setDirectLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId, film])
+
+  const currentFilm = film || directFilm
+
+  if (directLoading) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-8 w-64 bg-[#1a1a1a] mb-4" />
+        <div className="h-4 w-full bg-[#0e0e0e] mb-2" />
+        <div className="h-4 w-3/4 bg-[#0e0e0e]" />
+      </div>
+    )
+  }
+
+  if (!currentFilm) {
+    return (
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
+        <div
+          className="text-2xl font-black mb-3 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Project not <span className="text-[#E50914]">found</span>
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-4">
+          This project could not be loaded. It may have been archived or
+          you may not have access.
+        </p>
+        <button
+          onClick={() => router.push('/account', { scroll: false })}
+          className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
+        >
+          Back to studio
+        </button>
+      </div>
+    )
+  }
+
+  switch (tab) {
+    case 'captable':
+      return <ProjectCapTableView film={currentFilm} />
+    case 'crew':
+      return <ProjectCrewView projectId={projectId} accountId={accountId} />
+    case 'deck':
+      return <ProjectDeckView film={currentFilm} />
+    case 'room':
+      return <ProjectRoomView film={currentFilm} />
+    case 'overview':
+    default:
+      return <ProjectOverviewView film={currentFilm} />
+  }
+}
+
+/* ─── Project Overview ─── */
+
+function ProjectOverviewView({ film }: { film: Film }) {
   const posterUrl = resolvePosterUrl(film)
   const onChain = film.token_mint_txid && /^[0-9a-f]{64}$/.test(film.token_mint_txid)
   const [publishing, setPublishing] = useState(false)
   const [publishStatus, setPublishStatus] = useState<string | null>(null)
   const [currentStatus, setCurrentStatus] = useState(film.status)
+  const router = useRouter()
 
   async function handlePublish() {
     setPublishing(true)
@@ -723,128 +782,175 @@ function FilmCard({ film }: { film: Film }) {
   }
 
   return (
-    <div className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors">
-      {posterUrl ? (
-        <div className="aspect-[2/3] bg-[#050505] overflow-hidden">
-          <img src={posterUrl} alt={film.title} className="w-full h-full object-cover" />
+    <div>
+      <div className="flex flex-col md:flex-row gap-8 mb-8">
+        {/* Poster */}
+        <div className="shrink-0">
+          {posterUrl ? (
+            <div className="w-64 border border-[#222] bg-[#050505] overflow-hidden">
+              <img src={posterUrl} alt={film.title} className="w-full" />
+            </div>
+          ) : (
+            <div className="w-64 aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] border border-[#222] flex items-center justify-center">
+              <div
+                className="text-[#666] text-5xl font-black"
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                b<span className="text-[#E50914]">M</span>
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] flex items-center justify-center">
-          <div
-            className="text-[#666] text-5xl font-black"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            b<span className="text-[#E50914]">M</span>
-          </div>
-        </div>
-      )}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3
-            className="font-black text-lg leading-tight text-white"
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <h1
+            className="text-4xl font-black leading-none mb-2"
             style={{ fontFamily: 'var(--font-bebas)' }}
           >
             {film.title}
-          </h3>
-          <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
-            ${film.token_ticker}
-          </span>
-        </div>
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
-            {film.tier}
-          </span>
-          <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
-            {currentStatus.replace(/_/g, ' ')}
-          </span>
-          {onChain && (
-            <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
-              On chain
+          </h1>
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <span className="text-[0.55rem] font-mono text-[#E50914]">
+              ${film.token_ticker}
             </span>
-          )}
-        </div>
-        <p className="text-[#888] text-xs leading-relaxed mb-4 line-clamp-2">
-          {film.synopsis || 'No synopsis yet.'}
-        </p>
-        {currentStatus === 'draft' && (
-          <div className="mb-3">
-            <button
-              onClick={handlePublish}
-              disabled={publishing}
-              className="w-full text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 bg-[#0e3a0e] border border-[#2a6a2a] text-[#6bff8a] hover:bg-[#1a4a1a] transition-colors disabled:opacity-40 disabled:cursor-wait"
+            <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+              {film.tier}
+            </span>
+            <span
+              className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5"
+              style={{
+                background: statusColor(currentStatus).bg,
+                color: statusColor(currentStatus).text,
+              }}
             >
-              {publishing ? 'Publishing...' : 'Publish Film'}
-            </button>
-            {publishStatus && (
-              <p className={`text-[0.6rem] mt-1 ${publishStatus.startsWith('Failed') ? 'text-[#ff6b6b]' : 'text-[#6bff8a]'}`}>
-                {publishStatus}
-              </p>
+              {currentStatus.replace(/_/g, ' ')}
+            </span>
+            {onChain && (
+              <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+                On chain
+              </span>
             )}
           </div>
-        )}
-        <div className="flex flex-wrap gap-1.5">
-          <a
-            href={`/film.html?id=${encodeURIComponent(film.id)}`}
-            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
-          >
-            Watch
-          </a>
-          <a
-            href={`/production.html?id=${encodeURIComponent(film.id)}`}
-            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-white hover:border-[#E50914]"
-          >
-            Timeline
-          </a>
-          <a
-            href={`/captable.html?id=${encodeURIComponent(film.id)}`}
-            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-[#bbb] hover:text-white"
-          >
-            Cap table
-          </a>
-          <a
-            href={`/deck.html?id=${encodeURIComponent(film.id)}`}
-            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] text-[#bbb] hover:text-white"
-          >
-            Deck
-          </a>
-          <a
-            href={`/production-room.html?id=${encodeURIComponent(film.id)}`}
-            className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white transition-colors"
-          >
-            Production Room
-          </a>
+
+          <p className="text-[#888] text-sm leading-relaxed mb-4 max-w-xl">
+            {film.synopsis || 'No synopsis yet.'}
+          </p>
+
+          <div className="text-[#666] text-xs mb-4">
+            Commissioned {new Date(film.created_at).toLocaleDateString('en-GB', {
+              year: 'numeric', month: 'short', day: 'numeric',
+            })}
+            {' '} &middot; {' '}
+            {film.commissioner_percent}% commissioner share
+          </div>
+
+          {/* Quick stats */}
+          <div className="grid grid-cols-3 gap-3 mb-6 max-w-md">
+            <StatCard label="Tier" value={film.tier} />
+            <StatCard label="Your share" value={`${film.commissioner_percent}%`} />
+            <StatCard label="On chain" value={onChain ? 'Yes' : 'No'} accent={!!onChain} />
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2">
+            {currentStatus === 'draft' && (
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#0e3a0e] border border-[#2a6a2a] text-[#6bff8a] hover:bg-[#1a4a1a] transition-colors disabled:opacity-40"
+              >
+                {publishing ? 'Publishing...' : 'Publish Film'}
+              </button>
+            )}
+            <a
+              href={`/film.html?id=${encodeURIComponent(film.id)}`}
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
+            >
+              Watch
+            </a>
+            <a
+              href={`/production.html?id=${encodeURIComponent(film.id)}`}
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 border border-[#333] text-white hover:border-[#E50914] transition-colors"
+            >
+              Timeline
+            </a>
+            <button
+              onClick={() => router.push(`/account?project=${film.id}&tool=script`, { scroll: false })}
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 border border-[#333] text-white hover:border-[#E50914] transition-colors"
+            >
+              Open tools
+            </button>
+          </div>
+
+          {publishStatus && (
+            <p className={`text-[0.6rem] mt-2 ${publishStatus.startsWith('Failed') ? 'text-[#ff6b6b]' : 'text-[#6bff8a]'}`}>
+              {publishStatus}
+            </p>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-/* ───────── Studio tab ───────── */
+/* ─── Project Cap Table ─── */
 
-const AESTHETIC_OPTIONS = [
-  'Eclectic and bold',
-  'Noir and moody',
-  'Neon cyberpunk',
-  'Classic Hollywood',
-  'Minimalist and clean',
-  'Surreal and dreamlike',
-  'Gritty realism',
-  'Cosmic and ethereal',
-  'Retro 70s exploitation',
-  'Japanese new wave',
-]
-
-interface StudioData {
-  id: string
-  name: string
-  token_ticker: string
-  treasury_address: string
-  bio: string | null
-  logo_url: string | null
-  founded_year: number
-  aesthetic: string | null
-  owner_account_id: string | null
+function ProjectCapTableView({ film }: { film: Film }) {
+  return (
+    <div>
+      <h2
+        className="text-3xl font-black mb-4 leading-none"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        Cap table: <span className="text-[#E50914]">{film.title}</span>
+      </h2>
+      <p className="text-[#888] text-sm leading-relaxed mb-6 max-w-xl">
+        Every share is on-chain and verifiable independently at GorillaPool.
+        Cap tables are printable for investor outreach.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        <a
+          href={`/captable.html?id=${encodeURIComponent(film.id)}`}
+          className="p-5 border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] hover:from-[#2a0005] transition-colors"
+        >
+          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-2">
+            Film token
+          </div>
+          <div
+            className="text-3xl font-black text-white mb-1 leading-none"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            ${film.token_ticker}
+          </div>
+          <div className="text-[#888] text-xs">
+            {film.tier} &middot; {film.commissioner_percent}% commissioner share
+          </div>
+          <div className="text-[0.6rem] text-[#E50914] mt-2 font-bold uppercase tracking-wider">
+            View full cap table
+          </div>
+        </a>
+        <a
+          href="/captable.html?id=platform"
+          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
+        >
+          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
+            Platform token
+          </div>
+          <div
+            className="text-3xl font-black text-white mb-1 leading-none"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            $bMovies
+          </div>
+          <div className="text-[#888] text-xs">1B supply &middot; live on BSV mainnet</div>
+        </a>
+      </div>
+    </div>
+  )
 }
+
+/* ─── Project Crew ─── */
 
 interface AgentData {
   id: string
@@ -862,883 +968,232 @@ interface AgentData {
   headshot_url: string | null
 }
 
-function StudioTab({
-  hasFilms,
-  user,
-  accountId,
-  sessionIdFromUrl,
-}: {
-  hasFilms: boolean
-  user: User | null
-  accountId: string | null
-  sessionIdFromUrl: string | null
-}) {
-  const [studio, setStudio] = useState<StudioData | null>(null)
-  const [studioLoading, setStudioLoading] = useState(true)
-  const [provisioning, setProvisioning] = useState(false)
-  const [provisionError, setProvisionError] = useState<string | null>(null)
-
-  // Create form state
-  const [studioName, setStudioName] = useState('')
-  const [studioAesthetic, setStudioAesthetic] = useState('')
-  const [createLoading, setCreateLoading] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-
-  // Load existing studio
-  useEffect(() => {
-    if (!accountId) { setStudioLoading(false); return; }
-    let cancelled = false
-    async function loadStudio() {
-      setStudioLoading(true)
-      const { data, error } = await bmovies
-        .from('bct_studios')
-        .select('*')
-        .eq('owner_account_id', accountId)
-        .maybeSingle()
-      if (!cancelled) {
-        if (error) console.warn('[studio-tab] load error:', error.message)
-        setStudio(data as StudioData | null)
-        setStudioLoading(false)
-      }
-    }
-    loadStudio()
-    return () => { cancelled = true }
-  }, [accountId])
-
-  // Handle post-Stripe provisioning: if session_id is in the URL,
-  // call /api/studio/complete to provision the studio
-  useEffect(() => {
-    if (!sessionIdFromUrl || !user || studio) return
-    let cancelled = false
-    async function provision() {
-      setProvisioning(true)
-      setProvisionError(null)
-      try {
-        const { data: session } = await bmovies.auth.getSession()
-        const accessToken = session.session?.access_token
-        if (!accessToken) throw new Error('Not authenticated')
-
-        const res = await fetch('/api/studio/complete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ session_id: sessionIdFromUrl }),
-        })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
-        if (!cancelled) {
-          setStudio(json.studio as StudioData)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          const msg = err instanceof Error ? err.message : String(err)
-          console.error('[studio-tab] provision error:', msg)
-          setProvisionError(msg)
-        }
-      } finally {
-        if (!cancelled) setProvisioning(false)
-      }
-    }
-    provision()
-    return () => { cancelled = true }
-  }, [sessionIdFromUrl, user, studio])
-
-  // Handle create form submission
-  const handleCreate = useCallback(async () => {
-    if (!user) return
-    const name = studioName.trim()
-    if (name.length < 2 || name.length > 50) {
-      setCreateError('Studio name must be 2-50 characters')
-      return
-    }
-    setCreateLoading(true)
-    setCreateError(null)
-    try {
-      const { data: session } = await bmovies.auth.getSession()
-      const accessToken = session.session?.access_token
-      if (!accessToken) throw new Error('Not authenticated')
-
-      const res = await fetch('/api/studio/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          name,
-          aesthetic: studioAesthetic || undefined,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
-      // Redirect to Stripe checkout
-      if (json.checkoutUrl) {
-        window.location.href = json.checkoutUrl
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setCreateError(msg)
-    } finally {
-      setCreateLoading(false)
-    }
-  }, [user, studioName, studioAesthetic])
-
-  // ─── Provisioning state ───
-  if (provisioning) {
-    return (
-      <div className="max-w-2xl">
-        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-8">
-          <div className="animate-pulse">
-            <div
-              className="text-3xl font-black mb-4 leading-none"
-              style={{ fontFamily: 'var(--font-bebas)' }}
-            >
-              Provisioning your <span className="text-[#E50914]">studio</span>...
-            </div>
-            <p className="text-[#888] text-sm leading-relaxed mb-3">
-              Generating your studio logo, bio, and 8 specialist agents via
-              Grok AI. This takes 15-30 seconds.
-            </p>
-            <div className="flex gap-1">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="w-2 h-2 bg-[#E50914] animate-pulse"
-                  style={{ animationDelay: `${i * 200}ms` }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (provisionError) {
-    return (
-      <div className="max-w-2xl">
-        <div className="border border-[#E50914] bg-[#1a0003] p-6">
-          <div className="text-[#ff6b7a] text-xs font-bold uppercase tracking-wider mb-2">
-            Studio provisioning failed
-          </div>
-          <div className="text-[#bbb] text-sm mb-3">{provisionError}</div>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (studioLoading) {
-    return (
-      <div className="max-w-2xl animate-pulse">
-        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-6">
-          <div className="h-6 w-48 bg-[#1a1a1a] mb-4" />
-          <div className="h-3 w-full bg-[#151515] mb-2" />
-          <div className="h-3 w-3/4 bg-[#151515]" />
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Studio exists: show it ───
-  if (studio) {
-    return (
-      <div className="max-w-2xl">
-        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
-          <div className="flex items-start gap-5">
-            {studio.logo_url ? (
-              <img
-                src={studio.logo_url}
-                alt={`${studio.name} logo`}
-                className="w-20 h-20 object-cover border border-[#333] shrink-0"
-              />
-            ) : (
-              <div className="w-20 h-20 bg-[#1a1a1a] border border-[#333] flex items-center justify-center shrink-0">
-                <span
-                  className="text-3xl font-black text-[#E50914]"
-                  style={{ fontFamily: 'var(--font-bebas)' }}
-                >
-                  {studio.name.charAt(0)}
-                </span>
-              </div>
-            )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-3 mb-1">
-                <h3
-                  className="text-2xl font-black leading-none truncate"
-                  style={{ fontFamily: 'var(--font-bebas)' }}
-                >
-                  {studio.name}
-                </h3>
-                <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
-                  ${studio.token_ticker}
-                </span>
-              </div>
-              {studio.aesthetic && (
-                <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
-                  {studio.aesthetic}
-                </div>
-              )}
-              <p className="text-[#888] text-sm leading-relaxed mb-3">
-                {studio.bio || 'No bio generated yet.'}
-              </p>
-              <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
-                Treasury
-              </div>
-              <div className="text-[#bbb] font-mono text-xs break-all mb-3">
-                {studio.treasury_address}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={`https://whatsonchain.com/address/${studio.treasury_address}`}
-                  target="_blank"
-                  rel="noopener"
-                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
-                >
-                  View treasury on chain
-                </a>
-                <a
-                  href="/studios.html"
-                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
-                >
-                  Browse all studios
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="border border-[#222] bg-[#0a0a0a] p-6">
-          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
-            Founded {studio.founded_year}
-          </div>
-          <p className="text-[#888] text-sm leading-relaxed">
-            Your studio brand goes on every film you commission. Switch to the
-            Agents tab to see your 8 specialist agents.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── No studio: show create form ───
-  return (
-    <div className="max-w-2xl">
-      <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
-        <h3
-          className="text-2xl font-black mb-2 leading-none"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          Create your <span className="text-[#E50914]">studio</span>
-        </h3>
-        <p className="text-[#888] text-sm leading-relaxed mb-5">
-          Spawn your own AI film studio for $0.99. You get a generated logo,
-          bio, treasury address, and 8 specialist agents (writer, director,
-          cinematographer, storyboard, editor, composer, sound designer,
-          producer). Your studio brand goes on every film you commission.
-        </p>
-
-        <div className="space-y-4 mb-5">
-          <div>
-            <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
-              Studio name
-            </label>
-            <input
-              type="text"
-              value={studioName}
-              onChange={(e) => setStudioName(e.target.value)}
-              placeholder="e.g. Midnight Forge Pictures"
-              maxLength={50}
-              className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#555]"
-            />
-            <div className="text-[0.55rem] text-[#444] mt-1">
-              {studioName.trim().length}/50 characters
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
-              Describe your studio
-            </label>
-            <textarea
-              value={studioAesthetic}
-              onChange={(e) => setStudioAesthetic(e.target.value)}
-              placeholder="What kind of films does your studio make? What's the aesthetic, the mood, the genre? The AI uses this to shape your logo, your bio, and your agents' personas. Write as much or as little as you like."
-              rows={5}
-              maxLength={500}
-              className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#555] leading-relaxed resize-y"
-            />
-            <div className="text-[0.55rem] text-[#444] mt-1">
-              {(studioAesthetic || '').length}/500 characters
-            </div>
-          </div>
-        </div>
-
-        {createError && (
-          <div className="text-[#ff6b7a] text-xs mb-4 p-3 border border-[#E50914] bg-[#1a0003]">
-            {createError}
-          </div>
-        )}
-
-        <button
-          onClick={handleCreate}
-          disabled={createLoading || studioName.trim().length < 2}
-          className={`px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-colors ${
-            createLoading || studioName.trim().length < 2
-              ? 'bg-[#333] text-[#666] cursor-not-allowed'
-              : 'bg-[#E50914] hover:bg-[#b00610] text-white'
-          }`}
-        >
-          {createLoading ? 'Creating...' : 'Create studio — $0.99'}
-        </button>
-      </div>
-
-      <div className="border border-[#222] bg-[#0a0a0a] p-6">
-        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
-          The founding studios
-        </div>
-        <p className="text-[#888] text-sm leading-relaxed mb-3">
-          The platform launched with 6 founding studios ($BOLTD, $CLNKR,
-          $BOT21, $DREAM, $NRLSP, $PRMNT). Your studio joins them as a
-          peer. Every film you commission gets your brand on the poster.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href="/studios.html"
-            className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 border border-[#333] hover:border-[#E50914] text-white"
-          >
-            Browse founding studios
-          </a>
-          {!hasFilms && (
-            <a
-              href="/commission.html"
-              className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 border border-[#333] hover:border-[#E50914] text-white"
-            >
-              Start a commission
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ───────── Agents tab ───────── */
-
-function AgentsTab({ user, accountId }: { user: User | null; accountId: string | null }) {
+function ProjectCrewView({ projectId, accountId }: { projectId: string; accountId: string | null }) {
   const [agents, setAgents] = useState<AgentData[]>([])
   const [agentsLoading, setAgentsLoading] = useState(true)
+  const [projectAgentIds, setProjectAgentIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!accountId) { setAgentsLoading(false); return; }
+    if (!accountId) { setAgentsLoading(false); return }
     let cancelled = false
-    async function loadAgents() {
+    async function loadData() {
       setAgentsLoading(true)
-      const { data, error } = await bmovies
+
+      // Load all agents belonging to this account
+      const { data: agentData, error: agentErr } = await bmovies
         .from('bct_agents')
         .select('*')
         .eq('owner_account_id', accountId)
         .order('role')
-      if (!cancelled) {
-        if (error) console.warn('[agents-tab] load error:', error.message)
-        setAgents((data as AgentData[]) || [])
-        setAgentsLoading(false)
+      if (!cancelled && !agentErr) {
+        setAgents((agentData as AgentData[]) || [])
       }
+
+      // Load which agents have artifacts on this project
+      const { data: artifactData } = await bmovies
+        .from('bct_artifacts')
+        .select('agent_id')
+        .eq('offer_id', projectId)
+        .not('agent_id', 'is', null)
+      if (!cancelled && artifactData) {
+        const ids = new Set(artifactData.map((a: any) => a.agent_id as string).filter(Boolean))
+        setProjectAgentIds(ids)
+      }
+
+      if (!cancelled) setAgentsLoading(false)
     }
-    loadAgents()
+    loadData()
     return () => { cancelled = true }
-  }, [accountId])
+  }, [accountId, projectId])
 
-  const hasOwnAgents = agents.length > 0
-
-  return (
-    <div>
-      {/* Own agents section */}
-      {agentsLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 animate-pulse">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
-              <div className="h-3 w-20 bg-[#1a1a1a] mb-3" />
-              <div className="h-6 w-28 bg-[#151515] mb-2" />
-              <div className="h-2 w-full bg-[#0e0e0e]" />
-            </div>
-          ))}
-        </div>
-      ) : hasOwnAgents ? (
-        <>
-          <div className="mb-4">
-            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-1">
-              Your agents
-            </div>
-            <p className="text-[#888] text-sm">
-              {agents.length} specialist agents working under your studio brand.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-            {agents.map((agent) => (
-              <div
-                key={agent.id}
-                className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors p-5"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914]">
-                    {agent.role.replace(/_/g, ' ')}
-                  </div>
-                  {agent.token_ticker && (
-                    <span className="text-[0.5rem] font-mono text-[#666]">
-                      ${agent.token_ticker}
-                    </span>
-                  )}
-                </div>
-                <h4
-                  className="text-lg font-black text-white mb-1 leading-tight"
-                  style={{ fontFamily: 'var(--font-bebas)' }}
-                >
-                  {agent.name}
-                </h4>
-                <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
-                  {agent.persona || 'No persona generated.'}
-                </p>
-                <div className="flex items-center justify-between text-[0.5rem] text-[#666]">
-                  <span>Rep: {agent.reputation.toFixed(1)}</span>
-                  <span>{agent.jobs_completed} jobs</span>
-                </div>
-                <div className="mt-2">
-                  <a
-                    href={`https://whatsonchain.com/address/${agent.wallet_address}`}
-                    target="_blank"
-                    rel="noopener"
-                    className="text-[0.5rem] font-mono text-[#444] hover:text-[#E50914] break-all"
-                  >
-                    {agent.wallet_address.slice(0, 10)}...{agent.wallet_address.slice(-6)}
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-6 mb-8 max-w-2xl">
-          <p className="text-[#888] text-sm leading-relaxed mb-3">
-            Create a studio to get your own team of 8 specialist agents. Each
-            agent has a unique name, persona, wallet address, and token ticker.
-          </p>
-          <button
-            onClick={() => {
-              // Switch to studio tab
-              const tabBtn = document.querySelector('[role="tab"][aria-selected="false"]') as HTMLButtonElement | null
-              const studioBtn = Array.from(document.querySelectorAll('[role="tab"]')).find(
-                (el) => el.textContent === 'Studio'
-              ) as HTMLButtonElement | null
-              studioBtn?.click()
-            }}
-            className="text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 bg-[#E50914] hover:bg-[#b00610] text-white"
-          >
-            Create a studio first
-          </button>
-        </div>
-      )}
-
-      {/* Creative tools available to your agents */}
-      <div className="mt-8 border-t border-[#1a1a1a] pt-6 mb-8">
-        <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-3">
-          Creative tools
-        </div>
-        <p className="text-[#888] text-xs leading-relaxed mb-4 max-w-xl">
-          Your agents have access to a suite of AI-powered creative tools,
-          each with an API, an MCP server, and a CLI interface. These tools
-          are being integrated into the autonomous pipeline.
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {[
-            { name: 'Movie Editor', desc: 'Non-linear AI editor', status: 'API + MCP' },
-            { name: 'Titles Designer', desc: 'Cinematic title sequences', status: 'API + MCP' },
-            { name: 'Storyboard Gen', desc: 'Frame-by-frame planning', status: 'API + CLI' },
-            { name: 'Script Writer', desc: 'AI screenplay assistant', status: 'API' },
-            { name: 'Score Composer', desc: 'AI film scoring', status: 'API + MCP' },
-            { name: 'Poster Designer', desc: 'Theatrical one-sheets', status: 'Live' },
-          ].map(tool => (
-            <div key={tool.name} className="border border-[#222] bg-[#0a0a0a] p-4">
-              <div className="text-white text-sm font-black mb-1">{tool.name}</div>
-              <div className="text-[#888] text-xs mb-2">{tool.desc}</div>
-              <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#666]">
-                {tool.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Public roster */}
-      <div className="mb-4">
-        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
-          Platform roster
-        </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <a
-          href="/agents.html"
-          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
-        >
-          <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914] mb-2">
-            The bench
-          </div>
-          <div
-            className="text-3xl font-black text-white mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            58+ agents
-          </div>
-          <div className="text-[#888] text-xs">Browse the public roster.</div>
-        </a>
-        <a
-          href="/studios.html"
-          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
-        >
-          <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914] mb-2">
-            Founding studios
-          </div>
-          <div
-            className="text-3xl font-black text-white mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            6 studios
-          </div>
-          <div className="text-[#888] text-xs">
-            Each with 8 specialists + shared pool.
-          </div>
-        </a>
-      </div>
-    </div>
-  )
-}
-
-/* ───────── Chat tab (Grand Orchestrator) ───────── */
-
-interface ToolResult {
-  type: 'text' | 'image' | 'audio'
-  content: string
-  artifactUrl?: string
-}
-
-interface ChatMessage {
-  role: string
-  content: string
-  toolResult?: ToolResult
-}
-
-function ChatTab({ user, accountId }: { user: User; accountId: string | null }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function sendMessage() {
-    if (!input.trim() || loading) return
-    const userMsg = input.trim()
-    setInput('')
-    setMessages((prev) => [...prev, { role: 'user', content: userMsg }])
-    setLoading(true)
-
-    try {
-      const session = await bmovies.auth.getSession()
-      const token = session.data.session?.access_token
-      const res = await fetch('/api/agent/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ message: userMsg, conversationId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Chat failed')
-      setConversationId(data.conversationId)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.message.content,
-          toolResult: data.toolResult || undefined,
-        },
-      ])
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `Sorry, I hit an error: ${err instanceof Error ? err.message : 'unknown'}. Try again?`,
-        },
-      ])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="max-w-3xl">
-      {/* Header */}
-      <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-5 mb-4">
-        <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">
-          Grand orchestrator
-        </div>
-        <h3
-          className="text-2xl font-black"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          bMovies Agent
-        </h3>
-        <p className="text-[#bbb] text-xs leading-relaxed mt-1">
-          I know your studio, your films, your agents. Ask me anything about
-          the platform, brainstorm film concepts, or let me help you build
-          your next production.
-        </p>
-      </div>
-
-      {/* Messages */}
-      <div className="border border-[#222] bg-[#0a0a0a] min-h-[400px] max-h-[600px] overflow-y-auto p-4 space-y-4 mb-3">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <div
-              className="text-[#333] text-5xl mb-3"
-              style={{ fontFamily: 'var(--font-bebas)' }}
-            >
-              bM
-            </div>
-            <div className="text-[#666] text-sm">
-              Ask me anything. I&apos;m your creative partner on bMovies.
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center mt-4">
-              {[
-                'Help me name my studio',
-                'Brainstorm a sci-fi film',
-                'How does the bonding curve work?',
-                'What can my agents do?',
-              ].map((q) => (
-                <button
-                  key={q}
-                  onClick={() => {
-                    setInput(q)
-                  }}
-                  className="text-xs px-3 py-1.5 border border-[#333] text-[#888] hover:border-[#E50914] hover:text-white transition-colors"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i}>
-            <div
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-[#E50914] text-white'
-                    : 'bg-[#1a1a1a] text-[#ccc] border border-[#222]'
-                }`}
-              >
-                {msg.content.split('\n').map((line, j) => (
-                  <p key={j} className={j > 0 ? 'mt-2' : ''}>
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </div>
-            {msg.toolResult && (
-              <div className="flex justify-start mt-2">
-                <div className="max-w-[85%]">
-                  {msg.toolResult.type === 'image' && msg.toolResult.artifactUrl && (
-                    <div className="border border-[#222] bg-[#050505]">
-                      <img
-                        src={msg.toolResult.artifactUrl}
-                        alt="Generated artifact"
-                        className="w-full max-w-md"
-                        loading="lazy"
-                      />
-                      {msg.toolResult.content && (
-                        <div className="px-3 py-2 text-xs text-[#888]">
-                          {msg.toolResult.content}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {msg.toolResult.type === 'text' && (
-                    <pre className="bg-[#111] border border-[#1a1a1a] px-4 py-3 text-xs text-[#aaa] leading-relaxed font-mono whitespace-pre-wrap overflow-x-auto max-h-[400px] overflow-y-auto">
-                      {msg.toolResult.content}
-                    </pre>
-                  )}
-                </div>
-              </div>
-            )}
+  if (agentsLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+            <div className="h-3 w-20 bg-[#1a1a1a] mb-3" />
+            <div className="h-6 w-28 bg-[#151515]" />
           </div>
         ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-[#1a1a1a] border border-[#222] px-4 py-3 text-sm text-[#666]">
-              <span className="animate-pulse">Thinking...</span>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
       </div>
+    )
+  }
 
-      {/* Input */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              sendMessage()
-            }
-          }}
-          placeholder="Talk to the bMovies agent..."
-          className="flex-1 bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-4 py-3 text-white text-sm outline-none placeholder:text-[#555]"
-          disabled={loading}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={loading || !input.trim()}
-          className={`px-5 py-3 text-xs font-black uppercase tracking-wider ${
-            loading || !input.trim()
-              ? 'bg-[#333] text-[#666]'
-              : 'bg-[#E50914] hover:bg-[#b00610] text-white'
-          }`}
-        >
-          Send
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/* ───────── Cap Tables tab ───────── */
-
-function CapTablesTab({ films }: { films: Film[] }) {
-  return (
-    <div>
-      <div className="mb-6 max-w-2xl">
-        <p className="text-[#888] text-sm leading-relaxed">
-          Every film has a cap table. Every share is on-chain and
-          verifiable independently at GorillaPool. Cap tables are
-          printable for investor outreach.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <a
-          href="/captable.html?id=platform"
-          className="p-5 border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] hover:from-[#2a0005] transition-colors"
-        >
-          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-2">
-            Platform token
-          </div>
-          <div
-            className="text-3xl font-black text-white mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            $bMovies
-          </div>
-          <div className="text-[#888] text-xs">1B supply · live on BSV mainnet</div>
-        </a>
-        {films.length === 0 ? (
-          <div className="p-5 border border-dashed border-[#222] bg-[#050505] flex items-center justify-center">
-            <div className="text-[#666] text-xs text-center max-w-[12rem]">
-              Commission a film to see its cap table here alongside the
-              platform token.
-            </div>
-          </div>
-        ) : (
-          films.slice(0, 8).map((f) => (
-            <a
-              key={f.id}
-              href={`/captable.html?id=${encodeURIComponent(f.id)}`}
-              className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
-            >
-              <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
-                {f.tier} · {f.commissioner_percent}% yours
-              </div>
-              <div
-                className="text-xl font-black text-white mb-1 leading-tight"
-                style={{ fontFamily: 'var(--font-bebas)' }}
-              >
-                {f.title}
-              </div>
-              <div className="text-[0.65rem] font-mono text-[#E50914]">
-                ${f.token_ticker}
-              </div>
-            </a>
-          ))
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ───────── Investor Packs tab ───────── */
-
-function InvestorPacksTab({ films }: { films: Film[] }) {
-  if (films.length === 0) {
+  if (agents.length === 0) {
     return (
-      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 text-center max-w-xl">
-        <div className="text-[#888] text-sm mb-4 leading-relaxed">
-          Every film you commission generates a printable investor pack:
-          synopsis, treatment, cap table, storyboard frames, production
-          timeline, on-chain token receipt. Commission a film to get
-          your first pack.
-        </div>
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-2xl">
+        <p className="text-[#888] text-sm leading-relaxed mb-3">
+          Create a studio to get your own team of 8 specialist agents. Each
+          agent has a unique name, persona, wallet address, and token ticker.
+        </p>
         <a
-          href="/commission.html"
-          className="inline-block px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+          href="/agents.html"
+          className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
         >
-          Commission a film →
+          Browse the public roster
         </a>
       </div>
     )
   }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl">
-      {films.map((f) => (
-        <a
-          key={f.id}
-          href={`/deck.html?id=${encodeURIComponent(f.id)}`}
-          target="_blank"
-          rel="noopener"
-          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
-        >
-          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
-            {f.tier} · ${f.token_ticker}
-          </div>
-          <div
-            className="text-xl font-black text-white mb-2 leading-tight"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            {f.title}
-          </div>
-          <div className="text-[0.6rem] text-[#666]">Open printable deck →</div>
-        </a>
-      ))}
+    <div>
+      <h2
+        className="text-3xl font-black mb-2 leading-none"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        Project <span className="text-[#E50914]">crew</span>
+      </h2>
+      <p className="text-[#888] text-sm mb-4">
+        Your studio agents. Those who contributed to this project are highlighted.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {agents.map((agent) => {
+          const contributed = projectAgentIds.has(agent.id)
+          return (
+            <div
+              key={agent.id}
+              className={`border bg-[#0a0a0a] p-5 transition-colors ${
+                contributed ? 'border-[#E50914]' : 'border-[#222]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914]">
+                  {agent.role.replace(/_/g, ' ')}
+                </div>
+                {contributed && (
+                  <span className="text-[0.5rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#E50914] text-white">
+                    Active
+                  </span>
+                )}
+              </div>
+              <h4
+                className="text-lg font-black text-white mb-1 leading-tight"
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                {agent.name}
+              </h4>
+              <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
+                {agent.persona || 'No persona generated.'}
+              </p>
+              <div className="flex items-center justify-between text-[0.5rem] text-[#666]">
+                <span>Rep: {agent.reputation.toFixed(1)}</span>
+                <span>{agent.jobs_completed} jobs</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-/* ───────── Wallet tab ───────── */
+/* ─── Project Deck ─── */
+
+function ProjectDeckView({ film }: { film: Film }) {
+  return (
+    <div className="max-w-2xl">
+      <h2
+        className="text-3xl font-black mb-4 leading-none"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        Investor <span className="text-[#E50914]">deck</span>
+      </h2>
+      <p className="text-[#888] text-sm leading-relaxed mb-6">
+        A printable investor deck for &quot;{film.title}&quot; including synopsis,
+        treatment, cap table, storyboard frames, production timeline, and
+        on-chain token receipt.
+      </p>
+      <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div
+              className="text-xl font-black text-white mb-1 leading-tight"
+              style={{ fontFamily: 'var(--font-bebas)' }}
+            >
+              {film.title}
+            </div>
+            <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider">
+              {film.tier} &middot; ${film.token_ticker}
+            </div>
+          </div>
+          <a
+            href={`/deck.html?id=${encodeURIComponent(film.id)}`}
+            target="_blank"
+            rel="noopener"
+            className="px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider shrink-0"
+          >
+            Open deck
+          </a>
+        </div>
+      </div>
+      <p className="text-[#666] text-xs">
+        Opens the printable investor deck in a new tab. Use your browser&apos;s
+        print function (Ctrl+P / Cmd+P) to save as PDF.
+      </p>
+    </div>
+  )
+}
+
+/* ─── Project Production Room ─── */
+
+function ProjectRoomView({ film }: { film: Film }) {
+  const router = useRouter()
+  return (
+    <div className="max-w-2xl">
+      <h2
+        className="text-3xl font-black mb-4 leading-none"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        Production <span className="text-[#E50914]">room</span>
+      </h2>
+      <p className="text-[#888] text-sm leading-relaxed mb-6">
+        The Production Room is where you chat with the bMovies Grand Orchestrator
+        agent about &quot;{film.title}&quot;. Ask it to generate storyboard frames,
+        rewrite the script, compose a theme, or anything else.
+      </p>
+      <div className="flex flex-wrap gap-3 mb-8">
+        <a
+          href={`/production-room.html?id=${encodeURIComponent(film.id)}`}
+          className="px-6 py-3 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+        >
+          Open Production Room
+        </a>
+        <button
+          onClick={() => router.push(`/account?project=${film.id}&tool=script`, { scroll: false })}
+          className="px-6 py-3 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider transition-colors"
+        >
+          Open tools
+        </button>
+      </div>
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
+        Available tools
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[
+          { name: 'Script', tool: 'script', desc: 'AI screenplay assistant' },
+          { name: 'Storyboard', tool: 'storyboard', desc: 'Frame-by-frame planning' },
+          { name: 'Editor', tool: 'editor', desc: 'Non-linear AI editor' },
+          { name: 'Titles', tool: 'titles', desc: 'Cinematic title sequences' },
+          { name: 'Score', tool: 'score', desc: 'AI film scoring' },
+        ].map((t) => (
+          <button
+            key={t.tool}
+            onClick={() => router.push(`/account?project=${film.id}&tool=${t.tool}`, { scroll: false })}
+            className="border border-[#222] bg-[#0a0a0a] p-4 text-left hover:border-[#E50914] transition-colors"
+          >
+            <div className="text-white text-sm font-black mb-1">{t.name}</div>
+            <div className="text-[#888] text-xs">{t.desc}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  WALLET VIEW — account-level
+ * ═══════════════════════════════════════════════════════════════════════ */
 
 interface WalletData {
   platformTokens: number
@@ -1772,7 +1227,8 @@ interface WalletData {
   }[]
 }
 
-function WalletTab({ user, accountId, films }: { user: User; accountId: string | null; films: Film[] }) {
+function WalletView({ user, accountId, films }: { user: User; accountId: string | null; films: Film[] }) {
+  const router = useRouter()
   const brc100Address = brc100AddressOf(user)
   const brc100Provider = brc100ProviderOf(user)
   const email = publicEmailFor(user)
@@ -1821,7 +1277,6 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
         const studios = (studiosRes.data || []) as { id: string; name: string; token_ticker: string; treasury_address: string }[]
         const agents = (agentsRes.data || []) as { id: string; name: string; role: string; reputation: number; jobs_completed: number; wallet_address: string; owner_account_id: string | null }[]
 
-        // Count agents and films per studio
         const studiosWithCounts = studios.map((s) => ({
           ...s,
           agentCount: agents.length,
@@ -1830,7 +1285,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
 
         const priceCents = configRes.data?.value
           ? (typeof configRes.data.value === 'number' ? configRes.data.value : parseFloat(String(configRes.data.value)))
-          : 0.1 // fallback: $0.001/token
+          : 0.1
 
         setWalletData({
           platformTokens: (holdingsRes.data?.total_tokens as number) ?? 0,
@@ -1844,7 +1299,6 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
         })
       } catch (err) {
         console.error('[wallet-tab] load error:', err)
-        // Set empty data so UI still renders
         setWalletData({
           platformTokens: 0,
           pricePerTokenCents: 0.1,
@@ -1874,11 +1328,25 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
 
   return (
     <div className="max-w-4xl">
-      {/* ── Section 1: Identity card ── */}
+      {/* Header */}
+      <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
+        <h1
+          className="text-5xl font-black leading-none"
+          style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
+        >
+          My <span className="text-[#E50914]">wallet</span>
+        </h1>
+        <p className="text-[#888] text-sm mt-2 max-w-xl">
+          Your BRC-100 wallet, $bMovies balance, studio tokens, film tokens,
+          agent roster, and transaction history.
+        </p>
+      </header>
+
+      {/* Identity card */}
       {isBrc100 && brc100Address ? (
         <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-6">
           <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-2">
-            BRC-100 wallet · {brc100Provider || 'unknown'}
+            BRC-100 wallet &middot; {brc100Provider || 'unknown'}
           </div>
           <div
             className="text-2xl font-black text-white mb-3 leading-none"
@@ -1917,7 +1385,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
         </div>
       )}
 
-      {/* ── Section 2: Portfolio summary strip ── */}
+      {/* Portfolio summary strip */}
       {walletLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 animate-pulse">
           {[0, 1, 2, 3].map((i) => (
@@ -1951,7 +1419,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
         </div>
       )}
 
-      {/* ── Section 3: Holdings list ── */}
+      {/* Holdings list */}
       <div className="mb-8">
         <h2
           className="text-2xl font-black mb-4 leading-none"
@@ -1992,7 +1460,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
                 </div>
                 <div className="text-[#666] text-xs">
                   @ ${(walletData!.pricePerTokenCents / 100).toFixed(4)}/token
-                  {' · '}
+                  {' \u00b7 '}
                   {((walletData!.platformTokens / 1_000_000_000) * 100).toFixed(4)}% of supply
                 </div>
               </div>
@@ -2035,7 +1503,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
                   </div>
                   <div className="text-[#666] text-xs mb-2">
                     {s.agentCount} agent{s.agentCount !== 1 ? 's' : ''}
-                    {' · '}
+                    {' \u00b7 '}
                     {s.filmCount} film{s.filmCount !== 1 ? 's' : ''} produced
                   </div>
                   <div className="flex items-center gap-3">
@@ -2063,12 +1531,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
                     <span className="text-[#666] text-sm">No studio yet</span>
                   </div>
                   <button
-                    onClick={() => {
-                      const studioBtn = Array.from(document.querySelectorAll('[role="tab"]')).find(
-                        (el) => el.textContent === 'Studio'
-                      ) as HTMLButtonElement | null
-                      studioBtn?.click()
-                    }}
+                    onClick={() => router.push('/account', { scroll: false })}
                     className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-white"
                   >
                     Create your studio
@@ -2193,7 +1656,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
         )}
       </div>
 
-      {/* ── Section 4: Transaction history ── */}
+      {/* Transaction history */}
       <div className="mb-8">
         <h2
           className="text-2xl font-black mb-4 leading-none"
@@ -2278,7 +1741,7 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
         )}
       </div>
 
-      {/* ── Section 5: Technical details (collapsible) ── */}
+      {/* Technical details */}
       <details className="border border-[#222] bg-[#0a0a0a]">
         <summary className="p-4 cursor-pointer text-[0.6rem] text-[#666] font-bold uppercase tracking-wider hover:text-white">
           Technical details
@@ -2305,11 +1768,394 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- *  TOOL VIEWS — rendered when ?tool=<name> is in the URL.
- *
- *  Each tool view reads the active project from localStorage via the
- *  useActiveProject hook and loads project-specific data from Supabase.
- *  These are minimal but functional stubs for the hackathon.
+ *  STUDIO INFO SECTION (for StudioView — studio brand + create form)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+const AESTHETIC_OPTIONS = [
+  'Eclectic and bold',
+  'Noir and moody',
+  'Neon cyberpunk',
+  'Classic Hollywood',
+  'Minimalist and clean',
+  'Surreal and dreamlike',
+  'Gritty realism',
+  'Cosmic and ethereal',
+  'Retro 70s exploitation',
+  'Japanese new wave',
+]
+
+interface StudioData {
+  id: string
+  name: string
+  token_ticker: string
+  treasury_address: string
+  bio: string | null
+  logo_url: string | null
+  founded_year: number
+  aesthetic: string | null
+  owner_account_id: string | null
+}
+
+function StudioInfoSection({
+  hasFilms,
+  user,
+  accountId,
+  sessionIdFromUrl,
+}: {
+  hasFilms: boolean
+  user: User | null
+  accountId: string | null
+  sessionIdFromUrl: string | null
+}) {
+  const [studio, setStudio] = useState<StudioData | null>(null)
+  const [studioLoading, setStudioLoading] = useState(true)
+  const [provisioning, setProvisioning] = useState(false)
+  const [provisionError, setProvisionError] = useState<string | null>(null)
+
+  const [studioName, setStudioName] = useState('')
+  const [studioAesthetic, setStudioAesthetic] = useState('')
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!accountId) { setStudioLoading(false); return; }
+    let cancelled = false
+    async function loadStudio() {
+      setStudioLoading(true)
+      const { data, error } = await bmovies
+        .from('bct_studios')
+        .select('*')
+        .eq('owner_account_id', accountId)
+        .maybeSingle()
+      if (!cancelled) {
+        if (error) console.warn('[studio-tab] load error:', error.message)
+        setStudio(data as StudioData | null)
+        setStudioLoading(false)
+      }
+    }
+    loadStudio()
+    return () => { cancelled = true }
+  }, [accountId])
+
+  useEffect(() => {
+    if (!sessionIdFromUrl || !user || studio) return
+    let cancelled = false
+    async function provision() {
+      setProvisioning(true)
+      setProvisionError(null)
+      try {
+        const { data: session } = await bmovies.auth.getSession()
+        const accessToken = session.session?.access_token
+        if (!accessToken) throw new Error('Not authenticated')
+
+        const res = await fetch('/api/studio/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ session_id: sessionIdFromUrl }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+        if (!cancelled) {
+          setStudio(json.studio as StudioData)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error('[studio-tab] provision error:', msg)
+          setProvisionError(msg)
+        }
+      } finally {
+        if (!cancelled) setProvisioning(false)
+      }
+    }
+    provision()
+    return () => { cancelled = true }
+  }, [sessionIdFromUrl, user, studio])
+
+  const handleCreate = useCallback(async () => {
+    if (!user) return
+    const name = studioName.trim()
+    if (name.length < 2 || name.length > 50) {
+      setCreateError('Studio name must be 2-50 characters')
+      return
+    }
+    setCreateLoading(true)
+    setCreateError(null)
+    try {
+      const { data: session } = await bmovies.auth.getSession()
+      const accessToken = session.session?.access_token
+      if (!accessToken) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/studio/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name,
+          aesthetic: studioAesthetic || undefined,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+      if (json.checkoutUrl) {
+        window.location.href = json.checkoutUrl
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setCreateError(msg)
+    } finally {
+      setCreateLoading(false)
+    }
+  }, [user, studioName, studioAesthetic])
+
+  if (provisioning) {
+    return (
+      <div className="max-w-2xl">
+        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-8">
+          <div className="animate-pulse">
+            <div
+              className="text-3xl font-black mb-4 leading-none"
+              style={{ fontFamily: 'var(--font-bebas)' }}
+            >
+              Provisioning your <span className="text-[#E50914]">studio</span>...
+            </div>
+            <p className="text-[#888] text-sm leading-relaxed mb-3">
+              Generating your studio logo, bio, and 8 specialist agents via
+              Grok AI. This takes 15-30 seconds.
+            </p>
+            <div className="flex gap-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-[#E50914] animate-pulse"
+                  style={{ animationDelay: `${i * 200}ms` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (provisionError) {
+    return (
+      <div className="max-w-2xl">
+        <div className="border border-[#E50914] bg-[#1a0003] p-6">
+          <div className="text-[#ff6b7a] text-xs font-bold uppercase tracking-wider mb-2">
+            Studio provisioning failed
+          </div>
+          <div className="text-[#bbb] text-sm mb-3">{provisionError}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (studioLoading) {
+    return (
+      <div className="max-w-2xl animate-pulse">
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-6">
+          <div className="h-6 w-48 bg-[#1a1a1a] mb-4" />
+          <div className="h-3 w-full bg-[#151515] mb-2" />
+          <div className="h-3 w-3/4 bg-[#151515]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (studio) {
+    return (
+      <div className="max-w-2xl">
+        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
+          <div className="flex items-start gap-5">
+            {studio.logo_url ? (
+              <img
+                src={studio.logo_url}
+                alt={`${studio.name} logo`}
+                className="w-20 h-20 object-cover border border-[#333] shrink-0"
+              />
+            ) : (
+              <div className="w-20 h-20 bg-[#1a1a1a] border border-[#333] flex items-center justify-center shrink-0">
+                <span
+                  className="text-3xl font-black text-[#E50914]"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {studio.name.charAt(0)}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 mb-1">
+                <h3
+                  className="text-2xl font-black leading-none truncate"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {studio.name}
+                </h3>
+                <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+                  ${studio.token_ticker}
+                </span>
+              </div>
+              {studio.aesthetic && (
+                <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
+                  {studio.aesthetic}
+                </div>
+              )}
+              <p className="text-[#888] text-sm leading-relaxed mb-3">
+                {studio.bio || 'No bio generated yet.'}
+              </p>
+              <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
+                Treasury
+              </div>
+              <div className="text-[#bbb] font-mono text-xs break-all mb-3">
+                {studio.treasury_address}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`https://whatsonchain.com/address/${studio.treasury_address}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+                >
+                  View treasury on chain
+                </a>
+                <a
+                  href="/studios.html"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+                >
+                  Browse all studios
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border border-[#222] bg-[#0a0a0a] p-6">
+          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
+            Founded {studio.founded_year}
+          </div>
+          <p className="text-[#888] text-sm leading-relaxed">
+            Your studio brand goes on every film you commission.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // No studio: show create form
+  return (
+    <div className="max-w-2xl">
+      <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
+        <h3
+          className="text-2xl font-black mb-2 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Create your <span className="text-[#E50914]">studio</span>
+        </h3>
+        <p className="text-[#888] text-sm leading-relaxed mb-5">
+          Spawn your own AI film studio for $0.99. You get a generated logo,
+          bio, treasury address, and 8 specialist agents (writer, director,
+          cinematographer, storyboard, editor, composer, sound designer,
+          producer). Your studio brand goes on every film you commission.
+        </p>
+
+        <div className="space-y-4 mb-5">
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
+              Studio name
+            </label>
+            <input
+              type="text"
+              value={studioName}
+              onChange={(e) => setStudioName(e.target.value)}
+              placeholder="e.g. Midnight Forge Pictures"
+              maxLength={50}
+              className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#555]"
+            />
+            <div className="text-[0.55rem] text-[#444] mt-1">
+              {studioName.trim().length}/50 characters
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1.5">
+              Describe your studio
+            </label>
+            <textarea
+              value={studioAesthetic}
+              onChange={(e) => setStudioAesthetic(e.target.value)}
+              placeholder="What kind of films does your studio make? What's the aesthetic, the mood, the genre? The AI uses this to shape your logo, your bio, and your agents' personas. Write as much or as little as you like."
+              rows={5}
+              maxLength={500}
+              className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2.5 text-white text-sm outline-none placeholder:text-[#555] leading-relaxed resize-y"
+            />
+            <div className="text-[0.55rem] text-[#444] mt-1">
+              {(studioAesthetic || '').length}/500 characters
+            </div>
+          </div>
+        </div>
+
+        {createError && (
+          <div className="text-[#ff6b7a] text-xs mb-4 p-3 border border-[#E50914] bg-[#1a0003]">
+            {createError}
+          </div>
+        )}
+
+        <button
+          onClick={handleCreate}
+          disabled={createLoading || studioName.trim().length < 2}
+          className={`px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-colors ${
+            createLoading || studioName.trim().length < 2
+              ? 'bg-[#333] text-[#666] cursor-not-allowed'
+              : 'bg-[#E50914] hover:bg-[#b00610] text-white'
+          }`}
+        >
+          {createLoading ? 'Creating...' : 'Create studio -- $0.99'}
+        </button>
+      </div>
+
+      <div className="border border-[#222] bg-[#0a0a0a] p-6">
+        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
+          The founding studios
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-3">
+          The platform launched with 6 founding studios ($BOLTD, $CLNKR,
+          $BOT21, $DREAM, $NRLSP, $PRMNT). Your studio joins them as a
+          peer. Every film you commission gets your brand on the poster.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="/studios.html"
+            className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 border border-[#333] hover:border-[#E50914] text-white"
+          >
+            Browse founding studios
+          </a>
+          {!hasFilms && (
+            <a
+              href="/commission.html"
+              className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 border border-[#333] hover:border-[#E50914] text-white"
+            >
+              Start a commission
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  TOOL VIEWS — rendered at ?project=<id>&tool=<name>
  * ═══════════════════════════════════════════════════════════════════════ */
 
 const TOOL_LABELS: Record<string, string> = {
@@ -2322,80 +2168,20 @@ const TOOL_LABELS: Record<string, string> = {
 
 function ToolView({
   tool,
-  user,
-  accountId,
+  projectId,
+  projectTitle,
 }: {
   tool: string
-  user: User
-  accountId: string | null
+  projectId: string
+  projectTitle: string
 }) {
-  const [activeProject] = useActiveProject()
-
   return (
-    <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-8">
-      {/* Tool header bar */}
-      <div className="mb-6 pb-4 border-b border-[#1a1a1a] flex items-center justify-between gap-4">
-        <div>
-          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-1">
-            {TOOL_LABELS[tool] || tool}
-          </div>
-          <h1
-            className="text-3xl font-black leading-none"
-            style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
-          >
-            {activeProject ? (
-              <>
-                {activeProject.title}{' '}
-                <span className="text-[#E50914] text-lg font-mono">${activeProject.ticker}</span>
-              </>
-            ) : (
-              <span className="text-[#666]">No project selected</span>
-            )}
-          </h1>
-        </div>
-        <Link
-          href="/account"
-          className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:border-[#E50914] hover:text-white transition-colors"
-        >
-          Back to dashboard
-        </Link>
-      </div>
-
-      {!activeProject ? (
-        <NoProjectSelected />
-      ) : (
-        <>
-          {tool === 'script' && <ScriptEditorView projectId={activeProject.id} projectTitle={activeProject.title} />}
-          {tool === 'storyboard' && <StoryboardView projectId={activeProject.id} projectTitle={activeProject.title} />}
-          {tool === 'editor' && <MovieEditorView projectId={activeProject.id} projectTitle={activeProject.title} />}
-          {tool === 'titles' && <TitleDesignerView projectId={activeProject.id} projectTitle={activeProject.title} />}
-          {tool === 'score' && <ScoreComposerView projectId={activeProject.id} projectTitle={activeProject.title} />}
-        </>
-      )}
-    </div>
-  )
-}
-
-function NoProjectSelected() {
-  return (
-    <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
-      <div
-        className="text-2xl font-black mb-3 leading-none"
-        style={{ fontFamily: 'var(--font-bebas)' }}
-      >
-        Select a <span className="text-[#E50914]">project</span> first
-      </div>
-      <p className="text-[#888] text-sm leading-relaxed mb-4">
-        Use the project selector in the toolbar above to choose which film
-        you want to work on. If you haven&apos;t commissioned a film yet, head
-        to the commission page to get started.
-      </p>
-      <a
-        href="/commission.html"
-        className="inline-block px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
-      >
-        Commission a film
-      </a>
+    <div>
+      {tool === 'script' && <ScriptEditorView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'storyboard' && <StoryboardView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'editor' && <MovieEditorView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'titles' && <TitleDesignerView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'score' && <ScoreComposerView projectId={projectId} projectTitle={projectTitle} />}
     </div>
   )
 }
@@ -2413,7 +2199,6 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
       setLoading(true)
       setSaved(false)
       try {
-        // Load the writer.synopsis artifact if it exists
         const { data } = await bmovies
           .from('bct_artifacts')
           .select('url, kind')
@@ -2425,7 +2210,6 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
           .limit(1)
         if (cancelled) return
         if (data && data.length > 0 && data[0].url) {
-          // Try to fetch the text content from the URL
           try {
             const res = await fetch(data[0].url)
             if (res.ok) {
@@ -2433,7 +2217,6 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
               if (!cancelled) setSynopsis(text)
             }
           } catch {
-            // URL may be expired — fall back to offer synopsis
             await loadFallbackSynopsis()
           }
         } else {
@@ -2488,7 +2271,6 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
             </button>
             <button
               onClick={() => {
-                // Stub: in production this calls the chat agent
                 alert(`AI Rewrite requested for "${projectTitle}". This will call the Grok agent to rewrite the script.`)
               }}
               className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
@@ -2514,7 +2296,6 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
     let cancelled = false
     async function load() {
       setLoading(true)
-      // Load offer tier + title for POSTER_MAP lookup
       const { data: offer } = await bmovies
         .from('bct_offers')
         .select('tier, title')
@@ -2522,7 +2303,6 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
         .maybeSingle()
       if (!cancelled && offer) setTier(offer.tier || '')
 
-      // Load ALL image artifacts (storyboard frames + poster)
       const { data } = await bmovies
         .from('bct_artifacts')
         .select('id, url, step_id, role')
@@ -2532,12 +2312,10 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
         .order('created_at', { ascending: true })
       if (cancelled) return
       const allImages = (data as any[]) || []
-      // Separate poster from storyboard frames
       const storyboardFrames = allImages.filter(a =>
         a.step_id && a.step_id.startsWith('storyboard.') && a.step_id !== 'storyboard.poster'
       )
       const posterArt = allImages.find(a => a.role === 'poster' || a.step_id === 'storyboard.poster')
-      // Resolve poster: POSTER_MAP wins over ephemeral DB URL
       const titleLower = (offer?.title || '').toLowerCase()
       const mapUrl = POSTER_MAP[titleLower]
       if (mapUrl) {
@@ -2584,7 +2362,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
           </div>
           <p className="text-[#888] text-sm leading-relaxed mb-4">
             {tier === 'pitch'
-              ? 'Pitches include a poster but no storyboard frames. Publish your pitch and sell 10% to fund a trailer — trailers include 6 storyboard frames + video clips.'
+              ? 'Pitches include a poster but no storyboard frames. Publish your pitch and sell 10% to fund a trailer -- trailers include 6 storyboard frames + video clips.'
               : 'Generate storyboard frames using the AI agent, or wait for the production pipeline to create them.'}
           </p>
           <button
@@ -2703,7 +2481,6 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         <div className="text-[#666] text-sm">No media assets found for this project.</div>
       )}
 
-      {/* Editor placeholder */}
       <div className="border border-dashed border-[#222] bg-[#050505] p-8">
         <div
           className="text-xl font-black mb-3 leading-none"
@@ -2805,7 +2582,6 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
         </button>
       </div>
 
-      {/* 3D title designer placeholder */}
       <div className="border border-dashed border-[#222] bg-[#050505] p-8">
         <div
           className="text-xl font-black mb-3 leading-none"
@@ -2896,7 +2672,6 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
         </button>
       </div>
 
-      {/* AI composer placeholder */}
       <div className="border border-dashed border-[#222] bg-[#050505] p-8">
         <div
           className="text-xl font-black mb-3 leading-none"
@@ -2912,4 +2687,156 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
       </div>
     </div>
   )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  SHARED COMPONENTS
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+function SignedOutHero() {
+  return (
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 py-12">
+      <div className="max-w-md text-center">
+        <div
+          className="text-6xl font-black mb-4 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Sign in to<br/>
+          open your <span className="text-[#E50914]">studio</span>
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-6">
+          Your account, your films, your cap tables, your agents, your
+          dividends -- all live inside this dashboard. Sign in with your
+          BRC-100 wallet (recommended) or with the email you used to
+          commission a film.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/login"
+            className="px-6 py-3 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+          >
+            Sign in
+          </Link>
+          <a
+            href="/commission.html"
+            className="px-6 py-3 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider"
+          >
+            Commission a film ($0.99 +)
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SkeletonDashboard() {
+  return (
+    <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12 animate-pulse">
+      <div className="mb-8 pb-6 border-b border-[#1a1a1a]">
+        <div className="h-2 w-32 bg-[#1a1a1a] mb-3" />
+        <div className="h-12 w-64 bg-[#1a1a1a]" />
+        <div className="h-3 w-80 bg-[#0e0e0e] mt-4" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+            <div className="h-2 w-16 bg-[#1a1a1a] mb-3" />
+            <div className="h-8 w-24 bg-[#151515]" />
+          </div>
+        ))}
+      </div>
+      <div className="mb-8 flex gap-4 border-b border-[#1a1a1a] pb-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-3 w-20 bg-[#1a1a1a]" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a]">
+            <div className="aspect-[2/3] bg-[#050505]" />
+            <div className="p-4">
+              <div className="h-4 w-3/4 bg-[#1a1a1a] mb-2" />
+              <div className="h-3 w-1/2 bg-[#151515] mb-3" />
+              <div className="h-2 w-full bg-[#0e0e0e]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function StatsStrip({
+  filmsCount,
+  committedUsd,
+  onChainCount,
+  activeCount,
+}: {
+  filmsCount: number
+  committedUsd: number
+  onChainCount: number
+  activeCount: number
+}) {
+  const formatUsd = (n: number) =>
+    n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <StatCard label="Films commissioned" value={filmsCount.toLocaleString()} />
+      <StatCard label="Committed" value={formatUsd(committedUsd)} />
+      <StatCard label="On chain" value={onChainCount.toLocaleString()} accent={onChainCount > 0} />
+      <StatCard label="In production" value={activeCount.toLocaleString()} />
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+}) {
+  return (
+    <div
+      className={`border bg-[#0a0a0a] p-5 transition-colors ${
+        accent ? 'border-[#E50914]' : 'border-[#1a1a1a]'
+      }`}
+    >
+      <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+        {label}
+      </div>
+      <div
+        className="text-3xl font-black leading-none"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        {accent && value !== '0' ? (
+          <span className="text-[#E50914]">{value}</span>
+        ) : (
+          value
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Status badge color helper ─── */
+
+function statusColor(status: string): { bg: string; text: string } {
+  switch (status) {
+    case 'released':
+    case 'published':
+    case 'auto_published':
+      return { bg: '#0e3a0e', text: '#6bff8a' }
+    case 'in_progress':
+    case 'producing':
+      return { bg: '#1a1a00', text: '#ffd700' }
+    case 'funded':
+      return { bg: '#0a1a3a', text: '#66aaff' }
+    case 'draft':
+      return { bg: '#1a1a1a', text: '#888' }
+    default:
+      return { bg: '#1a1a1a', text: '#666' }
+  }
 }

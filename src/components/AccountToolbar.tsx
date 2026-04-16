@@ -1,41 +1,25 @@
 'use client'
 
 /**
- * AccountToolbar — secondary nav bar below the main navbar.
+ * AccountToolbar — hierarchical nav bar below the main navbar.
  *
- * Only renders when the user is signed in (checks localStorage
- * 'bmovies-auth' — same pattern as Navigation.tsx). Two rows:
+ * THREE states based on URL depth:
  *
- *   Row 1: Project selector dropdown (left) + status badge (right)
- *   Row 2: Tool tabs (dashboard, script, storyboard, editor, etc.)
+ *   ACCOUNT LEVEL:  [Studio] [Wallet] [Coupons]
+ *   PROJECT LEVEL:  [<- Studio] [Project: X v] [Overview] [Cap Table] [Crew] [Deck] [Production Room]
+ *   TOOLS LEVEL:    [<- Project] [Project: X v] [Script] [Storyboard] [Editor] [Titles] [Score]
  *
- * The active project is persisted in localStorage and broadcast via
- * a CustomEvent so other components (ToolView, etc.) can react.
+ * Navigation state is managed entirely via URL search params:
+ *   /account                            -> account level, Studio tab
+ *   /account?section=wallet             -> account level, Wallet tab
+ *   /account?section=coupons            -> account level, Coupons tab
+ *   /account?project=<id>&tab=overview  -> project level
+ *   /account?project=<id>&tool=script   -> tools level
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { bmovies } from '@/lib/supabase-bmovies'
-import { useActiveProject, type ActiveProject } from '@/hooks/useActiveProject'
-
-/* ─── Tool tab definitions ─── */
-
-interface ToolTab {
-  id: string
-  label: string
-  href: string | null // null = dynamic (depends on active project)
-}
-
-const TOOL_TABS: ToolTab[] = [
-  { id: 'dashboard',        label: 'Dashboard',        href: '/account' },
-  { id: 'script',           label: 'Script Editor',    href: '/account?tool=script' },
-  { id: 'storyboard',       label: 'Storyboard',       href: '/account?tool=storyboard' },
-  { id: 'editor',           label: 'Movie Editor',     href: '/account?tool=editor' },
-  { id: 'titles',           label: 'Title Designer',   href: '/account?tool=titles' },
-  { id: 'score',            label: 'Score',             href: '/account?tool=score' },
-  { id: 'production-room',  label: 'Production Room',  href: null },
-]
 
 /* ─── Auth check (mirrors Navigation.tsx) ─── */
 
@@ -59,8 +43,37 @@ interface ProjectOption {
   id: string
   title: string
   ticker: string
+  tier: string
   status: string
 }
+
+/* ─── Navigation level type ─── */
+
+type NavLevel = 'account' | 'project' | 'tools'
+
+/* ─── Tab definitions ─── */
+
+const ACCOUNT_TABS = [
+  { id: 'studio',  label: 'Studio' },
+  { id: 'wallet',  label: 'Wallet' },
+  { id: 'coupons', label: 'Coupons' },
+] as const
+
+const PROJECT_TABS = [
+  { id: 'overview',  label: 'Overview' },
+  { id: 'captable',  label: 'Cap Table' },
+  { id: 'crew',      label: 'Crew' },
+  { id: 'deck',      label: 'Deck' },
+  { id: 'room',      label: 'Production Room' },
+] as const
+
+const TOOL_TABS = [
+  { id: 'script',      label: 'Script' },
+  { id: 'storyboard',  label: 'Storyboard' },
+  { id: 'editor',      label: 'Editor' },
+  { id: 'titles',      label: 'Titles' },
+  { id: 'score',       label: 'Score' },
+] as const
 
 /* ─── Component ─── */
 
@@ -69,19 +82,30 @@ export function AccountToolbar() {
   const [mounted, setMounted] = useState(false)
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
-  const [activeProject, setActiveProject] = useActiveProject()
 
   const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // ─── Derive navigation level from URL params ───
+  const projectId = searchParams.get('project')
   const toolParam = searchParams.get('tool')
+  const tabParam = searchParams.get('tab')
+  const sectionParam = searchParams.get('section')
 
-  // Determine the active tool tab id
-  const activeToolId = toolParam && ['script', 'storyboard', 'editor', 'titles', 'score'].includes(toolParam)
-    ? toolParam
-    : toolParam === null || toolParam === undefined
-      ? 'dashboard'
-      : 'dashboard'
+  const navLevel: NavLevel =
+    toolParam && projectId ? 'tools' :
+    projectId ? 'project' :
+    'account'
 
-  // ─── Hydration guard (same as Navigation.tsx) ───
+  // Active tab/tool/section
+  const activeSection = sectionParam || 'studio'
+  const activeTab = tabParam || 'overview'
+  const activeTool = toolParam || 'script'
+
+  // Active project object
+  const activeProject = projectId ? projects.find(p => p.id === projectId) || null : null
+
+  // ─── Hydration guard ───
   useEffect(() => {
     setMounted(true)
     setSignedIn(isSessionValid())
@@ -110,7 +134,6 @@ export function AccountToolbar() {
         const user = sessionData.session?.user
         if (!user || cancelled) { setProjectsLoading(false); return }
 
-        // Resolve bct_accounts.id
         const { data: accountRow } = await bmovies
           .from('bct_accounts')
           .select('id')
@@ -129,7 +152,7 @@ export function AccountToolbar() {
 
         let q = bmovies
           .from('bct_offers')
-          .select('id, title, token_ticker, status')
+          .select('id, title, token_ticker, tier, status')
           .is('archived_at', null)
           .order('created_at', { ascending: false })
 
@@ -151,14 +174,10 @@ export function AccountToolbar() {
             id: row.id,
             title: row.title,
             ticker: row.token_ticker || '???',
+            tier: row.tier || 'pitch',
             status: row.status,
           }))
           setProjects(opts)
-
-          // Auto-select the first project if nothing is selected
-          if (!activeProject && opts.length > 0) {
-            setActiveProject({ id: opts[0].id, title: opts[0].title, ticker: opts[0].ticker })
-          }
         }
       } catch (err) {
         console.warn('[AccountToolbar] loadProjects threw:', err)
@@ -169,34 +188,27 @@ export function AccountToolbar() {
 
     loadProjects()
     return () => { cancelled = true }
-  }, [signedIn, mounted]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [signedIn, mounted])
 
-  // ─── Handlers ───
+  // ─── Navigation handlers ───
+
+  const navigateTo = useCallback((path: string) => {
+    router.push(path, { scroll: false })
+  }, [router])
 
   const handleProjectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value
-    if (!id) {
-      setActiveProject(null)
-      return
+    if (!id) return
+    // Stay at current level when switching projects
+    if (navLevel === 'tools' && toolParam) {
+      navigateTo(`/account?project=${id}&tool=${toolParam}`)
+    } else {
+      navigateTo(`/account?project=${id}&tab=${activeTab}`)
     }
-    const match = projects.find((p) => p.id === id)
-    if (match) {
-      setActiveProject({ id: match.id, title: match.title, ticker: match.ticker })
-    }
-  }, [projects, setActiveProject])
-
-  const handleProductionRoom = useCallback(() => {
-    if (activeProject) {
-      window.location.href = `/production-room.html?id=${encodeURIComponent(activeProject.id)}`
-    }
-  }, [activeProject])
+  }, [navLevel, toolParam, activeTab, navigateTo])
 
   // ─── Don't render during SSR or when signed out ───
   if (!mounted || !signedIn) return null
-
-  const selectedStatus = activeProject
-    ? projects.find((p) => p.id === activeProject.id)?.status
-    : null
 
   return (
     <div
@@ -209,171 +221,246 @@ export function AccountToolbar() {
         width: '100%',
       }}
     >
-      {/* ── Row 1: Project selector + status badge ── */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0.5rem max(1.5rem, calc((100% - 1400px) / 2))',
-          gap: '0.75rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
-          <span
-            style={{
-              fontSize: '0.55rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase' as const,
-              color: '#666',
-              whiteSpace: 'nowrap' as const,
-            }}
-          >
-            Project
-          </span>
-          <select
-            value={activeProject?.id || ''}
-            onChange={handleProjectChange}
-            disabled={projectsLoading}
-            style={{
-              flex: 1,
-              maxWidth: '400px',
-              padding: '0.35rem 0.6rem',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              fontFamily: "'Inter', -apple-system, sans-serif",
-              color: '#fff',
-              background: '#111',
-              border: '1px solid #333',
-              borderRadius: 0,
-              outline: 'none',
-              cursor: 'pointer',
-              appearance: 'auto' as const,
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = '#E50914' }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = '#333' }}
-          >
-            {projectsLoading ? (
-              <option value="">Loading projects...</option>
-            ) : projects.length === 0 ? (
-              <option value="">No projects yet</option>
-            ) : (
-              <>
-                <option value="">Select a project</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} (${p.ticker})
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
-        </div>
-
-        {selectedStatus && (
-          <span
-            style={{
-              fontSize: '0.55rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase' as const,
-              padding: '0.2rem 0.6rem',
-              background: statusColor(selectedStatus).bg,
-              color: statusColor(selectedStatus).text,
-              whiteSpace: 'nowrap' as const,
-            }}
-          >
-            {selectedStatus.replace(/_/g, ' ')}
-          </span>
-        )}
-      </div>
-
-      {/* ── Row 2: Tool tabs ── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'stretch',
           padding: '0 max(1.5rem, calc((100% - 1400px) / 2))',
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
+          gap: '0',
         }}
       >
-        {TOOL_TABS.map((tab) => {
-          const isActive = activeToolId === tab.id
-          const isProductionRoom = tab.id === 'production-room'
+        {/* ═══ ACCOUNT LEVEL ═══ */}
+        {navLevel === 'account' && (
+          <>
+            {ACCOUNT_TABS.map((tab) => {
+              const isActive =
+                (tab.id === 'studio' && !sectionParam) ||
+                activeSection === tab.id
+              const href =
+                tab.id === 'studio'
+                  ? '/account'
+                  : `/account?section=${tab.id}`
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigateTo(href)}
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    fontFamily: "'Inter', -apple-system, sans-serif",
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase' as const,
+                    color: isActive ? '#fff' : '#666',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+                    whiteSpace: 'nowrap' as const,
+                    cursor: 'pointer',
+                    transition: 'color 150ms',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </>
+        )}
 
-          if (isProductionRoom) {
-            return (
-              <button
-                key={tab.id}
-                onClick={handleProductionRoom}
-                disabled={!activeProject}
-                style={{
-                  padding: '0.5rem 0.85rem',
-                  fontFamily: "'Inter', -apple-system, sans-serif",
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase' as const,
-                  color: !activeProject ? '#444' : '#E50914',
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: '2px solid transparent',
-                  cursor: activeProject ? 'pointer' : 'default',
-                  whiteSpace: 'nowrap' as const,
-                  transition: 'color 150ms',
-                }}
-              >
-                {tab.label}
-              </button>
-            )
-          }
-
-          return (
-            <Link
-              key={tab.id}
-              href={tab.href!}
+        {/* ═══ PROJECT LEVEL ═══ */}
+        {navLevel === 'project' && (
+          <>
+            {/* Back button */}
+            <button
+              onClick={() => navigateTo('/account')}
               style={{
-                padding: '0.5rem 0.85rem',
+                padding: '0.65rem 0.75rem',
                 fontFamily: "'Inter', -apple-system, sans-serif",
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase' as const,
-                color: isActive ? '#fff' : '#666',
-                textDecoration: 'none',
-                borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+                fontSize: '0.6rem',
+                fontWeight: 600,
+                color: '#888',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
                 whiteSpace: 'nowrap' as const,
                 transition: 'color 150ms',
               }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
             >
-              {tab.label}
-            </Link>
-          )
-        })}
+              ← Studio
+            </button>
+
+            {/* Separator */}
+            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
+
+            {/* Project selector */}
+            <ProjectSelector
+              projects={projects}
+              loading={projectsLoading}
+              activeProjectId={projectId}
+              onChange={handleProjectChange}
+            />
+
+            {/* Separator */}
+            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
+
+            {/* Project tabs */}
+            {PROJECT_TABS.map((tab) => {
+              const isActive = activeTab === tab.id
+              const href = `/account?project=${projectId}&tab=${tab.id}`
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigateTo(href)}
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    fontFamily: "'Inter', -apple-system, sans-serif",
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase' as const,
+                    color: isActive ? '#fff' : '#666',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+                    whiteSpace: 'nowrap' as const,
+                    cursor: 'pointer',
+                    transition: 'color 150ms',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </>
+        )}
+
+        {/* ═══ TOOLS LEVEL ═══ */}
+        {navLevel === 'tools' && (
+          <>
+            {/* Back button */}
+            <button
+              onClick={() => navigateTo(`/account?project=${projectId}&tab=room`)}
+              style={{
+                padding: '0.65rem 0.75rem',
+                fontFamily: "'Inter', -apple-system, sans-serif",
+                fontSize: '0.6rem',
+                fontWeight: 600,
+                color: '#888',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap' as const,
+                transition: 'color 150ms',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+            >
+              ← Project
+            </button>
+
+            {/* Separator */}
+            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
+
+            {/* Project selector */}
+            <ProjectSelector
+              projects={projects}
+              loading={projectsLoading}
+              activeProjectId={projectId}
+              onChange={handleProjectChange}
+            />
+
+            {/* Separator */}
+            <div style={{ width: '1px', height: '1.2rem', background: '#222', margin: '0 0.25rem', flexShrink: 0 }} />
+
+            {/* Tool tabs */}
+            {TOOL_TABS.map((tab) => {
+              const isActive = activeTool === tab.id
+              const href = `/account?project=${projectId}&tool=${tab.id}`
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigateTo(href)}
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    fontFamily: "'Inter', -apple-system, sans-serif",
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase' as const,
+                    color: isActive ? '#fff' : '#666',
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+                    whiteSpace: 'nowrap' as const,
+                    cursor: 'pointer',
+                    transition: 'color 150ms',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-/* ─── Status badge color helper ─── */
+/* ─── Project selector dropdown (shared between project + tools level) ─── */
 
-function statusColor(status: string): { bg: string; text: string } {
-  switch (status) {
-    case 'released':
-    case 'published':
-    case 'auto_published':
-      return { bg: '#0e3a0e', text: '#6bff8a' }
-    case 'in_progress':
-    case 'producing':
-      return { bg: '#1a1a00', text: '#ffd700' }
-    case 'funded':
-      return { bg: '#0a1a3a', text: '#66aaff' }
-    case 'draft':
-      return { bg: '#1a1a1a', text: '#888' }
-    default:
-      return { bg: '#1a1a1a', text: '#666' }
-  }
+function ProjectSelector({
+  projects,
+  loading,
+  activeProjectId,
+  onChange,
+}: {
+  projects: ProjectOption[]
+  loading: boolean
+  activeProjectId: string | null
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
+}) {
+  return (
+    <select
+      value={activeProjectId || ''}
+      onChange={onChange}
+      disabled={loading}
+      style={{
+        maxWidth: '260px',
+        padding: '0.35rem 0.6rem',
+        fontSize: '0.65rem',
+        fontWeight: 600,
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        color: '#fff',
+        background: '#111',
+        border: '1px solid #333',
+        borderRadius: 0,
+        outline: 'none',
+        cursor: 'pointer',
+        appearance: 'auto' as const,
+      }}
+      onFocus={(e) => { e.currentTarget.style.borderColor = '#E50914' }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = '#333' }}
+    >
+      {loading ? (
+        <option value="">Loading...</option>
+      ) : projects.length === 0 ? (
+        <option value="">No projects</option>
+      ) : (
+        <>
+          <option value="">Select project</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title} (${p.ticker})
+            </option>
+          ))}
+        </>
+      )}
+    </select>
+  )
 }
