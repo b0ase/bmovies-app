@@ -1394,7 +1394,19 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-3">
             Connect a wallet
           </div>
-          {/* BSV Desktop — always clickable, no KYC gate */}
+          {!walletData?.kycVerified && (
+            <div className="border border-[#E50914] bg-[#1a0003] p-4 mb-3">
+              <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">KYC required</div>
+              <p className="text-[#bbb] text-xs leading-relaxed mb-2">
+                Complete identity verification before connecting wallets. One-time check via Veriff (~90 seconds).
+              </p>
+              <a href="/kyc.html" className="inline-block text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white">
+                Verify identity →
+              </a>
+            </div>
+          )}
+          <div className={!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}>
+          {/* BSV Desktop — primary */}
           <button
             onClick={async () => {
               try {
@@ -1447,6 +1459,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
             <a href="https://github.com/bsv-blockchain/bsv-desktop/releases/latest" target="_blank" rel="noopener" className="text-[#E50914]">Download BSV Desktop</a> — the primary BRC-100 wallet for bMovies.
           </p>
+          </div>{/* end KYC gate wrapper */}
         </div>
       )}
 
