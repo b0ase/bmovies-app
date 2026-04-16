@@ -44,7 +44,8 @@ const NAV_LINKS = [
   //   rail) are ready to ship. Page still exists at /invest.html for
   //   direct-link access; add back to NAV_LINKS when ready.
   { href: 'productions.html', label: 'Live' },          // renamed from "Productions"
-  { href: 'x402.html',        label: 'Protocol' },
+  // x402.html — surfaced on /judges.html tour, not in consumer nav.
+  // { href: 'x402.html',        label: 'Protocol' },
   { href: 'studios.html',     label: 'Studios' },
   { href: 'watch.html',       label: 'Watch' },
   { href: 'judges.html',      label: 'Judges' },
