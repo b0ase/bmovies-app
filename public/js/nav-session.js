@@ -297,15 +297,43 @@ function isSessionValid() {
 function updateNav() {
   // Brochure and app are now on one origin, so the session blob at
   // localStorage['bmovies-auth'] is visible here. Flip the CTA text
-  // + colour when a valid session exists.
+  // + colour when a valid session exists, and show/hide Sign Out.
   const link = document.querySelector('.site-header nav a.signin-cta');
   if (!link) return;
+  const nav = link.parentElement;
+  let signOutBtn = nav?.querySelector('.signout-btn');
+
   if (isSessionValid()) {
     link.textContent = 'Account';
     link.classList.add('signed-in');
+    // Add Sign Out button if not already there
+    if (nav && !signOutBtn) {
+      signOutBtn = document.createElement('button');
+      signOutBtn.className = 'signout-btn';
+      signOutBtn.textContent = 'Sign Out';
+      signOutBtn.style.cssText =
+        'background:none;border:1px solid #333;color:#888;font-size:0.65rem;' +
+        'font-weight:700;letter-spacing:0.08em;text-transform:uppercase;' +
+        'padding:0.35rem 0.7rem;cursor:pointer;margin-left:0.4rem;';
+      signOutBtn.addEventListener('mouseover', () => {
+        signOutBtn.style.borderColor = '#E50914';
+        signOutBtn.style.color = '#fff';
+      });
+      signOutBtn.addEventListener('mouseout', () => {
+        signOutBtn.style.borderColor = '#333';
+        signOutBtn.style.color = '#888';
+      });
+      signOutBtn.addEventListener('click', () => {
+        localStorage.removeItem('bmovies-auth');
+        window.dispatchEvent(new Event('bmovies:auth-changed'));
+        window.location.href = '/';
+      });
+      nav.insertBefore(signOutBtn, link.nextSibling);
+    }
   } else {
     link.textContent = 'Sign In';
     link.classList.remove('signed-in');
+    if (signOutBtn) signOutBtn.remove();
   }
 }
 
