@@ -183,7 +183,7 @@
       },
       {
         id: 'capitalk', name: 'CapitalK', role: 'financier',
-        persona: 'A second financier with a different risk thesis. Together with VC-X, they fully fund a 5,000-sat Feature tier offer in one tick.',
+        persona: 'A second financier with a different risk thesis. Together with VC-X, they fully fund a Feature tier offer in one tick.',
         address: '1Gk9f92DGDAnHxqp8crwLLHBzACSbtVLuD',
       },
       {
@@ -241,6 +241,17 @@
       }).join('');
     }
 
+    // Convert raw satoshi balance to BSV units. Agents.html shows the
+    // real on-chain wallet addresses that the agent swarm uses for x402
+    // micropayments, so the underlying number IS denominated in BSV.
+    // Display in BSV (4 decimal places) rather than raw sats — it's
+    // the standard unit and doesn't expose internal plumbing jargon.
+    function satsToBsv(sats) {
+      const bsv = (Number(sats) || 0) / 1e8;
+      // Show up to 4 decimal places, but hide trailing zeros.
+      return bsv.toFixed(4).replace(/\.?0+$/, '') + ' BSV';
+    }
+
     async function loadBalances() {
       for (const a of AGENTS) {
         if (!a.address) continue;
@@ -254,7 +265,7 @@
           if (!res.ok) throw new Error('WoC ' + res.status);
           const data = await res.json();
           const sats = (data.confirmed || 0) + (data.unconfirmed || 0);
-          el.textContent = fmt(sats) + ' sats';
+          el.textContent = satsToBsv(sats);
         } catch {
           el.innerHTML = '<span class="loading">balance unavailable</span>';
         }

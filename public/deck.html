@@ -304,7 +304,7 @@
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
-    import { renderCascade, WATCH_PRICE_SATS } from './js/cascade.js';
+    import { renderCascade } from './js/cascade.js';
 
     const SUPABASE_URL = 'https://api.b0ase.com';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig';
@@ -333,8 +333,8 @@
         .from('bct_offers')
         .select(`
           id, producer_id, producer_address, title, synopsis,
-          required_sats, raised_sats, status, token_ticker, created_at,
-          bct_subscriptions ( id, agent_id, address, sats, payment_txid ),
+          status, token_ticker, tier, created_at,
+          bct_subscriptions ( id, agent_id, address, payment_txid ),
           bct_artifacts ( id, kind, url, model, role, payment_txid, created_at )
         `)
         .eq('id', offerId)
@@ -410,9 +410,18 @@
       const liveStoryboardUrl = storyboard?.url && !isEphemeralUrl(storyboard.url) ? storyboard.url : null;
       const heroImage = liveStoryboardUrl || posterUrl || null;
 
-      const required = Number(offer.required_sats) || 0;
-      const raised = Number(offer.raised_sats) || 0;
-      const pct = required > 0 ? Math.min(100, Math.round((raised / required) * 100)) : 0;
+      // Users pay in USD (Stripe): pitch $0.99, trailer $9.99, short $99,
+      // feature $999. The on-chain `required_sats`/`raised_sats` fields
+      // are the x402 internal micropayment budget between agents — that's
+      // plumbing, not a consumer-facing price. Never surface sat amounts
+      // on pages a commissioner, viewer, or investor looks at; show the
+      // tier price instead.
+      const TIER_PRICE_USD = { pitch: '$0.99', trailer: '$9.99', short: '$99', feature: '$999' };
+      const TIER_LABEL = { pitch: 'Pitch', trailer: 'Trailer', short: 'Short', feature: 'Feature' };
+      const commissionUsd = TIER_PRICE_USD[offer.tier] || '—';
+      const commissionTier = TIER_LABEL[offer.tier] || (offer.tier || '—');
+      const statusLabel = (offer.status || 'open').replace(/_/g, ' ');
+      const financierCount = subs.length;
 
       // OG tags
       document.title = `bMovies — ${offer.title} — Investor Deck`;
@@ -517,18 +526,18 @@
         ` : ''}
 
         <div class="deck-section">
-          <div class="eyebrow">Funding</div>
-          <h2>Financial snapshot</h2>
+          <div class="eyebrow">Commission</div>
+          <h2>Snapshot</h2>
           <div class="deck-financials">
             <div class="fin-card">
-              <div class="fin-label">Required budget</div>
-              <div class="fin-value">${fmt(required)}</div>
-              <div class="fin-sub">satoshis</div>
+              <div class="fin-label">Commission tier</div>
+              <div class="fin-value">${esc(commissionUsd)}</div>
+              <div class="fin-sub">${esc(commissionTier)}</div>
             </div>
             <div class="fin-card">
-              <div class="fin-label">Raised so far</div>
-              <div class="fin-value">${fmt(raised)}</div>
-              <div class="fin-sub">${pct}% funded</div>
+              <div class="fin-label">Status</div>
+              <div class="fin-value" style="font-size:1.4rem;text-transform:capitalize;">${esc(statusLabel)}</div>
+              <div class="fin-sub">pipeline state</div>
             </div>
             <div class="fin-card">
               <div class="fin-label">Token</div>
@@ -537,26 +546,21 @@
             </div>
             <div class="fin-card">
               <div class="fin-label">Financiers</div>
-              <div class="fin-value">${subs.length}</div>
-              <div class="fin-sub">agent subscribers</div>
+              <div class="fin-value">${financierCount}</div>
+              <div class="fin-sub">${financierCount === 1 ? 'shareholder' : 'shareholders'}</div>
             </div>
-          </div>
-          <span class="progress-bar"><span class="fill" style="width:${pct}%"></span></span>
-          <div class="progress-text">
-            <span>${fmt(raised)} / ${fmt(required)} sats</span>
-            <span>${pct}%</span>
           </div>
         </div>
 
         <div class="deck-section">
           <div class="eyebrow">Revenue model</div>
-          <h2>Where the sats go</h2>
+          <h2>Where the revenue goes</h2>
           <p style="font-size:0.85rem;color:#555;line-height:1.6;margin-top:0.5rem;margin-bottom:1.2rem;">
-            Every viewer who pays ${WATCH_PRICE_SATS} sats to watch this film triggers
-            an on-chain cascade. The majority of revenue fans out to royalty
-            shareholders. On derivative works a portion cascades up the IP
-            ladder to parent trailer and short holders. 1% goes to the studio
-            treasury. No platform cut, no off-chain bookkeeping.
+            Every ticket sale triggers an on-chain cascade. The majority of
+            revenue fans out to royalty shareholders pro-rata. On derivative
+            works a portion cascades up the IP ladder to parent trailer and
+            short holders. 1% goes to the studio treasury. No platform cut,
+            no off-chain bookkeeping.
           </p>
           ${cascade.html}
         </div>
@@ -567,14 +571,13 @@
             <h2>Financiers</h2>
             <div class="deck-subs">
               <table>
-                <thead><tr><th>#</th><th>Agent</th><th>Address</th><th style="text-align:right;">Sats</th></tr></thead>
+                <thead><tr><th>#</th><th>Agent</th><th>Address</th></tr></thead>
                 <tbody>
                   ${subs.map((s, i) => `
                     <tr>
                       <td>${i + 1}</td>
                       <td>${esc(s.agent_id)}</td>
                       <td class="mono"><a href="${wocAddr(s.address)}" target="_blank" rel="noopener">${esc(shortAddr(s.address))}</a></td>
-                      <td class="num">${fmt(s.sats)}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -590,13 +593,12 @@
             <p style="font-size:0.75rem;color:#666;margin-top:0.4rem;margin-bottom:1rem;">Every row is a real on-chain transaction. Click any txid to verify on WhatsOnChain.</p>
             <div class="deck-proof">
               <table>
-                <thead><tr><th>Event</th><th>Agent / model</th><th style="text-align:right;">Sats</th><th>Txid</th></tr></thead>
+                <thead><tr><th>Event</th><th>Agent / model</th><th>Txid</th></tr></thead>
                 <tbody>
                   ${proofRows.map(r => `
                     <tr>
                       <td>${esc(r.event)}</td>
                       <td>${esc(r.who)}</td>
-                      <td class="num">${r.sats === '—' ? '—' : fmt(r.sats)}</td>
                       <td class="mono"><a href="${wocTx(r.txid)}" target="_blank" rel="noopener">${esc(shortTx(r.txid))}</a></td>
                     </tr>
                   `).join('')}

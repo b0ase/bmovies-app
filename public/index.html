@@ -404,11 +404,17 @@
      * 4-role artifact set. Polls every 10s so the landing page
      * feels alive without hammering Supabase.
      */
+    // Users pay in USD (Stripe): pitch $0.99, trailer $9.99, short $99,
+    // feature $999. Never surface raw sat amounts on the landing page —
+    // the bct_offers.raised_sats column tracks x402 micropayments
+    // between agents, which is plumbing, not a consumer-facing price.
+    const TIER_PRICE_USD = { pitch: '$0.99', trailer: '$9.99', short: '$99', feature: '$999' };
+
     async function loadCatalogAndCounters() {
       try {
         const { data: offers, error } = await supabase
           .from('bct_offers')
-          .select('id, title, token_ticker, raised_sats, status, created_at, bct_artifacts(id, kind, role, payment_txid)')
+          .select('id, title, token_ticker, tier, status, created_at, bct_artifacts(id, kind, role, payment_txid)')
           .is('archived_at', null)
           .order('created_at', { ascending: false })
           .limit(40);
@@ -435,10 +441,11 @@
             const arts = o.bct_artifacts || [];
             const tx = (arts.find(a => a.payment_txid) || {}).payment_txid || '';
             const href = 'offer.html?id=' + encodeURIComponent(o.id);
+            const price = TIER_PRICE_USD[o.tier] || '';
             return '<a href="' + href + '" class="cat-row">'
               + '<div class="cat-t">' + esc(o.title) + '</div>'
               + '<div class="cat-m">$' + esc(o.token_ticker) + ' &middot; ' + esc(o.status) + (tx ? ' &middot; tx ' + esc(tx.slice(0, 10)) + '&hellip;' : '') + '</div>'
-              + '<div class="cat-p">' + fmt(o.raised_sats) + ' sats</div>'
+              + '<div class="cat-p">' + esc(price) + '</div>'
               + '</a>';
           }).join('');
         }

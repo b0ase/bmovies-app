@@ -284,7 +284,7 @@
 
     function fingerprint(offers) {
       return offers.map(o => [
-        o.id, o.status, o.raised_sats, o.current_step, o.production_phase,
+        o.id, o.status, o.current_step, o.production_phase,
         (o.bct_artifacts || []).length,
       ].join(':')).join('|');
     }
@@ -297,7 +297,7 @@
         .from('bct_offers')
         .select(`
           id, producer_id, producer_address, title, synopsis,
-          required_sats, raised_sats, status, token_ticker, tier,
+          status, token_ticker, tier,
           production_phase, current_step, created_at,
           bct_artifacts ( id, kind, url, model, prompt, payment_txid, created_at, role )
         `)
@@ -359,21 +359,6 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
         });
       });
-    }
-
-    function renderStats(offers) {
-      const total = offers.length;
-      const funded = offers.filter((o) => o.status !== 'open').length;
-      let sats = 0;
-      let artifactCount = 0;
-      for (const o of offers) {
-        sats += Number(o.raised_sats) || 0;
-        if (o.bct_artifacts && o.bct_artifacts.length) artifactCount++;
-      }
-      document.getElementById('s-count').textContent = fmt(total);
-      document.getElementById('s-funded').textContent = fmt(funded);
-      document.getElementById('s-sats').textContent = fmt(sats);
-      document.getElementById('s-artifacts').textContent = fmt(artifactCount);
     }
 
     // Decode the data:text/plain URL the writer agent stores
