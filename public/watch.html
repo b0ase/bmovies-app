@@ -414,7 +414,12 @@
       if (sb) return sb;
       const img = liveArts.find((a) => a.kind === 'image');
       if (img) return img;
-      return null;
+      // Placeholder SVG
+      const t = esc((title || 'Untitled').slice(0, 20));
+      const placeholder = 'data:image/svg+xml,' + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600"><rect width="400" height="600" fill="#0a0a0a"/><rect width="400" height="4" fill="#E50914"/><rect y="596" width="400" height="4" fill="#E50914"/><text x="200" y="290" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="900" fill="#fff">${t}</text><text x="200" y="560" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#333" letter-spacing="3">GENERATING</text></svg>`
+      );
+      return { url: placeholder, kind: 'image', role: 'poster' };
     }
 
     // ───────── now-showing render ─────────

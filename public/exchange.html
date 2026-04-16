@@ -742,6 +742,11 @@
     const short = (txid) => txid && txid.length > 16 ? `${txid.slice(0,6)}...${txid.slice(-4)}` : (txid || '--');
     const isHexTxid = (s) => typeof s === 'string' && /^[0-9a-f]{64}$/.test(s);
     const isInternalSmokeTest = (id) => /^(pitch-smoke|pitch-lock|pitch-x402|pitch-chain)/.test(id || '');
+    function posterPlaceholder(title, ticker) {
+      const t = esc(title || 'Untitled');
+      const tk = ticker ? '$' + esc(ticker) : '';
+      return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="#111"/><rect width="80" height="2" fill="#E50914"/><text x="40" y="38" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="900" fill="#fff">${t.length > 14 ? t.slice(0,12) + '…' : t}</text>${tk ? `<text x="40" y="52" text-anchor="middle" font-family="monospace" font-size="7" fill="#E50914">${tk}</text>` : ''}</svg>`);
+    }
 
     // Poster helpers
     const slugify = (s) => String(s || '').toLowerCase()
@@ -853,7 +858,7 @@
           const arts = (o.bct_artifacts || []).filter(a => !a.superseded_by && !isEphemeralUrl(a.url));
           const poster = arts.find(a => a.role === 'poster' && a.kind === 'image');
           const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
-          return { ...o, poster: local || poster?.url || storyboard?.url || null };
+          return { ...o, poster: local || poster?.url || storyboard?.url || posterPlaceholder(o.title, o.token_ticker) };
         });
     }
 

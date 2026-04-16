@@ -233,7 +233,7 @@
         if (pitch?.offer_id) {
           const { data: offer } = await supabase
             .from('bct_offers')
-            .select('*, bct_artifacts(id, kind, url, model, role, created_at), bct_subscriptions(id, agent_id, sats)')
+            .select('*, bct_artifacts(id, kind, url, model, role, step_id, created_at), bct_subscriptions(id, agent_id, sats)')
             .eq('id', pitch.offer_id)
             .maybeSingle();
           if (offer) return { pitch, offer };
@@ -243,7 +243,7 @@
       // Fallback: find by title
       const { data: offers } = await supabase
         .from('bct_offers')
-        .select('*, bct_artifacts(id, kind, url, model, role, created_at), bct_subscriptions(id, agent_id, sats)')
+        .select('*, bct_artifacts(id, kind, url, model, role, step_id, created_at), bct_subscriptions(id, agent_id, sats)')
         .eq('title', title)
         .order('created_at', { ascending: false })
         .limit(1);

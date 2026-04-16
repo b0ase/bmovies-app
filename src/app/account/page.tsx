@@ -81,7 +81,22 @@ function isEphemeralUrl(url: string | null | undefined): boolean {
   return typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url)
 }
 
-function resolvePosterUrl(film: Film): string | null {
+/** Generate a dynamic poster placeholder as an SVG data URL */
+function posterPlaceholder(title: string, ticker?: string | null): string {
+  const t = (title || 'Untitled').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+  const tk = ticker ? `$${ticker}` : ''
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600">
+    <rect width="400" height="600" fill="#0a0a0a"/>
+    <rect x="0" y="0" width="400" height="4" fill="#E50914"/>
+    <rect x="0" y="596" width="400" height="4" fill="#E50914"/>
+    <text x="200" y="260" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="900" fill="#ffffff" textLength="360" lengthAdjust="spacingAndGlyphs">${t}</text>
+    ${tk ? `<text x="200" y="300" text-anchor="middle" font-family="monospace" font-size="16" fill="#E50914">${tk}</text>` : ''}
+    <text x="200" y="560" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#333" letter-spacing="3">POSTER GENERATING</text>
+  </svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
+function resolvePosterUrl(film: Film): string {
   const mapHit = POSTER_MAP[(film.title || '').toLowerCase()]
   if (mapHit) return mapHit
   const arts = film.bct_artifacts || []
@@ -93,7 +108,7 @@ function resolvePosterUrl(film: Film): string | null {
     (a) => !a.superseded_by && (a.role === 'storyboard' || a.step_id === 'storyboard.poster') && a.kind === 'image',
   )
   if (storyboard?.url && !isEphemeralUrl(storyboard.url)) return storyboard.url
-  return null
+  return posterPlaceholder(film.title, film.token_ticker)
 }
 
 interface Film {

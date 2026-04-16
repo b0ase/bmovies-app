@@ -35,8 +35,8 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
             <a href="/productions.html">Live</a>
             <a href="/studios.html">Studios</a>
             <a href="/watch.html">Watch</a>
-            <a href="/legal/privacy.html">Privacy</a>
-            <a href="/legal/terms.html">Terms</a>
+            <a href="/privacy.html">Privacy</a>
+            <a href="/terms.html">Terms</a>
           </div>
           <div className="footer-copy">&copy; 2026 bMovies. All rights reserved. <a href="/boovies.html" style={{color:'#333',textDecoration:'none',fontSize:'0.55rem'}} title="You found it">bOOvies?</a></div>
         </div>
