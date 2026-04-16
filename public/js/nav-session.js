@@ -107,12 +107,19 @@ function buildNavHtml() {
   // Sign In routes to the /account Next.js route on the same origin.
   // Since brochure + app live on one domain now, the session is visible
   // here and updateNav() below flips the CTA to "Account" once signed in.
+  // $bMovies token icon — far right, after socials. Links to /invest.html
+  // which has the platform token page. Uses a simple coin SVG with the
+  // bMovies red fill so it stands out from the monochrome social icons.
+  const tokenIcon = `
+      <a class="nav-social nav-token" href="invest.html" aria-label="$bMovies token" style="color:#E50914;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="13" font-weight="700" fill="currentColor">b</text></svg>
+      </a>`;
   return `
     ${LOGO_HTML}
     ${HAMBURGER_HTML}
     <nav id="site-nav">
       ${linkTags}
-      <a href="/account" class="signin-cta">Sign In</a>${socialTags}
+      <a href="/account" class="signin-cta">Sign In</a>${socialTags}${tokenIcon}
     </nav>
   `;
 }
