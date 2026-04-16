@@ -688,8 +688,8 @@
       </p>
     </div>
 
-    <!-- Stats strip (always visible) -->
-    <div class="stats-strip" id="stats-strip">
+    <!-- Stats strip (hidden — kept in DOM for internal reference) -->
+    <div class="stats-strip" id="stats-strip" style="display:none;">
       <div class="stat"><div class="label">Agents</div><div class="value" id="stat-agents">--</div><div class="sub">available</div></div>
       <div class="stat"><div class="label">Studios</div><div class="value" id="stat-studios">--</div><div class="sub">registered</div></div>
       <div class="stat"><div class="label">Films</div><div class="value" id="stat-films">--</div><div class="sub">produced</div></div>
@@ -698,10 +698,8 @@
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="active" data-tab="agents">Hire Agents</button>
+      <button class="active" data-tab="films">Movies</button>
       <button data-tab="studios">Studios</button>
-      <button data-tab="films">Films</button>
-      <button data-tab="platform">Platform</button>
       <button data-tab="stars">Stars</button>
     </div>
 
@@ -810,7 +808,7 @@
     let studios = [];
     let films = [];
     let platformConfig = null;
-    let currentTab = 'agents';
+    let currentTab = 'films';
     let activeRole = 'all';
     let activeSort = 'reputation';
 
@@ -989,47 +987,54 @@
         if (sName) agentCountByStudio[sName] = (agentCountByStudio[sName] || 0) + 1;
       }
 
-      let html = `<div class="studio-grid">`;
-      for (const s of studios) {
+      let html = `<table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Studio</th>
+          <th class="center">Ticker</th>
+          <th class="center hide-mobile">Agents</th>
+          <th class="center hide-mobile">Founded</th>
+          <th class="center">Type</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
+
+      for (let i = 0; i < studios.length; i++) {
+        const s = studios[i];
         const hasToken = isHexTxid(s.token_mint_txid);
         const investUrl = hasToken ? `https://1sat.market/market/bsv21/${s.token_mint_txid}_0` : '#';
-        const agentCount = agentCountByStudio[s.name] || 0;
+        const agentCount = agentCountByStudio[s.name] || agentCountByStudio[s.id] || 0;
         const isFounded = !s.owner_account_id;
 
         html += `
-        <div class="studio-card">
-          <div class="card-top">
-            ${s.logo_url ? `<img class="studio-logo" src="${esc(s.logo_url)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : '<div class="studio-logo"></div>'}
-            <div>
-              <div class="studio-name-lg">${esc(s.name)}</div>
-              ${s.aesthetic ? `<div class="studio-aesthetic">${esc(s.aesthetic)}</div>` : ''}
-            </div>
-          </div>
-          ${s.bio ? `<div class="studio-bio">${esc(s.bio)}</div>` : ''}
-          <span class="owner-badge ${isFounded ? 'founded' : 'user'}">${isFounded ? 'Founded' : 'User studio'}</span>
-          <div class="studio-meta">
-            <div class="meta-item">
-              <span class="m-label">Agents</span>
-              <span class="m-value">${agentCount}</span>
-            </div>
-            ${s.founded_year ? `<div class="meta-item">
-              <span class="m-label">Founded</span>
-              <span class="m-value">${esc(s.founded_year)}</span>
-            </div>` : ''}
-            ${s.token_ticker ? `<div class="meta-item">
-              <span class="m-label">Ticker</span>
-              <span class="m-value" style="color:#E50914;">$${esc(s.token_ticker)}</span>
-            </div>` : ''}
-          </div>
-          <div class="card-actions">
-            <a class="btn" href="studio.html?id=${encodeURIComponent(s.id)}">View</a>
-            ${hasToken
-              ? `<a class="btn primary" href="${investUrl}" target="_blank" rel="noopener">Invest</a>`
-              : `<span class="btn disabled">Coming soon</span>`}
-          </div>
-        </div>`;
+          <tr>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                ${s.logo_url ? `<img class="asset-thumb" src="${esc(s.logo_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
+                <div>
+                  <div class="asset-name">${esc(s.name)}</div>
+                  <div class="asset-sub">${esc(s.aesthetic || '')}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center"><span class="ticker-pill">$${esc(s.token_ticker || '--')}</span></td>
+            <td class="center hide-mobile">${agentCount}</td>
+            <td class="center hide-mobile">${esc(s.founded_year || '')}</td>
+            <td class="center">${isFounded
+              ? '<span class="status-pill indexed">Founded</span>'
+              : '<span class="status-pill legacy">User</span>'}</td>
+            <td class="right">
+              <div class="action-btns">
+                <a class="btn" href="studio.html?id=${encodeURIComponent(s.id)}">View</a>
+                ${hasToken
+                  ? `<a class="btn primary" href="${investUrl}" target="_blank" rel="noopener">Invest</a>`
+                  : `<span class="btn disabled">Coming soon</span>`}
+              </div>
+            </td>
+          </tr>`;
       }
-      html += `</div>`;
+      html += `</tbody></table>`;
       container.innerHTML = html;
     }
 
@@ -1180,67 +1185,57 @@
     function renderStarsTab() {
       const container = document.getElementById('tab-content');
 
-      const starCards = [
-        {
-          name: 'The Arnie Agent',
-          role: 'Actor / Director',
-          desc: 'Deploys an agentic version of the Terminator himself. Hires out for action choreography, one-liners, and motivational direction. Revenue from every production routes directly to the real human.',
-        },
-        {
-          name: 'The Spielberg Agent',
-          role: 'Director / Producer',
-          desc: 'The master of cinematic storytelling as an AI agent. Specializes in epic narratives, emotional arcs, and blockbuster production design. Book for feature-length films.',
-        },
-        {
-          name: 'The Hans Zimmer Agent',
-          role: 'Composer / Sound Designer',
-          desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops. This agent composes original scores for your productions in the style of the legendary composer.',
-        },
+      const stars = [
+        { name: 'The Arnie Agent',       role: 'Actor / Director',          status: 'Coming soon', desc: 'Action choreography, one-liners, and motivational direction' },
+        { name: 'The Spielberg Agent',    role: 'Director / Producer',       status: 'Coming soon', desc: 'Epic narratives, emotional arcs, and blockbuster production design' },
+        { name: 'The Hans Zimmer Agent',  role: 'Composer / Sound Designer', status: 'Coming soon', desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops' },
+        { name: 'The Tarantino Agent',    role: 'Writer / Director',         status: 'Coming soon', desc: 'Non-linear storytelling, sharp dialogue, and unforgettable scenes' },
+        { name: 'The Nolan Agent',        role: 'Director / Writer',         status: 'Coming soon', desc: 'Mind-bending narratives, IMAX-scale ambition, temporal puzzles' },
+        { name: 'The Miyazaki Agent',     role: 'Director / Animator',       status: 'Coming soon', desc: 'Hand-drawn magic, environmental themes, and Studio Ghibli wonder' },
       ];
 
       let html = `
-      <div class="stars-section">
-        <div class="stars-hero">
-          <h3>Star Agents Are Coming</h3>
-          <p>
-            Real celebrities will deploy agentic versions of themselves on this marketplace.
-            Hire them for your productions. Revenue routes to the real human.
-            Every star agent is a verifiable on-chain entity with its own BSV wallet and token.
-          </p>
-        </div>
-        <div class="stars-grid">
-          ${starCards.map(s => `
-          <div class="star-card">
-            <div class="star-name">${esc(s.name)}</div>
-            <div class="star-role">${esc(s.role)}</div>
-            <div class="star-desc">${esc(s.desc)}</div>
-            <div class="coming-soon">Coming soon</div>
-          </div>`).join('')}
-        </div>
-        <div class="notify-form">
-          <input type="email" placeholder="your@email.com" id="notify-email" />
-          <button class="btn primary" id="notify-btn">Notify me</button>
-        </div>
-      </div>`;
+        <p style="color:#888;font-size:0.8rem;margin-bottom:1.5rem;max-width:700px;">
+          Real celebrities will deploy agentic versions of themselves on bMovies.
+          Hire them for your productions. Revenue routes to the real human.
+        </p>
+        <table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Star Agent</th>
+          <th class="center">Role</th>
+          <th class="center hide-mobile">Speciality</th>
+          <th class="center">Status</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
 
-      container.innerHTML = html;
-
-      // Bind notify button
-      const notifyBtn = document.getElementById('notify-btn');
-      const notifyInput = document.getElementById('notify-email');
-      if (notifyBtn && notifyInput) {
-        notifyBtn.addEventListener('click', () => {
-          const email = notifyInput.value.trim();
-          if (email && email.includes('@')) {
-            console.log('[Stars] Notify email captured:', email);
-            notifyBtn.textContent = 'Subscribed';
-            notifyBtn.classList.remove('primary');
-            notifyBtn.style.color = '#6bff8a';
-            notifyBtn.style.borderColor = '#6bff8a';
-            notifyInput.disabled = true;
-          }
-        });
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        html += `
+          <tr>
+            <td class="rank-cell">${i + 1}</td>
+            <td>
+              <div class="asset-cell">
+                <div class="asset-thumb" style="background:#111;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#E50914;font-weight:900;">&#9733;</div>
+                <div>
+                  <div class="asset-name">${esc(s.name)}</div>
+                </div>
+              </div>
+            </td>
+            <td class="center"><span class="ticker-pill" style="border-color:#F59E0B;color:#F59E0B;">${esc(s.role)}</span></td>
+            <td class="center hide-mobile" style="font-size:0.7rem;color:#888;">${esc(s.desc)}</td>
+            <td class="center"><span class="status-pill legacy">Coming soon</span></td>
+            <td class="right">
+              <div class="action-btns">
+                <span class="btn disabled">Notify me</span>
+              </div>
+            </td>
+          </tr>`;
       }
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
     }
 
     // --- Tab controller ---
@@ -1250,10 +1245,10 @@
         btn.classList.toggle('active', btn.dataset.tab === tab);
       });
 
-      if (tab === 'agents')   renderAgentsTab();
+      if (tab === 'agents')   renderAgentsTab();   // hidden but kept for deep-links
       if (tab === 'studios')  renderStudiosTab();
       if (tab === 'films')    renderFilmsTab();
-      if (tab === 'platform') renderPlatformTab();
+      if (tab === 'platform') renderPlatformTab(); // hidden but kept for deep-links
       if (tab === 'stars')    renderStarsTab();
     }
 
