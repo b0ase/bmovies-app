@@ -228,7 +228,7 @@
       // Load offer data
       const { data: offerData, error: offerErr } = await supabase
         .from('bct_offers')
-        .select('id, title, synopsis, status, tier, studio_id')
+        .select('id, title, synopsis, status, tier, producer_id')
         .eq('id', offerId)
         .maybeSingle();
 
@@ -238,16 +238,6 @@
       }
       offer = offerData;
       document.title = `bMovies — Production Room: ${esc(offer.title)}`;
-
-      // Load studio
-      if (offer.studio_id) {
-        const { data: studioData } = await supabase
-          .from('bct_studios')
-          .select('name')
-          .eq('id', offer.studio_id)
-          .maybeSingle();
-        studioName = studioData?.name || 'Your Studio';
-      }
 
       render();
     }
