@@ -389,6 +389,12 @@
   </style>
 </head>
 <body>
+  <script>
+    if (new URLSearchParams(location.search).has('embed')) {
+      document.documentElement.classList.add('embedded');
+    }
+  </script>
+  <style>.embedded .site-header, .embedded .site-footer, .embedded header.site-header { display: none !important; } .embedded main { padding-top: 1rem !important; }</style>
   <header class="site-header"></header>
 
   <main>

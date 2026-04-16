@@ -288,6 +288,12 @@
   </style>
 </head>
 <body>
+  <script>
+    if (new URLSearchParams(location.search).has('embed')) {
+      document.documentElement.classList.add('embedded');
+    }
+  </script>
+  <style>.embedded .site-header, .embedded .site-footer, .embedded header.site-header { display: none !important; } .embedded main, .embedded .deck-wrap { padding-top: 1rem !important; }</style>
   <header class="screen-bar screen-only">
     <a href="index.html" class="logo">bMovies</a>
     <div class="actions">

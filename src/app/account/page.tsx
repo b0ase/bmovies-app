@@ -1135,44 +1135,25 @@ function ProjectCrewView({ projectId, accountId }: { projectId: string; accountI
 function ProjectDeckView({ film }: { film: Film }) {
   return (
     <div>
-      <h2
-        className="text-3xl font-black mb-4 leading-none"
-        style={{ fontFamily: 'var(--font-bebas)' }}
-      >
-        Investor <span className="text-[#E50914]">deck</span>
-      </h2>
-      <p className="text-[#888] text-sm leading-relaxed mb-6">
-        A printable investor deck for &quot;{film.title}&quot; including synopsis,
-        treatment, cap table, storyboard frames, production timeline, and
-        on-chain token receipt.
-      </p>
-      <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div
-              className="text-xl font-black text-white mb-1 leading-tight"
-              style={{ fontFamily: 'var(--font-bebas)' }}
-            >
-              {film.title}
-            </div>
-            <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider">
-              {film.tier} &middot; ${film.token_ticker}
-            </div>
-          </div>
-          <a
-            href={`/deck.html?id=${encodeURIComponent(film.id)}`}
-            target="_blank"
-            rel="noopener"
-            className="px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider shrink-0"
-          >
-            Open deck
-          </a>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider">
+          Investor deck &middot; {film.title}
         </div>
+        <a
+          href={`/deck.html?id=${encodeURIComponent(film.id)}`}
+          target="_blank"
+          rel="noopener"
+          className="px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.6rem] font-bold uppercase tracking-wider shrink-0"
+        >
+          Open in new tab &middot; Print as PDF
+        </a>
       </div>
-      <p className="text-[#666] text-xs">
-        Opens the printable investor deck in a new tab. Use your browser&apos;s
-        print function (Ctrl+P / Cmd+P) to save as PDF.
-      </p>
+      <iframe
+        src={`/deck.html?id=${encodeURIComponent(film.id)}&embed=1`}
+        className="w-full border border-[#222]"
+        style={{ minHeight: '85vh', background: '#000' }}
+        title={`Investor deck: ${film.title}`}
+      />
     </div>
   )
 }
@@ -1180,55 +1161,27 @@ function ProjectDeckView({ film }: { film: Film }) {
 /* ─── Project Production Room ─── */
 
 function ProjectRoomView({ film }: { film: Film }) {
-  const router = useRouter()
   return (
     <div>
-      <h2
-        className="text-3xl font-black mb-4 leading-none"
-        style={{ fontFamily: 'var(--font-bebas)' }}
-      >
-        Production <span className="text-[#E50914]">room</span>
-      </h2>
-      <p className="text-[#888] text-sm leading-relaxed mb-6">
-        The Production Room is where you chat with the bMovies Grand Orchestrator
-        agent about &quot;{film.title}&quot;. Ask it to generate storyboard frames,
-        rewrite the script, compose a theme, or anything else.
-      </p>
-      <div className="flex flex-wrap gap-3 mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider">
+          Production timeline &middot; {film.title}
+        </div>
         <a
-          href={`/production-room.html?id=${encodeURIComponent(film.id)}`}
-          className="px-6 py-3 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+          href={`/production.html?id=${encodeURIComponent(film.id)}`}
+          target="_blank"
+          rel="noopener"
+          className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider"
         >
-          Open Production Room
+          Open in new tab
         </a>
-        <button
-          onClick={() => router.push(`/account?project=${film.id}&tool=script`, { scroll: false })}
-          className="px-6 py-3 border border-[#333] hover:border-[#E50914] text-white text-xs font-black uppercase tracking-wider transition-colors"
-        >
-          Open tools
-        </button>
       </div>
-      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
-        Available tools
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {[
-          { name: 'Script', tool: 'script', desc: 'AI screenplay assistant' },
-          { name: 'Storyboard', tool: 'storyboard', desc: 'Frame-by-frame planning' },
-          { name: 'Editor', tool: 'editor', desc: 'Non-linear AI editor' },
-          { name: 'Titles', tool: 'titles', desc: 'Cinematic title sequences' },
-          { name: 'Score', tool: 'score', desc: 'AI film scoring' },
-        ].map((t) => (
-          <button
-            key={t.tool}
-            onClick={() => router.push(`/account?project=${film.id}&tool=${t.tool}`, { scroll: false })}
-            className="border border-[#222] bg-[#0a0a0a] p-4 text-left hover:border-[#E50914] transition-colors"
-          >
-            <div className="text-white text-sm font-black mb-1">{t.name}</div>
-            <div className="text-[#888] text-xs">{t.desc}</div>
-          </button>
-        ))}
-      </div>
+      <iframe
+        src={`/production.html?id=${encodeURIComponent(film.id)}&embed=1`}
+        className="w-full border border-[#222]"
+        style={{ minHeight: '85vh', background: '#000' }}
+        title={`Production: ${film.title}`}
+      />
     </div>
   )
 }
