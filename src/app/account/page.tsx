@@ -36,6 +36,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { bmovies } from '@/lib/supabase-bmovies'
 import type { User } from '@supabase/supabase-js'
+import { useActiveProject, type ActiveProject } from '@/hooks/useActiveProject'
 
 type Tab =
   | 'my-films'
@@ -358,6 +359,14 @@ function AccountContent() {
   if (loading) return <SkeletonDashboard />
 
   if (!user) return <SignedOutHero />
+
+  // ─── Tool view routing ───
+  // If ?tool=<name> is present, show the tool view instead of the
+  // normal tab-based dashboard. These are the AccountToolbar targets.
+  const toolParam = searchParams.get('tool')
+  if (toolParam && ['script', 'storyboard', 'editor', 'titles', 'score'].includes(toolParam)) {
+    return <ToolView tool={toolParam} user={user} accountId={accountId} />
+  }
 
   // Signed-in dashboard
   return (
@@ -2246,6 +2255,580 @@ function WalletTab({ user, accountId, films }: { user: User; accountId: string |
           )}
         </div>
       </details>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  TOOL VIEWS — rendered when ?tool=<name> is in the URL.
+ *
+ *  Each tool view reads the active project from localStorage via the
+ *  useActiveProject hook and loads project-specific data from Supabase.
+ *  These are minimal but functional stubs for the hackathon.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+const TOOL_LABELS: Record<string, string> = {
+  script: 'Script Editor',
+  storyboard: 'Storyboard',
+  editor: 'Movie Editor',
+  titles: 'Title Designer',
+  score: 'Score Composer',
+}
+
+function ToolView({
+  tool,
+  user,
+  accountId,
+}: {
+  tool: string
+  user: User
+  accountId: string | null
+}) {
+  const [activeProject] = useActiveProject()
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-8">
+      {/* Tool header bar */}
+      <div className="mb-6 pb-4 border-b border-[#1a1a1a] flex items-center justify-between gap-4">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-1">
+            {TOOL_LABELS[tool] || tool}
+          </div>
+          <h1
+            className="text-3xl font-black leading-none"
+            style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
+          >
+            {activeProject ? (
+              <>
+                {activeProject.title}{' '}
+                <span className="text-[#E50914] text-lg font-mono">${activeProject.ticker}</span>
+              </>
+            ) : (
+              <span className="text-[#666]">No project selected</span>
+            )}
+          </h1>
+        </div>
+        <Link
+          href="/account"
+          className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:border-[#E50914] hover:text-white transition-colors"
+        >
+          Back to dashboard
+        </Link>
+      </div>
+
+      {!activeProject ? (
+        <NoProjectSelected />
+      ) : (
+        <>
+          {tool === 'script' && <ScriptEditorView projectId={activeProject.id} projectTitle={activeProject.title} />}
+          {tool === 'storyboard' && <StoryboardView projectId={activeProject.id} projectTitle={activeProject.title} />}
+          {tool === 'editor' && <MovieEditorView projectId={activeProject.id} projectTitle={activeProject.title} />}
+          {tool === 'titles' && <TitleDesignerView projectId={activeProject.id} projectTitle={activeProject.title} />}
+          {tool === 'score' && <ScoreComposerView projectId={activeProject.id} projectTitle={activeProject.title} />}
+        </>
+      )}
+    </div>
+  )
+}
+
+function NoProjectSelected() {
+  return (
+    <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
+      <div
+        className="text-2xl font-black mb-3 leading-none"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        Select a <span className="text-[#E50914]">project</span> first
+      </div>
+      <p className="text-[#888] text-sm leading-relaxed mb-4">
+        Use the project selector in the toolbar above to choose which film
+        you want to work on. If you haven&apos;t commissioned a film yet, head
+        to the commission page to get started.
+      </p>
+      <a
+        href="/commission.html"
+        className="inline-block px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
+      >
+        Commission a film
+      </a>
+    </div>
+  )
+}
+
+/* ── Script Editor ── */
+
+function ScriptEditorView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [synopsis, setSynopsis] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setSaved(false)
+      try {
+        // Load the writer.synopsis artifact if it exists
+        const { data } = await bmovies
+          .from('bct_artifacts')
+          .select('url, kind')
+          .eq('offer_id', projectId)
+          .eq('kind', 'text')
+          .like('step_id', 'writer%')
+          .is('superseded_by', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        if (cancelled) return
+        if (data && data.length > 0 && data[0].url) {
+          // Try to fetch the text content from the URL
+          try {
+            const res = await fetch(data[0].url)
+            if (res.ok) {
+              const text = await res.text()
+              if (!cancelled) setSynopsis(text)
+            }
+          } catch {
+            // URL may be expired — fall back to offer synopsis
+            await loadFallbackSynopsis()
+          }
+        } else {
+          await loadFallbackSynopsis()
+        }
+      } catch {
+        await loadFallbackSynopsis()
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    async function loadFallbackSynopsis() {
+      const { data: offer } = await bmovies
+        .from('bct_offers')
+        .select('synopsis')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (offer?.synopsis) setSynopsis(offer.synopsis)
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  return (
+    <div className="space-y-4">
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
+        Script / Synopsis
+      </div>
+      {loading ? (
+        <div className="h-64 bg-[#0a0a0a] border border-[#1a1a1a] animate-pulse" />
+      ) : (
+        <>
+          <textarea
+            value={synopsis}
+            onChange={(e) => { setSynopsis(e.target.value); setSaved(false) }}
+            rows={16}
+            className="w-full bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-4 font-mono resize-y focus:border-[#E50914] focus:outline-none"
+            placeholder="No script content yet. Click 'AI Rewrite' to generate one, or start typing..."
+            style={{ minHeight: '200px' }}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setSaved(true)
+                setTimeout(() => setSaved(false), 3000)
+              }}
+              className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+            >
+              {saved ? 'Saved' : 'Save'}
+            </button>
+            <button
+              onClick={() => {
+                // Stub: in production this calls the chat agent
+                alert(`AI Rewrite requested for "${projectTitle}". This will call the Grok agent to rewrite the script.`)
+              }}
+              className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+            >
+              AI Rewrite
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ── Storyboard ── */
+
+function StoryboardView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [frames, setFrames] = useState<{ id: number; url: string; step_id: string | null }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data } = await bmovies
+        .from('bct_artifacts')
+        .select('id, url, step_id')
+        .eq('offer_id', projectId)
+        .eq('kind', 'image')
+        .like('step_id', 'storyboard%')
+        .is('superseded_by', null)
+        .order('created_at', { ascending: true })
+      if (!cancelled) {
+        setFrames((data as any[]) || [])
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-pulse">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+        ))}
+      </div>
+    )
+  }
+
+  if (frames.length === 0) {
+    return (
+      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8 max-w-xl">
+        <div
+          className="text-xl font-black mb-2 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          No storyboard <span className="text-[#E50914]">frames</span> yet
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-4">
+          The storyboard is generated during the production pipeline. You can
+          also generate individual frames using the AI agent.
+        </p>
+        <button
+          onClick={() => {
+            alert(`Generate storyboard requested for "${projectTitle}". This will call Grok Imagine to create storyboard frames.`)
+          }}
+          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
+        >
+          Generate storyboard
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
+        {frames.length} frame{frames.length === 1 ? '' : 's'}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {frames.map((frame) => (
+          <div key={frame.id} className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden">
+            <div className="aspect-video bg-[#050505]">
+              <img
+                src={frame.url}
+                alt={frame.step_id || 'Storyboard frame'}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            {frame.step_id && (
+              <div className="px-2 py-1.5 text-[0.55rem] text-[#666] font-mono truncate">
+                {frame.step_id}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-4">
+        <button
+          onClick={() => {
+            alert(`Generate new frame requested for "${projectTitle}".`)
+          }}
+          className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+        >
+          Generate new frame
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ── Movie Editor ── */
+
+function MovieEditorView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [artifacts, setArtifacts] = useState<{ id: number; kind: string; url: string; step_id: string | null; role: string | null }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data } = await bmovies
+        .from('bct_artifacts')
+        .select('id, kind, url, step_id, role')
+        .eq('offer_id', projectId)
+        .in('kind', ['video', 'image'])
+        .is('superseded_by', null)
+        .order('created_at', { ascending: true })
+      if (!cancelled) {
+        setArtifacts((data as any[]) || [])
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  return (
+    <div className="space-y-6">
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
+        Media assets ({loading ? '...' : artifacts.length})
+      </div>
+
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-12 bg-[#0a0a0a] border border-[#1a1a1a]" />
+          ))}
+        </div>
+      ) : artifacts.length > 0 ? (
+        <div className="border border-[#222] bg-[#0a0a0a] divide-y divide-[#1a1a1a]">
+          {artifacts.map((a) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+              <span className={`text-[0.55rem] font-bold uppercase tracking-wider px-2 py-0.5 ${
+                a.kind === 'video' ? 'bg-[#1a0a3a] text-[#aa66ff]' : 'bg-[#1a1a1a] text-[#888]'
+              }`}>
+                {a.kind}
+              </span>
+              <span className="text-[#888] text-xs font-mono truncate flex-1">
+                {a.step_id || a.role || 'unnamed'}
+              </span>
+              <a
+                href={a.url}
+                target="_blank"
+                rel="noopener"
+                className="text-[0.6rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+              >
+                Open
+              </a>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-[#666] text-sm">No media assets found for this project.</div>
+      )}
+
+      {/* Editor placeholder */}
+      <div className="border border-dashed border-[#222] bg-[#050505] p-8">
+        <div
+          className="text-xl font-black mb-3 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Non-linear <span className="text-[#E50914]">editor</span>
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed mb-4">
+          The timeline-based video editor will live here. Drag and drop clips,
+          add transitions, overlay text, and export your final cut. Currently
+          in development.
+        </p>
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-4">
+          <div className="flex gap-1 mb-2">
+            {['V1', 'V2', 'A1', 'A2'].map((track) => (
+              <div key={track} className="flex items-center gap-2 flex-1">
+                <span className="text-[0.5rem] font-mono text-[#666] w-6">{track}</span>
+                <div className={`h-6 flex-1 ${
+                  track.startsWith('V') ? 'bg-[#1a0a3a]' : 'bg-[#0a1a0a]'
+                } border border-[#222]`} />
+              </div>
+            ))}
+          </div>
+          <div className="h-1 bg-[#E50914] w-0.5 ml-8" />
+        </div>
+        <a
+          href="https://npgx.website"
+          target="_blank"
+          rel="noopener"
+          className="text-[0.6rem] font-bold uppercase tracking-wider text-[#888] hover:text-[#E50914] border-b border-[#333]"
+        >
+          NPGX Movie Editor concept
+        </a>
+      </div>
+    </div>
+  )
+}
+
+/* ── Title Designer ── */
+
+function TitleDesignerView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [titleCards, setTitleCards] = useState<{ id: number; url: string; step_id: string | null }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data } = await bmovies
+        .from('bct_artifacts')
+        .select('id, url, step_id')
+        .eq('offer_id', projectId)
+        .eq('kind', 'image')
+        .like('step_id', 'title%')
+        .is('superseded_by', null)
+        .order('created_at', { ascending: false })
+      if (!cancelled) {
+        setTitleCards((data as any[]) || [])
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  return (
+    <div className="space-y-6">
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
+        Title cards
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3 animate-pulse">
+          <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+          <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+        </div>
+      ) : titleCards.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {titleCards.map((tc) => (
+            <div key={tc.id} className="border border-[#222] bg-[#0a0a0a] overflow-hidden hover:border-[#E50914] transition-colors">
+              <div className="aspect-video bg-[#050505]">
+                <img src={tc.url} alt="Title card" className="w-full h-full object-cover" loading="lazy" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-[#666] text-sm">No title cards generated yet.</div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => {
+            alert(`Design title card requested for "${projectTitle}". This will call the chat agent to generate a title card.`)
+          }}
+          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+        >
+          Design a title card
+        </button>
+      </div>
+
+      {/* 3D title designer placeholder */}
+      <div className="border border-dashed border-[#222] bg-[#050505] p-8">
+        <div
+          className="text-xl font-black mb-3 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          3D Title <span className="text-[#E50914]">Designer</span>
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed">
+          The interactive 3D title designer will let you position, animate,
+          and style your film&apos;s title card in real-time with Three.js.
+          Coming soon.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ── Score Composer ── */
+
+function ScoreComposerView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [audioArtifacts, setAudioArtifacts] = useState<{ id: number; url: string; step_id: string | null; role: string | null }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data } = await bmovies
+        .from('bct_artifacts')
+        .select('id, url, step_id, role')
+        .eq('offer_id', projectId)
+        .eq('kind', 'audio')
+        .is('superseded_by', null)
+        .order('created_at', { ascending: false })
+      if (!cancelled) {
+        setAudioArtifacts((data as any[]) || [])
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  return (
+    <div className="space-y-6">
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
+        Audio / Score
+      </div>
+
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
+          <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
+        </div>
+      ) : audioArtifacts.length > 0 ? (
+        <div className="space-y-3">
+          {audioArtifacts.map((a) => (
+            <div key={a.id} className="border border-[#222] bg-[#0a0a0a] p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-xs text-[#ccc] font-mono">
+                  {a.step_id || a.role || 'Audio track'}
+                </span>
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                >
+                  Download
+                </a>
+              </div>
+              <audio src={a.url} controls className="w-full h-8" preload="none" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-[#666] text-sm">No audio tracks generated yet.</div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => {
+            alert(`Compose theme requested for "${projectTitle}". This will call the chat agent to generate a musical score.`)
+          }}
+          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+        >
+          Compose a theme
+        </button>
+      </div>
+
+      {/* AI composer placeholder */}
+      <div className="border border-dashed border-[#222] bg-[#050505] p-8">
+        <div
+          className="text-xl font-black mb-3 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          AI <span className="text-[#E50914]">Composer</span>
+        </div>
+        <p className="text-[#888] text-sm leading-relaxed">
+          The AI composer will generate original scores, ambient soundscapes,
+          and theme music for your films using neural audio synthesis.
+          Currently in research.
+        </p>
+      </div>
     </div>
   )
 }
