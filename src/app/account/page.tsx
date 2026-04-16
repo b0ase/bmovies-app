@@ -29,7 +29,7 @@
  * renders the content for whatever the URL says.
  */
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { bmovies } from '@/lib/supabase-bmovies'
@@ -2396,94 +2396,158 @@ function ToolView({
 
 /* ── Script Editor ── */
 
+interface TextArtifact { id: number; url: string; step_id: string | null; role: string | null; content?: string }
+
+const SCRIPT_TABS = [
+  { stepPrefix: 'writer.logline',    label: 'Logline' },
+  { stepPrefix: 'writer.synopsis',   label: 'Synopsis' },
+  { stepPrefix: 'writer.treatment',  label: 'Treatment' },
+  { stepPrefix: 'writer.beat_sheet', label: 'Beat Sheet' },
+  { stepPrefix: 'writer.screenplay', label: 'Screenplay' },
+  { stepPrefix: 'director.vision',   label: 'Director\'s Vision' },
+  { stepPrefix: 'casting.cast_list', label: 'Cast' },
+  { stepPrefix: 'dp.shot_plan',      label: 'Cinematography' },
+  { stepPrefix: 'composer.themes',   label: 'Score Brief' },
+]
+
+function decodeDataUrl(url: string): string | null {
+  if (!url.startsWith('data:')) return null
+  const comma = url.indexOf(',')
+  if (comma < 0) return null
+  return decodeURIComponent(url.slice(comma + 1))
+}
+
 function ScriptEditorView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const [synopsis, setSynopsis] = useState('')
+  const [artifacts, setArtifacts] = useState<TextArtifact[]>([])
+  const [activeTab, setActiveTab] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [saved, setSaved] = useState(false)
+  const [offerSynopsis, setOfferSynopsis] = useState('')
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
-      setSaved(false)
-      try {
-        const { data } = await bmovies
+      const [artsRes, offerRes] = await Promise.all([
+        bmovies
           .from('bct_artifacts')
-          .select('url, kind')
+          .select('id, url, step_id, role')
           .eq('offer_id', projectId)
           .eq('kind', 'text')
-          .like('step_id', 'writer%')
           .is('superseded_by', null)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        if (cancelled) return
-        if (data && data.length > 0 && data[0].url) {
+          .order('created_at', { ascending: true }),
+        bmovies
+          .from('bct_offers')
+          .select('synopsis')
+          .eq('id', projectId)
+          .maybeSingle(),
+      ])
+      if (cancelled) return
+      if (offerRes.data?.synopsis) setOfferSynopsis(offerRes.data.synopsis)
+
+      // Decode data URLs inline
+      const raw = (artsRes.data || []) as TextArtifact[]
+      const decoded = raw.map(a => ({
+        ...a,
+        content: a.url.startsWith('data:') ? decodeDataUrl(a.url) || '' : undefined,
+      }))
+      setArtifacts(decoded)
+
+      // Load text from non-data URLs
+      for (let i = 0; i < decoded.length; i++) {
+        if (decoded[i].content === undefined && decoded[i].url) {
           try {
-            const res = await fetch(data[0].url)
-            if (res.ok) {
+            const res = await fetch(decoded[i].url)
+            if (res.ok && !cancelled) {
               const text = await res.text()
-              if (!cancelled) setSynopsis(text)
+              decoded[i] = { ...decoded[i], content: text }
+              setArtifacts([...decoded])
             }
-          } catch {
-            await loadFallbackSynopsis()
-          }
-        } else {
-          await loadFallbackSynopsis()
+          } catch { /* skip */ }
         }
-      } catch {
-        await loadFallbackSynopsis()
-      } finally {
-        if (!cancelled) setLoading(false)
       }
+      if (!cancelled) setLoading(false)
     }
-
-    async function loadFallbackSynopsis() {
-      const { data: offer } = await bmovies
-        .from('bct_offers')
-        .select('synopsis')
-        .eq('id', projectId)
-        .maybeSingle()
-      if (offer?.synopsis) setSynopsis(offer.synopsis)
-    }
-
     load()
     return () => { cancelled = true }
   }, [projectId])
 
+  // Match artifacts to tabs
+  const tabData = SCRIPT_TABS.map(tab => {
+    const match = artifacts.find(a =>
+      a.step_id?.startsWith(tab.stepPrefix) ||
+      (tab.stepPrefix === 'writer.logline' && a.role === 'writer' && !a.step_id)
+    )
+    return { ...tab, artifact: match }
+  }).filter(t => t.artifact?.content || (t.label === 'Synopsis' && offerSynopsis))
+
+  // If no tab data at all, show the offer synopsis
+  if (!loading && tabData.length === 0 && offerSynopsis) {
+    tabData.push({
+      stepPrefix: 'writer.synopsis',
+      label: 'Synopsis',
+      artifact: { id: 0, url: '', step_id: 'writer.synopsis', role: 'writer', content: offerSynopsis },
+    })
+  }
+
+  const currentContent = tabData[activeTab]?.artifact?.content || offerSynopsis || ''
+
   return (
     <div className="space-y-4">
-      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
-        Script / Synopsis
+      {/* Tab row */}
+      <div className="flex gap-0 overflow-x-auto border-b border-[#222]">
+        {loading ? (
+          <div className="h-8 w-48 bg-[#0a0a0a] animate-pulse" />
+        ) : tabData.map((tab, i) => (
+          <button
+            key={tab.stepPrefix}
+            onClick={() => setActiveTab(i)}
+            className="px-3 py-2 text-[0.6rem] font-bold uppercase tracking-wider whitespace-nowrap transition-colors"
+            style={{
+              color: i === activeTab ? '#fff' : '#666',
+              borderBottom: i === activeTab ? '2px solid #E50914' : '2px solid transparent',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Content area */}
       {loading ? (
         <div className="h-64 bg-[#0a0a0a] border border-[#1a1a1a] animate-pulse" />
       ) : (
         <>
-          <textarea
-            value={synopsis}
-            onChange={(e) => { setSynopsis(e.target.value); setSaved(false) }}
-            rows={16}
-            className="w-full bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-4 font-mono resize-y focus:border-[#E50914] focus:outline-none"
-            placeholder="No script content yet. Click 'AI Rewrite' to generate one, or start typing..."
-            style={{ minHeight: '200px' }}
-          />
-          <div className="flex gap-2">
+          <div
+            className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-5 whitespace-pre-wrap"
+            style={{ minHeight: '300px', fontFamily: 'var(--font-mono), monospace' }}
+          >
+            {currentContent || 'No content generated yet for this section.'}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[0.5rem] text-[#555] font-mono">
+              {currentContent.split(/\s+/).filter(Boolean).length} words
+            </span>
             <button
               onClick={() => {
-                setSaved(true)
-                setTimeout(() => setSaved(false), 3000)
+                navigator.clipboard.writeText(currentContent)
               }}
-              className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+              className="ml-auto px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider transition-colors"
             >
-              {saved ? 'Saved' : 'Save'}
+              Copy
             </button>
             <button
               onClick={() => {
-                alert(`AI Rewrite requested for "${projectTitle}". This will call the Grok agent to rewrite the script.`)
+                const blob = new Blob([currentContent], { type: 'text/plain' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${projectTitle} - ${tabData[activeTab]?.label || 'script'}.txt`
+                a.click()
+                URL.revokeObjectURL(url)
               }}
-              className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+              className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider transition-colors"
             >
-              AI Rewrite
+              Download
             </button>
           </div>
         </>
@@ -2627,8 +2691,12 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
 /* ── Movie Editor ── */
 
 function MovieEditorView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const [artifacts, setArtifacts] = useState<{ id: number; kind: string; url: string; step_id: string | null; role: string | null }[]>([])
+  const [clips, setClips] = useState<{ id: number; kind: string; url: string; step_id: string | null; role: string | null }[]>([])
+  const [images, setImages] = useState<{ id: number; url: string; step_id: string | null; role: string | null }[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeClip, setActiveClip] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -2642,7 +2710,9 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
       if (!cancelled) {
-        setArtifacts((data as any[]) || [])
+        const all = (data as any[]) || []
+        setClips(all.filter(a => a.kind === 'video'))
+        setImages(all.filter(a => a.kind === 'image'))
         setLoading(false)
       }
     }
@@ -2650,79 +2720,187 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
     return () => { cancelled = true }
   }, [projectId])
 
+  // Auto-advance to next clip when current one ends
+  function handleClipEnd() {
+    if (activeClip < clips.length - 1) {
+      setActiveClip(prev => prev + 1)
+    } else {
+      setIsPlaying(false)
+    }
+  }
+
+  // Play all clips in sequence
+  function playAll() {
+    setActiveClip(0)
+    setIsPlaying(true)
+    setTimeout(() => videoRef.current?.play(), 100)
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+        <div className="h-20 bg-[#0a0a0a] border border-[#1a1a1a]" />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
-        Media assets ({loading ? '...' : artifacts.length})
+    <div className="space-y-4">
+      {/* Monitor — main video player */}
+      <div className="border border-[#E50914] bg-black">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-[#0a0a0a] border-b border-[#222]">
+          <span className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold">
+            Monitor
+          </span>
+          <span className="text-[0.5rem] text-[#666] font-mono">
+            {clips.length > 0 ? `Clip ${activeClip + 1} of ${clips.length}` : 'No clips'}
+          </span>
+        </div>
+        {clips.length > 0 ? (
+          <video
+            ref={videoRef}
+            key={clips[activeClip]?.url}
+            src={clips[activeClip]?.url}
+            controls
+            autoPlay={isPlaying}
+            onEnded={handleClipEnd}
+            className="w-full aspect-video bg-black"
+            preload="metadata"
+          />
+        ) : (
+          <div className="aspect-video bg-[#050505] flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-[#333] text-4xl mb-2">&#9654;</div>
+              <div className="text-[#555] text-xs">No video clips yet</div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="space-y-2 animate-pulse">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-12 bg-[#0a0a0a] border border-[#1a1a1a]" />
-          ))}
+      {/* Transport controls */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setActiveClip(Math.max(0, activeClip - 1))}
+          disabled={clips.length === 0}
+          className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-sm disabled:opacity-30"
+        >
+          &#9664;&#9664;
+        </button>
+        <button
+          onClick={playAll}
+          disabled={clips.length === 0}
+          className="px-5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider disabled:opacity-30"
+        >
+          &#9654; Play all
+        </button>
+        <button
+          onClick={() => setActiveClip(Math.min(clips.length - 1, activeClip + 1))}
+          disabled={clips.length === 0}
+          className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-sm disabled:opacity-30"
+        >
+          &#9654;&#9654;
+        </button>
+        <span className="ml-auto text-[0.55rem] text-[#666] font-mono">
+          {clips.length} clips &middot; {images.length} stills
+        </span>
+      </div>
+
+      {/* Timeline */}
+      <div className="border border-[#222] bg-[#050505]">
+        <div className="px-3 py-1.5 border-b border-[#1a1a1a] flex items-center justify-between">
+          <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">Timeline</span>
         </div>
-      ) : artifacts.length > 0 ? (
-        <div className="border border-[#222] bg-[#0a0a0a] divide-y divide-[#1a1a1a]">
-          {artifacts.map((a) => (
-            <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-              <span className={`text-[0.55rem] font-bold uppercase tracking-wider px-2 py-0.5 ${
-                a.kind === 'video' ? 'bg-[#1a0a3a] text-[#aa66ff]' : 'bg-[#1a1a1a] text-[#888]'
-              }`}>
-                {a.kind}
-              </span>
-              <span className="text-[#888] text-xs font-mono truncate flex-1">
-                {a.step_id || a.role || 'unnamed'}
-              </span>
-              <a
-                href={a.url}
-                target="_blank"
-                rel="noopener"
-                className="text-[0.6rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
-              >
-                Open
-              </a>
+        {/* Video track */}
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-[0.45rem] font-mono text-[#555] w-5 shrink-0">V1</span>
+            <div className="flex gap-0.5 flex-1 overflow-x-auto">
+              {clips.length > 0 ? clips.map((clip, i) => (
+                <button
+                  key={clip.id}
+                  onClick={() => { setActiveClip(i); videoRef.current?.play() }}
+                  className="h-10 min-w-[60px] flex-1 flex items-center justify-center text-[0.45rem] font-mono transition-colors"
+                  style={{
+                    background: i === activeClip ? '#E50914' : '#1a0a3a',
+                    border: `1px solid ${i === activeClip ? '#E50914' : '#2a1a4a'}`,
+                    color: i === activeClip ? '#fff' : '#aa66ff',
+                  }}
+                >
+                  {clip.step_id?.replace('scene.', 'S').replace('.video', '') || clip.role || `C${i + 1}`}
+                </button>
+              )) : (
+                <div className="h-10 flex-1 bg-[#0a0a0a] border border-[#1a1a1a] border-dashed flex items-center justify-center text-[0.5rem] text-[#333]">
+                  Empty track
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Image / stills track */}
+          <div className="flex items-center gap-1">
+            <span className="text-[0.45rem] font-mono text-[#555] w-5 shrink-0">V2</span>
+            <div className="flex gap-0.5 flex-1 overflow-x-auto">
+              {images.length > 0 ? images.map((img) => (
+                <div
+                  key={img.id}
+                  className="h-10 min-w-[40px] flex-1 bg-[#0a1a0a] border border-[#1a2a1a] overflow-hidden"
+                >
+                  <img src={img.url} alt="" className="w-full h-full object-cover opacity-60" loading="lazy" />
+                </div>
+              )) : (
+                <div className="h-10 flex-1 bg-[#0a0a0a] border border-[#1a1a1a] border-dashed flex items-center justify-center text-[0.5rem] text-[#333]">
+                  Empty track
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Audio tracks */}
+          {['A1', 'A2'].map(track => (
+            <div key={track} className="flex items-center gap-1 mt-1">
+              <span className="text-[0.45rem] font-mono text-[#555] w-5 shrink-0">{track}</span>
+              <div className="h-6 flex-1 bg-[#0a0a0a] border border-[#1a1a1a] border-dashed flex items-center justify-center text-[0.5rem] text-[#333]">
+                {track === 'A1' ? 'Score' : 'SFX'}
+              </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div className="text-[#666] text-sm">No media assets found for this project.</div>
-      )}
-
-      <div className="border border-dashed border-[#222] bg-[#050505] p-8">
-        <div
-          className="text-xl font-black mb-3 leading-none"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          Non-linear <span className="text-[#E50914]">editor</span>
-        </div>
-        <p className="text-[#888] text-sm leading-relaxed mb-4">
-          The timeline-based video editor will live here. Drag and drop clips,
-          add transitions, overlay text, and export your final cut. Currently
-          in development.
-        </p>
-        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-4">
-          <div className="flex gap-1 mb-2">
-            {['V1', 'V2', 'A1', 'A2'].map((track) => (
-              <div key={track} className="flex items-center gap-2 flex-1">
-                <span className="text-[0.5rem] font-mono text-[#666] w-6">{track}</span>
-                <div className={`h-6 flex-1 ${
-                  track.startsWith('V') ? 'bg-[#1a0a3a]' : 'bg-[#0a1a0a]'
-                } border border-[#222]`} />
-              </div>
-            ))}
-          </div>
-          <div className="h-1 bg-[#E50914] w-0.5 ml-8" />
-        </div>
-        <a
-          href="https://npgx.website"
-          target="_blank"
-          rel="noopener"
-          className="text-[0.6rem] font-bold uppercase tracking-wider text-[#888] hover:text-[#E50914] border-b border-[#333]"
-        >
-          NPGX Movie Editor concept
-        </a>
       </div>
+
+      {/* Clip bin */}
+      <details open={clips.length > 0}>
+        <summary className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold cursor-pointer mb-2">
+          Clip bin ({clips.length + images.length} assets)
+        </summary>
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          {clips.map((clip, i) => (
+            <button
+              key={clip.id}
+              onClick={() => setActiveClip(i)}
+              className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden text-left"
+            >
+              <div className="aspect-video bg-[#050505] flex items-center justify-center text-[#aa66ff] text-lg">
+                &#9654;
+              </div>
+              <div className="px-1.5 py-1 text-[0.45rem] text-[#888] font-mono truncate">
+                {clip.step_id || clip.role || `clip-${i + 1}`}
+              </div>
+            </button>
+          ))}
+          {images.map((img) => (
+            <div
+              key={img.id}
+              className="border border-[#222] bg-[#0a0a0a] overflow-hidden"
+            >
+              <div className="aspect-video bg-[#050505]">
+                <img src={img.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+              </div>
+              <div className="px-1.5 py-1 text-[0.45rem] text-[#888] font-mono truncate">
+                {img.step_id || img.role || 'still'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   )
 }
@@ -2811,21 +2989,44 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
 
 function ScoreComposerView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [audioArtifacts, setAudioArtifacts] = useState<{ id: number; url: string; step_id: string | null; role: string | null }[]>([])
+  const [scoreBrief, setScoreBrief] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const { data } = await bmovies
-        .from('bct_artifacts')
-        .select('id, url, step_id, role')
-        .eq('offer_id', projectId)
-        .eq('kind', 'audio')
-        .is('superseded_by', null)
-        .order('created_at', { ascending: false })
+      const [audioRes, textRes] = await Promise.all([
+        bmovies
+          .from('bct_artifacts')
+          .select('id, url, step_id, role')
+          .eq('offer_id', projectId)
+          .eq('kind', 'audio')
+          .is('superseded_by', null)
+          .order('created_at', { ascending: false }),
+        bmovies
+          .from('bct_artifacts')
+          .select('url')
+          .eq('offer_id', projectId)
+          .eq('kind', 'text')
+          .like('step_id', 'composer%')
+          .is('superseded_by', null)
+          .limit(1),
+      ])
       if (!cancelled) {
-        setAudioArtifacts((data as any[]) || [])
+        setAudioArtifacts((audioRes.data as any[]) || [])
+        const briefUrl = (textRes.data as any[])?.[0]?.url
+        if (briefUrl) {
+          const decoded = briefUrl.startsWith('data:') ? decodeDataUrl(briefUrl) : null
+          if (decoded) {
+            setScoreBrief(decoded)
+          } else {
+            try {
+              const r = await fetch(briefUrl)
+              if (r.ok) setScoreBrief(await r.text())
+            } catch { /* skip */ }
+          }
+        }
         setLoading(false)
       }
     }
@@ -2869,29 +3070,27 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
         <div className="text-[#666] text-sm">No audio tracks generated yet.</div>
       )}
 
+      {/* Score brief — the composer agent's written output */}
+      {scoreBrief && (
+        <div className="border border-[#222] bg-[#0a0a0a] p-5">
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-3">
+            Score brief — themes, motifs, cue list
+          </div>
+          <div className="text-[#ccc] text-sm leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'var(--font-mono), monospace' }}>
+            {scoreBrief}
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           onClick={() => {
-            alert(`Compose theme requested for "${projectTitle}". This will call the chat agent to generate a musical score.`)
+            alert(`Compose theme requested for "${projectTitle}". Use the bMovies agent chat (bottom-right) to generate audio.`)
           }}
           className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
         >
           Compose a theme
         </button>
-      </div>
-
-      <div className="border border-dashed border-[#222] bg-[#050505] p-8">
-        <div
-          className="text-xl font-black mb-3 leading-none"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          AI <span className="text-[#E50914]">Composer</span>
-        </div>
-        <p className="text-[#888] text-sm leading-relaxed">
-          The AI composer will generate original scores, ambient soundscapes,
-          and theme music for your films using neural audio synthesis.
-          Currently in research.
-        </p>
       </div>
     </div>
   )
