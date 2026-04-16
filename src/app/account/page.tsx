@@ -31,7 +31,7 @@
  * Supabase `.or()` clause when a BRC-100 address is available.
  */
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { bmovies } from '@/lib/supabase-bmovies'
@@ -44,6 +44,7 @@ type Tab =
   | 'cap-tables'
   | 'investor-packs'
   | 'wallet'
+  | 'chat'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'my-films',        label: 'My Films' },
@@ -52,6 +53,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'cap-tables',      label: 'Cap Tables' },
   { id: 'investor-packs',  label: 'Investor Packs' },
   { id: 'wallet',          label: 'Wallet' },
+  { id: 'chat',            label: 'Agent' },
 ]
 
 /** USD price per tier — the four commission tiers on /commission.html */
@@ -432,6 +434,7 @@ function AccountContent() {
         {activeTab === 'cap-tables' && <CapTablesTab films={films} />}
         {activeTab === 'investor-packs' && <InvestorPacksTab films={films} />}
         {activeTab === 'wallet' && <WalletTab user={user} accountId={accountId} films={films} />}
+        {activeTab === 'chat' && <ChatTab user={user} accountId={accountId} />}
       </div>
     </div>
   )
@@ -506,7 +509,7 @@ function SkeletonDashboard() {
 
       {/* Tabs skeleton */}
       <div className="mb-8 flex gap-4 border-b border-[#1a1a1a] pb-3">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="h-3 w-20 bg-[#1a1a1a]" />
         ))}
       </div>
@@ -1283,6 +1286,36 @@ function AgentsTab({ user, accountId }: { user: User | null; accountId: string |
         </div>
       )}
 
+      {/* Creative tools available to your agents */}
+      <div className="mt-8 border-t border-[#1a1a1a] pt-6 mb-8">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-3">
+          Creative tools
+        </div>
+        <p className="text-[#888] text-xs leading-relaxed mb-4 max-w-xl">
+          Your agents have access to a suite of AI-powered creative tools,
+          each with an API, an MCP server, and a CLI interface. These tools
+          are being integrated into the autonomous pipeline.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { name: 'Movie Editor', desc: 'Non-linear AI editor', status: 'API + MCP' },
+            { name: 'Titles Designer', desc: 'Cinematic title sequences', status: 'API + MCP' },
+            { name: 'Storyboard Gen', desc: 'Frame-by-frame planning', status: 'API + CLI' },
+            { name: 'Script Writer', desc: 'AI screenplay assistant', status: 'API' },
+            { name: 'Score Composer', desc: 'AI film scoring', status: 'API + MCP' },
+            { name: 'Poster Designer', desc: 'Theatrical one-sheets', status: 'Live' },
+          ].map(tool => (
+            <div key={tool.name} className="border border-[#222] bg-[#0a0a0a] p-4">
+              <div className="text-white text-sm font-black mb-1">{tool.name}</div>
+              <div className="text-[#888] text-xs mb-2">{tool.desc}</div>
+              <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#666]">
+                {tool.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Public roster */}
       <div className="mb-4">
         <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
@@ -1322,6 +1355,170 @@ function AgentsTab({ user, accountId }: { user: User | null; accountId: string |
             Each with 8 specialists + shared pool.
           </div>
         </a>
+      </div>
+    </div>
+  )
+}
+
+/* ───────── Chat tab (Grand Orchestrator) ───────── */
+
+function ChatTab({ user, accountId }: { user: User; accountId: string | null }) {
+  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function sendMessage() {
+    if (!input.trim() || loading) return
+    const userMsg = input.trim()
+    setInput('')
+    setMessages((prev) => [...prev, { role: 'user', content: userMsg }])
+    setLoading(true)
+
+    try {
+      const session = await bmovies.auth.getSession()
+      const token = session.data.session?.access_token
+      const res = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message: userMsg, conversationId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Chat failed')
+      setConversationId(data.conversationId)
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.message.content }])
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `Sorry, I hit an error: ${err instanceof Error ? err.message : 'unknown'}. Try again?`,
+        },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="max-w-3xl">
+      {/* Header */}
+      <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-5 mb-4">
+        <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">
+          Grand orchestrator
+        </div>
+        <h3
+          className="text-2xl font-black"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          bMovies Agent
+        </h3>
+        <p className="text-[#bbb] text-xs leading-relaxed mt-1">
+          I know your studio, your films, your agents. Ask me anything about
+          the platform, brainstorm film concepts, or let me help you build
+          your next production.
+        </p>
+      </div>
+
+      {/* Messages */}
+      <div className="border border-[#222] bg-[#0a0a0a] min-h-[400px] max-h-[600px] overflow-y-auto p-4 space-y-4 mb-3">
+        {messages.length === 0 && (
+          <div className="text-center py-12">
+            <div
+              className="text-[#333] text-5xl mb-3"
+              style={{ fontFamily: 'var(--font-bebas)' }}
+            >
+              bM
+            </div>
+            <div className="text-[#666] text-sm">
+              Ask me anything. I&apos;m your creative partner on bMovies.
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center mt-4">
+              {[
+                'Help me name my studio',
+                'Brainstorm a sci-fi film',
+                'How does the bonding curve work?',
+                'What can my agents do?',
+              ].map((q) => (
+                <button
+                  key={q}
+                  onClick={() => {
+                    setInput(q)
+                  }}
+                  className="text-xs px-3 py-1.5 border border-[#333] text-[#888] hover:border-[#E50914] hover:text-white transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-[#E50914] text-white'
+                  : 'bg-[#1a1a1a] text-[#ccc] border border-[#222]'
+              }`}
+            >
+              {msg.content.split('\n').map((line, j) => (
+                <p key={j} className={j > 0 ? 'mt-2' : ''}>
+                  {line}
+                </p>
+              ))}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-[#1a1a1a] border border-[#222] px-4 py-3 text-sm text-[#666]">
+              <span className="animate-pulse">Thinking...</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              sendMessage()
+            }
+          }}
+          placeholder="Talk to the bMovies agent..."
+          className="flex-1 bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-4 py-3 text-white text-sm outline-none placeholder:text-[#555]"
+          disabled={loading}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={loading || !input.trim()}
+          className={`px-5 py-3 text-xs font-black uppercase tracking-wider ${
+            loading || !input.trim()
+              ? 'bg-[#333] text-[#666]'
+              : 'bg-[#E50914] hover:bg-[#b00610] text-white'
+          }`}
+        >
+          Send
+        </button>
       </div>
     </div>
   )
