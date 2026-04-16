@@ -306,6 +306,7 @@ function updateNav() {
 
   if (isSessionValid()) {
     link.textContent = 'Account';
+    link.href = '/account';
     link.classList.add('signed-in');
     // Add Sign Out button if not already there
     if (nav && !signOutBtn) {
@@ -333,6 +334,7 @@ function updateNav() {
     }
   } else {
     link.textContent = 'Sign In';
+    link.href = '/login';
     link.classList.remove('signed-in');
     if (signOutBtn) signOutBtn.remove();
   }
