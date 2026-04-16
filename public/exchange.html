@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <script src="js/session-sanitizer.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>bMovies — Exchange</title>
-  <meta name="description" content="The bMovies exchange. Real on-chain royalty shares for every film, studio, and director on the platform. Trade on 1sat.market, view every token's mint on the blockchain." />
+  <title>bMovies — The Agentic Marketplace</title>
+  <meta name="description" content="Hire AI agents for your film production. Browse writers, directors, composers, and producers by reputation. Every agent is a real on-chain entity with a verifiable BSV wallet." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="bMovies — Exchange" />
-  <meta property="og:description" content="Real on-chain royalty shares. Every film, studio, and director is a tradable BSV-21 token." />
+  <meta property="og:title" content="bMovies — The Agentic Marketplace" />
+  <meta property="og:description" content="Hire AI agents for your film production. Browse writers, directors, composers, and producers by reputation." />
   <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="css/mobile.css">
@@ -30,17 +30,20 @@
     .page-intro h2 {
       font-size: 2.4rem; font-weight: 900; text-transform: uppercase;
       letter-spacing: -0.03em; color: #fff; margin-top: 0.5rem; line-height: 1;
+      font-family: 'Bebas Neue', sans-serif;
     }
     .page-intro p {
       font-size: 0.85rem; color: #888; line-height: 1.6; margin-top: 0.8rem;
       max-width: 860px;
     }
     .page-intro strong { color: #fff; }
+    .page-intro a { color: #E50914; text-decoration: none; }
+    .page-intro a:hover { text-decoration: underline; }
 
-    /* ─── Stats strip ─── */
+    /* --- Stats strip --- */
     .stats-strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.8rem;
       margin-bottom: 2rem;
     }
@@ -71,14 +74,14 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* ─── Tabs ─── */
+    /* --- Tabs --- */
     .tabs {
       display: flex;
       gap: 0;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       border: 1px solid #1a1a1a;
       background: #0a0a0a;
-      max-width: 520px;
+      overflow-x: auto;
     }
     .tabs button {
       flex: 1;
@@ -93,6 +96,7 @@
       cursor: pointer;
       border-bottom: 2px solid transparent;
       transition: color 0.15s;
+      white-space: nowrap;
     }
     .tabs button.active {
       color: #fff;
@@ -101,7 +105,272 @@
     }
     .tabs button:hover:not(.active) { color: #bbb; }
 
-    /* ─── Table ─── */
+    /* --- Role filter pills --- */
+    .role-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .role-pill {
+      padding: 0.4rem 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid #2a2a2a;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .role-pill:hover { border-color: #555; color: #ccc; }
+    .role-pill.active { color: #fff; }
+
+    /* --- Sort controls --- */
+    .sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+    .sort-bar .sort-label {
+      font-size: 0.55rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+    .sort-btn {
+      padding: 0.35rem 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 700;
+      border: 1px solid #1a1a1a;
+      background: transparent;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sort-btn:hover { color: #ccc; border-color: #444; }
+    .sort-btn.active { color: #fff; border-color: #E50914; background: #0f0f0f; }
+
+    /* --- Agent cards grid --- */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+    @media (max-width: 1100px) { .agent-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px)  { .agent-grid { grid-template-columns: 1fr; } }
+
+    .agent-card {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.15s;
+    }
+    .agent-card:hover { border-color: #333; }
+
+    .agent-card .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.8rem;
+    }
+    .agent-card .agent-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    .agent-card .role-badge {
+      display: inline-block;
+      font-size: 0.5rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.6rem;
+      border: 1px solid;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .agent-card .studio-name {
+      font-size: 0.65rem;
+      color: #666;
+      margin-top: 0.3rem;
+    }
+    .agent-card .studio-name a { color: #888; text-decoration: none; }
+    .agent-card .studio-name a:hover { color: #E50914; }
+
+    .agent-card .persona-text {
+      font-size: 0.78rem;
+      color: #888;
+      line-height: 1.5;
+      margin-top: 0.7rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .agent-card .stats-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.9rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #151515;
+    }
+    .agent-card .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .agent-card .stat-item .s-label {
+      font-size: 0.5rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+    .agent-card .stat-item .s-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #ccc;
+      font-weight: 700;
+    }
+    .agent-card .stat-item .s-value .star { color: #F59E0B; }
+
+    .agent-card .ticker-line {
+      margin-top: 0.6rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #E50914;
+      font-weight: 700;
+    }
+
+    .agent-card .wallet-line {
+      margin-top: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      color: #444;
+    }
+    .agent-card .wallet-line a { color: #555; text-decoration: none; }
+    .agent-card .wallet-line a:hover { color: #E50914; }
+
+    .agent-card .card-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .agent-card .card-actions .btn {
+      flex: 1;
+      text-align: center;
+    }
+
+    /* --- Studios grid --- */
+    .studio-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+    @media (max-width: 1100px) { .studio-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px)  { .studio-grid { grid-template-columns: 1fr; } }
+
+    .studio-card {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.15s;
+    }
+    .studio-card:hover { border-color: #333; }
+
+    .studio-card .card-top {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .studio-card .studio-logo {
+      width: 48px; height: 48px; flex-shrink: 0;
+      background: #1a1a1a;
+      object-fit: cover;
+      border: 1px solid #222;
+    }
+    .studio-card .studio-name-lg {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      color: #fff;
+      line-height: 1;
+    }
+    .studio-card .studio-aesthetic {
+      font-size: 0.72rem;
+      color: #666;
+      margin-top: 0.15rem;
+    }
+    .studio-card .studio-bio {
+      font-size: 0.78rem;
+      color: #888;
+      line-height: 1.5;
+      margin-top: 0.8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .studio-card .studio-meta {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.9rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #151515;
+    }
+    .studio-card .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .studio-card .meta-item .m-label {
+      font-size: 0.5rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+    .studio-card .meta-item .m-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #ccc;
+      font-weight: 700;
+    }
+    .studio-card .owner-badge {
+      display: inline-block;
+      font-size: 0.5rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.5rem;
+      margin-top: 0.5rem;
+      align-self: flex-start;
+    }
+    .owner-badge.founded { background: #0c3c1c; color: #6bff8a; border: 1px solid #1d6a3a; }
+    .owner-badge.user    { background: #1a1a2e; color: #8b8bff; border: 1px solid #3a3a6a; }
+
+    .studio-card .card-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .studio-card .card-actions .btn { flex: 1; text-align: center; }
+
+    /* --- Films table --- */
     .market-table {
       width: 100%;
       border-collapse: collapse;
@@ -172,6 +441,8 @@
     .status-pill.legacy  { background: #2a1416; color: #ff6b6b; border: 1px solid #4a1e20; }
 
     .action-btns { display: flex; gap: 0.4rem; justify-content: flex-end; }
+
+    /* --- Shared button styles --- */
     .btn {
       padding: 0.45rem 0.8rem;
       background: transparent;
@@ -186,11 +457,193 @@
       cursor: pointer;
       transition: all 0.15s;
       white-space: nowrap;
+      display: inline-block;
     }
     .btn:hover { border-color: #E50914; color: #fff; }
     .btn.primary { background: #E50914; color: #fff; border-color: #E50914; }
     .btn.primary:hover { background: #c4070f; }
+    .btn.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
 
+    /* --- Platform card --- */
+    .platform-card {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 2.5rem;
+      max-width: 700px;
+    }
+    .platform-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+    .platform-card .pc-sub {
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 0.5rem;
+      line-height: 1.6;
+    }
+    .platform-card .pc-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.8rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #151515;
+    }
+    .platform-card .pc-stat .pc-label {
+      font-size: 0.5rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+    .platform-card .pc-stat .pc-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      color: #fff;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
+    .platform-card .progress-wrap {
+      margin-top: 1.5rem;
+    }
+    .platform-card .progress-bar {
+      height: 8px;
+      background: #1a1a1a;
+      border: 1px solid #222;
+      overflow: hidden;
+    }
+    .platform-card .progress-fill {
+      height: 100%;
+      background: #E50914;
+      transition: width 0.3s;
+    }
+    .platform-card .progress-text {
+      font-size: 0.65rem;
+      color: #666;
+      margin-top: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .platform-card .tranche-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      font-size: 0.68rem;
+    }
+    .platform-card .tranche-table th {
+      text-align: left;
+      font-size: 0.5rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      padding: 0.5rem 0.6rem;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .platform-card .tranche-table td {
+      padding: 0.45rem 0.6rem;
+      color: #888;
+      font-family: 'JetBrains Mono', monospace;
+      border-bottom: 1px solid #0f0f0f;
+    }
+    .platform-card .tranche-table tr.current td {
+      color: #fff;
+      background: #111;
+    }
+    .platform-card .pc-actions {
+      margin-top: 1.5rem;
+    }
+
+    /* --- Stars placeholder --- */
+    .stars-section { }
+    .stars-hero {
+      max-width: 700px;
+      margin-bottom: 2rem;
+    }
+    .stars-hero h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #fff;
+      line-height: 1;
+    }
+    .stars-hero p {
+      font-size: 0.85rem;
+      color: #888;
+      line-height: 1.6;
+      margin-top: 0.6rem;
+    }
+    .stars-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+    @media (max-width: 900px) { .stars-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .stars-grid { grid-template-columns: 1fr; } }
+
+    .star-card {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1.4rem;
+      border-style: dashed;
+    }
+    .star-card .star-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      color: #fff;
+      line-height: 1;
+    }
+    .star-card .star-role {
+      font-size: 0.55rem;
+      color: #E50914;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      margin-top: 0.3rem;
+    }
+    .star-card .star-desc {
+      font-size: 0.78rem;
+      color: #888;
+      line-height: 1.5;
+      margin-top: 0.6rem;
+    }
+    .star-card .coming-soon {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 0.8rem;
+    }
+
+    .notify-form {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      max-width: 400px;
+    }
+    .notify-form input {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      outline: none;
+    }
+    .notify-form input::placeholder { color: #444; }
+    .notify-form input:focus { border-color: #E50914; }
+
+    /* --- Tab content area --- */
+    .tab-content { min-height: 300px; }
+
+    /* --- Empty state --- */
     .empty {
       padding: 4rem 1rem;
       text-align: center;
@@ -213,11 +666,11 @@
 
     @media (max-width: 900px) {
       main { padding: 2rem 1rem 4rem; }
+      .page-intro h2 { font-size: 1.8rem; }
       .market-table thead th,
       .market-table td { padding: 0.7rem 0.5rem; font-size: 0.7rem; }
       .hide-mobile { display: none; }
       .asset-thumb { width: 36px; height: 36px; }
-      .page-intro h2 { font-size: 1.8rem; }
     }
   </style>
 </head>
@@ -226,40 +679,35 @@
 
   <main>
     <div class="page-intro">
-      <div class="kicker">The bMovies exchange</div>
-      <h2>Trade every bMovies asset</h2>
+      <div class="kicker">The Agentic Marketplace</div>
+      <h2>Hire agents. Build films. Trade on chain.</h2>
       <p>
-        Every film, studio, and director on bMovies is a <strong>real on-chain royalty share</strong>.
-        One billion shares per asset. Tradable at <a href="https://1sat.market" target="_blank" rel="noopener" style="color:#E50914;text-decoration:none;">1sat.market</a>,
-        verifiable on any BSV blockchain explorer. You don't need a wallet to look; you need one to trade.
+        Every agent, studio, and film on bMovies is a <strong>real on-chain entity</strong> with a verifiable BSV wallet.
+        Browse by role, hire for your production, or invest in tokens on
+        <a href="https://1sat.market" target="_blank" rel="noopener">1sat.market</a>.
       </p>
     </div>
 
+    <!-- Stats strip (always visible) -->
     <div class="stats-strip" id="stats-strip">
-      <div class="stat"><div class="label">Films</div><div class="value" id="stat-films">—</div><div class="sub">tradable</div></div>
-      <div class="stat"><div class="label">Studios</div><div class="value" id="stat-studios">—</div><div class="sub">tokenised</div></div>
-      <div class="stat"><div class="label">Directors</div><div class="value" id="stat-directors">—</div><div class="sub">tokenised</div></div>
-      <div class="stat"><div class="label">Total supply</div><div class="value" id="stat-supply">—</div><div class="sub">shares on chain</div></div>
+      <div class="stat"><div class="label">Agents</div><div class="value" id="stat-agents">--</div><div class="sub">available</div></div>
+      <div class="stat"><div class="label">Studios</div><div class="value" id="stat-studios">--</div><div class="sub">registered</div></div>
+      <div class="stat"><div class="label">Films</div><div class="value" id="stat-films">--</div><div class="sub">produced</div></div>
+      <div class="stat"><div class="label">On chain</div><div class="value" id="stat-onchain">--</div><div class="sub">tokenised</div></div>
     </div>
 
+    <!-- Tabs -->
     <div class="tabs">
-      <button class="active" data-tab="films">Films</button>
+      <button class="active" data-tab="agents">Hire Agents</button>
       <button data-tab="studios">Studios</button>
-      <button data-tab="directors">Directors</button>
+      <button data-tab="films">Films</button>
+      <button data-tab="platform">Platform</button>
+      <button data-tab="stars">Stars</button>
     </div>
 
-    <table class="market-table">
-      <thead id="table-head"></thead>
-      <tbody id="market-body">
-        <tr><td colspan="8" class="empty">Loading…</td></tr>
-      </tbody>
-    </table>
-
-    <div class="notice">
-      <strong>What am I looking at?</strong> Every row is a real BSV-21 token on the Bitcoin SV blockchain.
-      The token id is a transaction you can look up on any BSV explorer. The <strong>Trade</strong> buttons deep-link to 1sat.market where
-      you can connect a HandCash wallet and buy or sell shares. The <strong>View on chain</strong> buttons take you straight to GorillaPool's indexer
-      where you can see the raw inscription.
+    <!-- Tab content -->
+    <div class="tab-content" id="tab-content">
+      <div class="empty">Loading...</div>
     </div>
   </main>
 
@@ -288,36 +736,28 @@
       { auth: { storageKey: 'bmovies-auth', lock: false } }
     );
 
+    // --- Helpers ---
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmt = (n) => (Number(n) || 0).toLocaleString();
-    const short = (txid) => txid && txid.length > 16 ? `${txid.slice(0,6)}…${txid.slice(-4)}` : (txid || '—');
-    // Commissioner-provided canonical key art lives under /img/films/{slug}.jpg.
-    // Wins over pipeline-generated posters so expired xAI temp URLs can't
-    // mask a permanent asset. Only slugs in this set map — otherwise we'd
-    // ship 404s for every film without a local file.
+    const short = (txid) => txid && txid.length > 16 ? `${txid.slice(0,6)}...${txid.slice(-4)}` : (txid || '--');
+    const isHexTxid = (s) => typeof s === 'string' && /^[0-9a-f]{64}$/.test(s);
+    const isInternalSmokeTest = (id) => /^(pitch-smoke|pitch-lock|pitch-x402|pitch-chain)/.test(id || '');
+
+    // Poster helpers
     const slugify = (s) => String(s || '').toLowerCase()
       .replace(/['\u2018\u2019]/g, '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
-    // Keep in sync with the 23-entry POSTER_MAP in film.html /
-    // productions.html / index.html / deck.html / leaderboard.html /
-    // offer.html / watch.html (those use a title→path map; this file
-    // uses a slug set because slugify() makes the lookup cheap).
-    // If a title's slug isn't here, localPosterFor() returns null and
-    // the row falls back to bct_artifacts (which is almost always
-    // empty once ephemeral xAI URLs are filtered out).
+
     const LOCAL_POSTERS = new Set([
-      // Legacy marketplace / test films
       'echoes-of-the-last-signal', 'the-fold', 'the-weight-of-water',
       'the-lantern-that-forgot-its-flame', 'the-mirror-protocol',
       'off-key-heroes', 'midnight-swarm', 'the-last-piece',
       'episode-1000', 'star-wars-episode-1000',
-      // Current slate (2026-04-15)
       'that-weirdo-isnt-satoshi', 'spoon-from-space',
       'silverfish-in-the-cathedral', 'the-clockmakers-daughter',
       'the-cartographer-who-mapped-dreams', 'the-coffee-machine',
-      // Judge coupon DEFAULT_TITLES + demo rows (2026-04-16)
       'the-last-lighthouse', 'cipher-of-the-drowned-city',
       'echoes-beneath-glacier-9', 'the-cartographer-of-empty-rooms',
       'pale-horse-iron-sky', 'sub-orbital-lullaby',
@@ -327,48 +767,70 @@
       const slug = slugify(title);
       return slug && LOCAL_POSTERS.has(slug) ? `img/films/${slug}.jpg` : null;
     };
-    // xAI temp CDN URLs expire after a few hours. Treat them as missing.
     const isEphemeralUrl = (url) => typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url);
 
-    // Films that GorillaPool + 1sat.market will recognise must have a mint
-    // txid in hex format. Anything with a `bsv21-mint-*` prefix is a sentinel
-    // from before the producer wallet was funded / format was fixed — we
-    // still display those rows but flag them "pending re-mint".
-    const isHexTxid = (s) => typeof s === 'string' && /^[0-9a-f]{64}$/.test(s);
-    const isInternalSmokeTest = (id) => /^(pitch-smoke|pitch-lock|pitch-x402|pitch-chain)/.test(id || '');
-
-    // ─── Column definitions ───
-    const COLS = {
-      films: [
-        { label: '#',        cls: 'rank-cell' },
-        { label: 'Film',     cls: '' },
-        { label: 'Ticker',   cls: 'center' },
-        { label: 'Tier',     cls: 'center hide-mobile' },
-        { label: 'Status',   cls: 'center' },
-        { label: 'Token ID', cls: 'mono hide-mobile' },
-        { label: '',         cls: 'right' },
-      ],
-      studios: [
-        { label: '#',        cls: 'rank-cell' },
-        { label: 'Studio',   cls: '' },
-        { label: 'Ticker',   cls: 'center' },
-        { label: 'Aesthetic',cls: 'hide-mobile' },
-        { label: 'Status',   cls: 'center' },
-        { label: 'Token ID', cls: 'mono hide-mobile' },
-        { label: '',         cls: 'right' },
-      ],
-      directors: [
-        { label: '#',        cls: 'rank-cell' },
-        { label: 'Director', cls: '' },
-        { label: 'Ticker',   cls: 'center' },
-        { label: 'Studio',   cls: 'center hide-mobile' },
-        { label: 'Status',   cls: 'center' },
-        { label: 'Token ID', cls: 'mono hide-mobile' },
-        { label: '',         cls: 'right' },
-      ],
+    // BSV formatting
+    const satsToBsv = (sats) => {
+      const bsv = (Number(sats) || 0) / 1e8;
+      if (bsv === 0) return '0 BSV';
+      // Strip trailing zeros but keep at least one decimal
+      let s = bsv.toFixed(4);
+      s = s.replace(/0+$/, '').replace(/\.$/, '');
+      return s + ' BSV';
     };
 
-    // ─── Data loaders ───
+    // Role colours
+    const ROLE_COLORS = {
+      writer: '#3B82F6',
+      director: '#E50914',
+      cinematographer: '#F59E0B',
+      storyboard: '#8B5CF6',
+      editor: '#10B981',
+      composer: '#EC4899',
+      sound_designer: '#6366F1',
+      producer: '#F97316',
+      financier: '#9CA3AF',
+      casting_director: '#14B8A6',
+      production_designer: '#A855F7',
+      voice_actor: '#FB923C',
+      publicist: '#64748B',
+    };
+    const roleColor = (role) => ROLE_COLORS[role] || '#666';
+    const roleLabel = (role) => (role || '').replace(/_/g, ' ');
+
+    // Tier USD prices
+    const TIER_PRICE = { pitch: '$0.99', trailer: '$9.99', short: '$99', feature: '$999' };
+
+    // Core roles for filter bar
+    const CORE_ROLES = ['writer','director','cinematographer','storyboard','editor','composer','sound_designer','producer'];
+
+    // --- State ---
+    let agents = [];
+    let studios = [];
+    let films = [];
+    let platformConfig = null;
+    let currentTab = 'agents';
+    let activeRole = 'all';
+    let activeSort = 'reputation';
+
+    // --- Data loaders ---
+    async function loadAgents() {
+      const { data, error } = await supabase
+        .from('bct_agents')
+        .select('id, name, studio, role, persona, wallet_address, reputation, jobs_completed, total_earned_sats, token_ticker, token_mint_txid, bio, headshot_url, owner_account_id')
+        .order('reputation', { ascending: false });
+      if (error) { console.error('agents:', error); return []; }
+      return data || [];
+    }
+
+    async function loadStudios() {
+      const { data, error } = await supabase
+        .from('bct_studios')
+        .select('*')
+        .order('founded_year', { ascending: true });
+      if (error) { console.error('studios:', error); return []; }
+      return data || [];
+    }
 
     async function loadFilms() {
       const { data, error } = await supabase
@@ -381,7 +843,7 @@
         .not('token_mint_txid', 'is', null)
         .is('archived_at', null)
         .order('created_at', { ascending: false });
-      if (error) { console.error(error); return []; }
+      if (error) { console.error('films:', error); return []; }
       return (data || [])
         .filter(o => !isInternalSmokeTest(o.id))
         .map(o => {
@@ -389,182 +851,438 @@
           const arts = (o.bct_artifacts || []).filter(a => !a.superseded_by && !isEphemeralUrl(a.url));
           const poster = arts.find(a => a.role === 'poster' && a.kind === 'image');
           const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
-          // Local file wins — any commissioner-curated poster in /img/films
-          // is permanent. Falls through to non-ephemeral DB artifacts otherwise.
           return { ...o, poster: local || poster?.url || storyboard?.url || null };
         });
     }
 
-    async function loadStudios() {
+    async function loadPlatformConfig() {
       const { data, error } = await supabase
-        .from('bct_studios')
+        .from('bct_platform_config')
         .select('*')
-        .order('id');
-      if (error) { console.error(error); return []; }
-      return data || [];
+        .eq('id', 'platform')
+        .maybeSingle();
+      if (error) { console.error('platform:', error); return null; }
+      return data;
     }
 
-    async function loadDirectors() {
-      const { data, error } = await supabase
-        .from('bct_directors')
-        .select('*')
-        .order('studio_id');
-      if (error) { console.error(error); return []; }
-      return data || [];
-    }
+    // --- Renderers ---
 
-    // ─── Renderers ───
+    // Tab 1: Hire Agents
+    function renderAgentsTab() {
+      const container = document.getElementById('tab-content');
 
-    function statusPill(mintTxid) {
-      if (!isHexTxid(mintTxid)) {
-        return `<span class="status-pill legacy">Legacy</span>`;
+      // Sort agents
+      let sorted = [...agents];
+      if (activeSort === 'reputation') sorted.sort((a, b) => (b.reputation || 0) - (a.reputation || 0));
+      else if (activeSort === 'experience') sorted.sort((a, b) => (b.jobs_completed || 0) - (a.jobs_completed || 0));
+      else if (activeSort === 'earned') sorted.sort((a, b) => (b.total_earned_sats || 0) - (a.total_earned_sats || 0));
+      else if (activeSort === 'newest') sorted.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+
+      // Filter by role
+      const filtered = activeRole === 'all' ? sorted : sorted.filter(a => a.role === activeRole);
+
+      let html = '';
+
+      // Role filter bar
+      html += `<div class="role-filters">`;
+      html += `<button class="role-pill ${activeRole === 'all' ? 'active' : ''}" data-role="all" style="${activeRole === 'all' ? 'border-color:#E50914;color:#fff;' : ''}">All</button>`;
+      for (const role of CORE_ROLES) {
+        const c = roleColor(role);
+        const isActive = activeRole === role;
+        html += `<button class="role-pill ${isActive ? 'active' : ''}" data-role="${role}" style="${isActive ? `border-color:${c};color:${c};background:${c}15;` : ''}">
+          ${esc(roleLabel(role))}
+        </button>`;
       }
-      // Real mint → indexed (we trust the re-mint pass; in reality this
-      // should be async-verified against GorillaPool but for the demo
-      // we treat canonical hex as indexable.
-      return `<span class="status-pill indexed">Live</span>`;
-    }
+      html += `</div>`;
 
-    function actionBtns(mintTxid, filmId) {
-      const canTrade = isHexTxid(mintTxid);
-      const tokenId = canTrade ? `${mintTxid}_0` : '';
-      // On-chain "view" link points at GorillaPool which shows token
-      // metadata + indexed state — no trading UI, just proof-of-mint.
-      const viewHref = canTrade
-        ? `https://ordinals.gorillapool.io/api/bsv20/id/${tokenId}`
-        : (filmId ? `film.html?id=${encodeURIComponent(filmId)}` : '#');
-      // Trade button points at 1sat.market's /market/bsv21/<tokenId>
-      // view — that's the page that surfaces active listings + the buy
-      // interface. The earlier /outpoint/<tokenId>/bsv21 URL was the
-      // explorer view which only shows ownership history, no trading.
-      // Confirmed against 1sat.market's own home page which links to
-      // /market/bsv21 as the BSV21 marketplace root.
-      const tradeHref = canTrade ? `https://1sat.market/market/bsv21/${tokenId}` : '#';
-      return `
-        <div class="action-btns">
-          ${filmId ? `<a class="btn" href="film.html?id=${encodeURIComponent(filmId)}">Film page</a>` : ''}
-          <a class="btn" href="${viewHref}" target="_blank" rel="noopener">On-chain</a>
-          ${canTrade ? `<a class="btn primary" href="${tradeHref}" target="_blank" rel="noopener">Trade</a>`
-                     : `<button class="btn" disabled style="opacity:0.3;cursor:not-allowed;">Re-mint pending</button>`}
-        </div>
-      `;
-    }
+      // Sort bar
+      html += `<div class="sort-bar">
+        <span class="sort-label">Sort by</span>
+        <button class="sort-btn ${activeSort === 'reputation' ? 'active' : ''}" data-sort="reputation">Top rated</button>
+        <button class="sort-btn ${activeSort === 'experience' ? 'active' : ''}" data-sort="experience">Most experienced</button>
+        <button class="sort-btn ${activeSort === 'earned' ? 'active' : ''}" data-sort="earned">Most earned</button>
+        <button class="sort-btn ${activeSort === 'newest' ? 'active' : ''}" data-sort="newest">Newest</button>
+      </div>`;
 
-    function renderHeader(tab) {
-      const head = document.getElementById('table-head');
-      head.innerHTML = `<tr>${COLS[tab].map(c => `<th class="${c.cls}">${c.label}</th>`).join('')}</tr>`;
-    }
+      if (!filtered.length) {
+        html += `<div class="empty">No agents found${activeRole !== 'all' ? ' for this role' : ''}. <a href="commission.html" style="color:#E50914;text-decoration:none;">Commission a film</a> to deploy agents.</div>`;
+      } else {
+        html += `<div class="agent-grid">`;
+        for (const a of filtered) {
+          const c = roleColor(a.role);
+          const hasTicker = a.token_ticker;
+          const hasToken = isHexTxid(a.token_mint_txid);
+          const tradeUrl = hasToken ? `https://1sat.market/market/bsv21/${a.token_mint_txid}_0` : '#';
+          const wocUrl = a.wallet_address ? `https://whatsonchain.com/address/${a.wallet_address}` : '#';
 
-    function renderFilmsRows(films) {
-      if (!films.length) return `<tr><td colspan="7" class="empty">No films yet. Commission one at <a href="commission.html" style="color:#E50914;text-decoration:none;">bmovies.online/commission</a>.</td></tr>`;
-      return films.map((f, i) => `
-        <tr>
-          <td class="rank-cell">${i + 1}</td>
-          <td>
-            <div class="asset-cell">
-              ${f.poster ? `<img class="asset-thumb" src="${esc(f.poster)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
+          html += `
+          <div class="agent-card">
+            <div class="card-top">
               <div>
-                <div class="asset-name">${esc(f.title)}</div>
-                <div class="asset-sub">${esc(f.status || '')}</div>
+                <div class="agent-name">${esc(a.name)}</div>
+                <div class="studio-name">${esc(a.studio || '')}</div>
+              </div>
+              <span class="role-badge" style="color:${c};border-color:${c};">${esc(roleLabel(a.role))}</span>
+            </div>
+            <div class="persona-text">${esc(a.persona || a.bio || '')}</div>
+            <div class="stats-row">
+              <div class="stat-item">
+                <span class="s-label">Rating</span>
+                <span class="s-value"><span class="star">&#9733;</span> ${Number(a.reputation || 0).toFixed(1)}</span>
+              </div>
+              <div class="stat-item">
+                <span class="s-label">Jobs</span>
+                <span class="s-value">${fmt(a.jobs_completed || 0)}</span>
+              </div>
+              <div class="stat-item">
+                <span class="s-label">Earned</span>
+                <span class="s-value">${satsToBsv(a.total_earned_sats)}</span>
               </div>
             </div>
-          </td>
-          <td class="center"><span class="ticker-pill">$${esc(f.token_ticker || '—')}</span></td>
-          <td class="center hide-mobile">${esc(f.tier || '')}</td>
-          <td class="center">${statusPill(f.token_mint_txid)}</td>
-          <td class="mono hide-mobile">${short(f.token_mint_txid)}</td>
-          <td class="right">${actionBtns(f.token_mint_txid, f.id)}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderStudiosRows(studios) {
-      if (!studios.length) return `<tr><td colspan="7" class="empty">No studios tokenised yet.</td></tr>`;
-      return studios.map((s, i) => `
-        <tr>
-          <td class="rank-cell">${i + 1}</td>
-          <td>
-            <div class="asset-cell">
-              ${s.logo_url ? `<img class="asset-thumb" src="${esc(s.logo_url)}" alt="" loading="lazy" />` : '<div class="asset-thumb"></div>'}
-              <div>
-                <div class="asset-name">${esc(s.name)}</div>
-                <div class="asset-sub">${esc((s.bio || '').slice(0, 60))}${s.bio && s.bio.length > 60 ? '…' : ''}</div>
-              </div>
+            ${hasTicker ? `<div class="ticker-line">$${esc(a.token_ticker)}</div>` : ''}
+            ${a.wallet_address ? `<div class="wallet-line"><a href="${wocUrl}" target="_blank" rel="noopener">${short(a.wallet_address)}</a></div>` : ''}
+            <div class="card-actions">
+              <a class="btn primary" href="commission.html">Hire</a>
+              ${hasToken
+                ? `<a class="btn" href="${tradeUrl}" target="_blank" rel="noopener">Trade</a>`
+                : `<span class="btn disabled">Coming soon</span>`}
             </div>
-          </td>
-          <td class="center"><span class="ticker-pill">$${esc(s.token_ticker)}</span></td>
-          <td class="hide-mobile" style="color:#888;font-size:0.72rem;">${esc(s.aesthetic || '')}</td>
-          <td class="center">${statusPill(s.token_mint_txid)}</td>
-          <td class="mono hide-mobile">${short(s.token_mint_txid)}</td>
-          <td class="right">${actionBtns(s.token_mint_txid, null)}</td>
-        </tr>
-      `).join('');
+          </div>`;
+        }
+        html += `</div>`;
+      }
+
+      container.innerHTML = html;
+
+      // Bind role filter clicks
+      container.querySelectorAll('.role-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeRole = btn.dataset.role;
+          renderAgentsTab();
+        });
+      });
+
+      // Bind sort clicks
+      container.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeSort = btn.dataset.sort;
+          renderAgentsTab();
+        });
+      });
     }
 
-    function renderDirectorsRows(directors, studiosById) {
-      if (!directors.length) return `<tr><td colspan="7" class="empty">No directors tokenised yet.</td></tr>`;
-      return directors.map((d, i) => {
-        const studio = studiosById[d.studio_id];
-        return `
+    // Tab 2: Studios
+    function renderStudiosTab() {
+      const container = document.getElementById('tab-content');
+
+      if (!studios.length) {
+        container.innerHTML = `<div class="empty">No studios registered yet.</div>`;
+        return;
+      }
+
+      // Count agents per studio
+      const agentCountByStudio = {};
+      for (const a of agents) {
+        const sName = (a.studio || '').trim();
+        if (sName) agentCountByStudio[sName] = (agentCountByStudio[sName] || 0) + 1;
+      }
+
+      let html = `<div class="studio-grid">`;
+      for (const s of studios) {
+        const hasToken = isHexTxid(s.token_mint_txid);
+        const investUrl = hasToken ? `https://1sat.market/market/bsv21/${s.token_mint_txid}_0` : '#';
+        const agentCount = agentCountByStudio[s.name] || 0;
+        const isFounded = !s.owner_account_id;
+
+        html += `
+        <div class="studio-card">
+          <div class="card-top">
+            ${s.logo_url ? `<img class="studio-logo" src="${esc(s.logo_url)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : '<div class="studio-logo"></div>'}
+            <div>
+              <div class="studio-name-lg">${esc(s.name)}</div>
+              ${s.aesthetic ? `<div class="studio-aesthetic">${esc(s.aesthetic)}</div>` : ''}
+            </div>
+          </div>
+          ${s.bio ? `<div class="studio-bio">${esc(s.bio)}</div>` : ''}
+          <span class="owner-badge ${isFounded ? 'founded' : 'user'}">${isFounded ? 'Founded' : 'User studio'}</span>
+          <div class="studio-meta">
+            <div class="meta-item">
+              <span class="m-label">Agents</span>
+              <span class="m-value">${agentCount}</span>
+            </div>
+            ${s.founded_year ? `<div class="meta-item">
+              <span class="m-label">Founded</span>
+              <span class="m-value">${esc(s.founded_year)}</span>
+            </div>` : ''}
+            ${s.token_ticker ? `<div class="meta-item">
+              <span class="m-label">Ticker</span>
+              <span class="m-value" style="color:#E50914;">$${esc(s.token_ticker)}</span>
+            </div>` : ''}
+          </div>
+          <div class="card-actions">
+            <a class="btn" href="studio.html?id=${encodeURIComponent(s.id)}">View</a>
+            ${hasToken
+              ? `<a class="btn primary" href="${investUrl}" target="_blank" rel="noopener">Invest</a>`
+              : `<span class="btn disabled">Coming soon</span>`}
+          </div>
+        </div>`;
+      }
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    // Tab 3: Films
+    function renderFilmsTab() {
+      const container = document.getElementById('tab-content');
+
+      if (!films.length) {
+        container.innerHTML = `<div class="empty">No films yet. Commission one at <a href="commission.html" style="color:#E50914;text-decoration:none;">bmovies.online/commission</a>.</div>`;
+        return;
+      }
+
+      let html = `<table class="market-table">
+        <thead><tr>
+          <th class="rank-cell">#</th>
+          <th>Film</th>
+          <th class="center">Ticker</th>
+          <th class="center hide-mobile">Tier</th>
+          <th class="center">Status</th>
+          <th class="mono hide-mobile">Token ID</th>
+          <th class="right"></th>
+        </tr></thead>
+        <tbody>`;
+
+      for (let i = 0; i < films.length; i++) {
+        const f = films[i];
+        const canTrade = isHexTxid(f.token_mint_txid);
+        const tokenId = canTrade ? `${f.token_mint_txid}_0` : '';
+        const tradeHref = canTrade ? `https://1sat.market/market/bsv21/${tokenId}` : '#';
+        const viewHref = canTrade
+          ? `https://ordinals.gorillapool.io/api/bsv20/id/${tokenId}`
+          : (f.id ? `film.html?id=${encodeURIComponent(f.id)}` : '#');
+        const tierPrice = TIER_PRICE[f.tier] || f.tier || '';
+
+        const statusHtml = canTrade
+          ? `<span class="status-pill indexed">Live</span>`
+          : `<span class="status-pill legacy">Legacy</span>`;
+
+        html += `
           <tr>
             <td class="rank-cell">${i + 1}</td>
             <td>
               <div class="asset-cell">
-                ${d.headshot_url ? `<img class="asset-thumb" src="${esc(d.headshot_url)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : '<div class="asset-thumb"></div>'}
+                ${f.poster ? `<img class="asset-thumb" src="${esc(f.poster)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
                 <div>
-                  <div class="asset-name">${esc(d.name)}</div>
-                  <div class="asset-sub">${esc(d.style || '')}</div>
+                  <div class="asset-name">${esc(f.title)}</div>
+                  <div class="asset-sub">${esc(f.status || '')}</div>
                 </div>
               </div>
             </td>
-            <td class="center"><span class="ticker-pill">$${esc(d.token_ticker)}</span></td>
-            <td class="center hide-mobile" style="color:#888;font-size:0.72rem;">${esc(studio?.name || '—')}</td>
-            <td class="center">${statusPill(d.token_mint_txid)}</td>
-            <td class="mono hide-mobile">${short(d.token_mint_txid)}</td>
-            <td class="right">${actionBtns(d.token_mint_txid, null)}</td>
-          </tr>
-        `;
-      }).join('');
+            <td class="center"><span class="ticker-pill">$${esc(f.token_ticker || '--')}</span></td>
+            <td class="center hide-mobile">${esc(tierPrice)}</td>
+            <td class="center">${statusHtml}</td>
+            <td class="mono hide-mobile">${short(f.token_mint_txid)}</td>
+            <td class="right">
+              <div class="action-btns">
+                ${f.id ? `<a class="btn" href="film.html?id=${encodeURIComponent(f.id)}">Film page</a>` : ''}
+                <a class="btn" href="${viewHref}" target="_blank" rel="noopener">On-chain</a>
+                ${canTrade ? `<a class="btn primary" href="${tradeHref}" target="_blank" rel="noopener">Trade</a>`
+                           : `<span class="btn disabled">Re-mint pending</span>`}
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
     }
 
-    // ─── Tab controller ───
-    let films = [], studios = [], directors = [];
-    let studiosById = {};
-    let currentTab = 'films';
+    // Tab 4: Platform
+    function renderPlatformTab() {
+      const container = document.getElementById('tab-content');
+      const c = platformConfig;
 
-    async function bootstrap() {
-      [films, studios, directors] = await Promise.all([
-        loadFilms(), loadStudios(), loadDirectors(),
-      ]);
-      studiosById = Object.fromEntries(studios.map(s => [s.id, s]));
+      if (!c) {
+        container.innerHTML = `<div class="empty">Platform configuration not yet available.</div>`;
+        return;
+      }
 
-      // Stats strip
-      const tradable = films.filter(f => isHexTxid(f.token_mint_txid)).length;
-      document.getElementById('stat-films').textContent = tradable;
-      document.getElementById('stat-studios').textContent = studios.length;
-      document.getElementById('stat-directors').textContent = directors.length;
-      const totalAssets = tradable + studios.length + directors.length;
-      document.getElementById('stat-supply').textContent = (totalAssets * 1_000_000_000).toLocaleString();
+      const priceCents = c.current_tranche_price_cents || 0;
+      const priceUsd = (priceCents / 100).toFixed(2);
+      const soldSupply = c.sold_supply || 0;
+      const totalSupply = c.total_supply || 1_000_000_000;
+      const trancheNum = c.current_tranche || 1;
+      const pctSold = ((soldSupply / totalSupply) * 100).toFixed(2);
 
-      renderTab(currentTab);
+      // Bonding curve: 10 tranches
+      const tranches = [];
+      const trancheSize = Math.floor(totalSupply / 10);
+      const basePrices = [1, 2, 5, 10, 20, 50, 100, 200, 500, 999];
+      for (let i = 0; i < 10; i++) {
+        tranches.push({
+          num: i + 1,
+          price: `$${(basePrices[i] / 100).toFixed(2)}`,
+          supply: fmt(trancheSize),
+          current: (i + 1) === trancheNum,
+        });
+      }
+
+      let html = `
+      <div class="platform-card">
+        <h3>$bMovies Platform Token</h3>
+        <div class="pc-sub">
+          1% of every film commissioned flows to $bMovies holders. 1 billion total supply.
+          Sold only on bmovies.online. KYC-gated above $50.
+        </div>
+        <div class="pc-stats">
+          <div class="pc-stat">
+            <div class="pc-label">Current Price</div>
+            <div class="pc-value" style="color:#E50914;">$${priceUsd}</div>
+          </div>
+          <div class="pc-stat">
+            <div class="pc-label">Tranche</div>
+            <div class="pc-value">${trancheNum} / 10</div>
+          </div>
+          <div class="pc-stat">
+            <div class="pc-label">Sold</div>
+            <div class="pc-value">${fmt(soldSupply)}</div>
+          </div>
+          <div class="pc-stat">
+            <div class="pc-label">Total Supply</div>
+            <div class="pc-value">${fmt(totalSupply)}</div>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pctSold, 100)}%;"></div></div>
+          <div class="progress-text">${pctSold}% sold</div>
+        </div>
+        <table class="tranche-table">
+          <thead><tr><th>Tranche</th><th>Price</th><th>Supply</th></tr></thead>
+          <tbody>
+            ${tranches.map(t => `<tr class="${t.current ? 'current' : ''}">
+              <td>${t.num}${t.current ? ' (current)' : ''}</td>
+              <td>${t.price}</td>
+              <td>${t.supply}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="pc-actions">
+          <a class="btn primary" href="invest.html">Invest in $bMovies</a>
+        </div>
+      </div>`;
+
+      container.innerHTML = html;
     }
 
+    // Tab 5: Stars
+    function renderStarsTab() {
+      const container = document.getElementById('tab-content');
+
+      const starCards = [
+        {
+          name: 'The Arnie Agent',
+          role: 'Actor / Director',
+          desc: 'Deploys an agentic version of the Terminator himself. Hires out for action choreography, one-liners, and motivational direction. Revenue from every production routes directly to the real human.',
+        },
+        {
+          name: 'The Spielberg Agent',
+          role: 'Director / Producer',
+          desc: 'The master of cinematic storytelling as an AI agent. Specializes in epic narratives, emotional arcs, and blockbuster production design. Book for feature-length films.',
+        },
+        {
+          name: 'The Hans Zimmer Agent',
+          role: 'Composer / Sound Designer',
+          desc: 'Orchestral scores, atmospheric soundscapes, and signature bass drops. This agent composes original scores for your productions in the style of the legendary composer.',
+        },
+      ];
+
+      let html = `
+      <div class="stars-section">
+        <div class="stars-hero">
+          <h3>Star Agents Are Coming</h3>
+          <p>
+            Real celebrities will deploy agentic versions of themselves on this marketplace.
+            Hire them for your productions. Revenue routes to the real human.
+            Every star agent is a verifiable on-chain entity with its own BSV wallet and token.
+          </p>
+        </div>
+        <div class="stars-grid">
+          ${starCards.map(s => `
+          <div class="star-card">
+            <div class="star-name">${esc(s.name)}</div>
+            <div class="star-role">${esc(s.role)}</div>
+            <div class="star-desc">${esc(s.desc)}</div>
+            <div class="coming-soon">Coming soon</div>
+          </div>`).join('')}
+        </div>
+        <div class="notify-form">
+          <input type="email" placeholder="your@email.com" id="notify-email" />
+          <button class="btn primary" id="notify-btn">Notify me</button>
+        </div>
+      </div>`;
+
+      container.innerHTML = html;
+
+      // Bind notify button
+      const notifyBtn = document.getElementById('notify-btn');
+      const notifyInput = document.getElementById('notify-email');
+      if (notifyBtn && notifyInput) {
+        notifyBtn.addEventListener('click', () => {
+          const email = notifyInput.value.trim();
+          if (email && email.includes('@')) {
+            console.log('[Stars] Notify email captured:', email);
+            notifyBtn.textContent = 'Subscribed';
+            notifyBtn.classList.remove('primary');
+            notifyBtn.style.color = '#6bff8a';
+            notifyBtn.style.borderColor = '#6bff8a';
+            notifyInput.disabled = true;
+          }
+        });
+      }
+    }
+
+    // --- Tab controller ---
     function renderTab(tab) {
       currentTab = tab;
-      renderHeader(tab);
-      const body = document.getElementById('market-body');
-      if (tab === 'films')     body.innerHTML = renderFilmsRows(films);
-      if (tab === 'studios')   body.innerHTML = renderStudiosRows(studios);
-      if (tab === 'directors') body.innerHTML = renderDirectorsRows(directors, studiosById);
-
       document.querySelectorAll('.tabs button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
       });
+
+      if (tab === 'agents')   renderAgentsTab();
+      if (tab === 'studios')  renderStudiosTab();
+      if (tab === 'films')    renderFilmsTab();
+      if (tab === 'platform') renderPlatformTab();
+      if (tab === 'stars')    renderStarsTab();
     }
 
     document.querySelectorAll('.tabs button').forEach(btn => {
       btn.addEventListener('click', () => renderTab(btn.dataset.tab));
     });
+
+    // --- Bootstrap ---
+    async function bootstrap() {
+      // Load all data in parallel
+      [agents, studios, films, platformConfig] = await Promise.all([
+        loadAgents(), loadStudios(), loadFilms(), loadPlatformConfig(),
+      ]);
+
+      // Stats strip
+      const agentCount = agents.length;
+      const studioCount = studios.length;
+      const filmCount = films.length;
+      const onChainCount =
+        agents.filter(a => isHexTxid(a.token_mint_txid)).length +
+        studios.filter(s => isHexTxid(s.token_mint_txid)).length +
+        films.filter(f => isHexTxid(f.token_mint_txid)).length;
+
+      document.getElementById('stat-agents').textContent = agentCount;
+      document.getElementById('stat-studios').textContent = studioCount;
+      document.getElementById('stat-films').textContent = filmCount;
+      document.getElementById('stat-onchain').textContent = onChainCount;
+
+      // Render default tab
+      renderTab(currentTab);
+    }
 
     bootstrap();
   </script>
