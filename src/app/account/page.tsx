@@ -2585,7 +2585,8 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
       if (cancelled) return
       const allImages = (data as any[]) || []
       const storyboardFrames = allImages.filter(a =>
-        a.step_id && a.step_id.startsWith('storyboard.') && a.step_id !== 'storyboard.poster'
+        (a.step_id && a.step_id.startsWith('storyboard.') && a.step_id !== 'storyboard.poster') ||
+        (a.role === 'storyboard' && a.step_id !== 'storyboard.poster')
       )
       const posterArt = allImages.find(a => a.role === 'poster' || a.step_id === 'storyboard.poster')
       const titleLower = (offer?.title || '').toLowerCase()
