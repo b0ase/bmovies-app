@@ -1249,13 +1249,11 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
       setWalletLoading(true)
       try {
         const [holdingsRes, studiosRes, agentsRes, txRes, configRes, kycRes] = await Promise.all([
-          // bct_platform_holdings may not exist yet — catch gracefully
           bmovies
             .from('bct_platform_holdings')
-            .select('total_tokens')
+            .select('tokens_held')
             .eq('account_id', accountId)
-            .maybeSingle()
-            .then(r => r, () => ({ data: null, error: null })),
+            .maybeSingle(),
           bmovies
             .from('bct_studios')
             .select('id, name, token_ticker, treasury_address')
@@ -1273,16 +1271,14 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             .limit(20),
           bmovies
             .from('bct_platform_config')
-            .select('value')
-            .eq('key', 'current_tranche_price_cents')
-            .maybeSingle()
-            .then(r => r, () => ({ data: null, error: null })),
+            .select('current_tranche_price_cents')
+            .eq('id', 'platform')
+            .maybeSingle(),
           bmovies
             .from('bct_user_kyc')
             .select('status')
             .eq('account_id', accountId)
-            .maybeSingle()
-            .then(r => r, () => ({ data: null, error: null })),
+            .maybeSingle(),
         ])
 
         if (cancelled) return
@@ -1296,13 +1292,14 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           filmCount: films.filter((f) => f.account_id === accountId).length,
         }))
 
-        const priceCents = configRes.data?.value
-          ? (typeof configRes.data.value === 'number' ? configRes.data.value : parseFloat(String(configRes.data.value)))
+        const rawPrice = configRes.data?.current_tranche_price_cents
+        const priceCents = rawPrice
+          ? (typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice)))
           : 0.1
 
         setWalletData({
           kycVerified: kycRes.data?.status === 'verified',
-          platformTokens: (holdingsRes.data?.total_tokens as number) ?? 0,
+          platformTokens: (holdingsRes.data?.tokens_held as number) ?? 0,
           pricePerTokenCents: priceCents,
           studioCount: studios.length,
           filmCount: films.length,
