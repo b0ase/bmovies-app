@@ -98,6 +98,7 @@ const POSTER_MAP: Record<string, string> = {
   'sub-orbital lullaby':                 '/img/films/sub-orbital-lullaby.jpg',
   'glasshouse':                          '/img/films/glasshouse.jpg',
   'the last transmission':               '/img/films/the-last-transmission.jpg',
+  'crypto whistleblow':                  '/img/films/crypto-whistleblow.jpg',
 }
 
 /** Any URL matching the xAI imgen temp CDN is untrustworthy — it dies
