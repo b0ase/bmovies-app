@@ -328,4 +328,26 @@
     }
   `;
   document.head.appendChild(style);
+
+  /* ── Public API: window.bmoviesChat ── */
+  window.bmoviesChat = {
+    /** Open the chat panel. If message is provided, send it immediately. */
+    open(message) {
+      if (!isOpen) {
+        isOpen = true;
+        panel.style.display = 'flex';
+      }
+      if (message) {
+        inputEl.value = message;
+        sendMessage();
+      }
+    },
+    /** Close the chat panel. */
+    close() {
+      isOpen = false;
+      panel.style.display = 'none';
+    },
+    /** Check if the chat is open. */
+    get isOpen() { return isOpen; },
+  };
 })();

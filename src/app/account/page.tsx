@@ -1409,7 +1409,8 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
                 const { connectBsvDesktop } = await import('@/lib/brc100')
                 const status = await connectBsvDesktop()
                 if (status.connected) {
-                  alert(`Connected! Address: ${status.address?.slice(0, 12)}...`)
+                  // Connected — reload to show wallet state
+
                   window.location.reload()
                 } else {
                   const msg = status.error || 'BSV Desktop not detected.'
@@ -2866,7 +2867,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
           </p>
           <button
             onClick={() => {
-              alert(`Ask the bMovies agent (bottom-right chat) to "Generate a storyboard for ${projectTitle}"`)
+              (window as any).bmoviesChat?.open(`Generate a 6-frame storyboard for "${projectTitle}". Use the synopsis and any existing script material.`)
             }}
             className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
           >
@@ -2904,7 +2905,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
       <div className="mt-4">
         <button
           onClick={() => {
-            alert(`Generate new frame requested for "${projectTitle}".`)
+            (window as any).bmoviesChat?.open(`Generate one additional storyboard frame for "${projectTitle}". Make it a key dramatic moment.`)
           }}
           className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
         >
@@ -3187,7 +3188,7 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
       <div className="flex gap-2">
         <button
           onClick={() => {
-            alert(`Design title card requested for "${projectTitle}". This will call the chat agent to generate a title card.`)
+            (window as any).bmoviesChat?.open(`Design a cinematic title card for "${projectTitle}". Use the film's genre and tone.`)
           }}
           className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
         >
@@ -3312,7 +3313,7 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
       <div className="flex gap-2">
         <button
           onClick={() => {
-            alert(`Compose theme requested for "${projectTitle}". Use the bMovies agent chat (bottom-right) to generate audio.`)
+            (window as any).bmoviesChat?.open(`Compose a musical theme for "${projectTitle}". Describe the genre, tempo, mood, and key instruments.`)
           }}
           className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
         >
