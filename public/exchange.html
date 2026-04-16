@@ -300,11 +300,28 @@
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+    // Keep in sync with the 23-entry POSTER_MAP in film.html /
+    // productions.html / index.html / deck.html / leaderboard.html /
+    // offer.html / watch.html (those use a title→path map; this file
+    // uses a slug set because slugify() makes the lookup cheap).
+    // If a title's slug isn't here, localPosterFor() returns null and
+    // the row falls back to bct_artifacts (which is almost always
+    // empty once ephemeral xAI URLs are filtered out).
     const LOCAL_POSTERS = new Set([
+      // Legacy marketplace / test films
       'echoes-of-the-last-signal', 'the-fold', 'the-weight-of-water',
       'the-lantern-that-forgot-its-flame', 'the-mirror-protocol',
       'off-key-heroes', 'midnight-swarm', 'the-last-piece',
-      'episode-1000', 'star-wars-episode-1000', 'that-weirdo-isnt-satoshi',
+      'episode-1000', 'star-wars-episode-1000',
+      // Current slate (2026-04-15)
+      'that-weirdo-isnt-satoshi', 'spoon-from-space',
+      'silverfish-in-the-cathedral', 'the-clockmakers-daughter',
+      'the-cartographer-who-mapped-dreams', 'the-coffee-machine',
+      // Judge coupon DEFAULT_TITLES + demo rows (2026-04-16)
+      'the-last-lighthouse', 'cipher-of-the-drowned-city',
+      'echoes-beneath-glacier-9', 'the-cartographer-of-empty-rooms',
+      'pale-horse-iron-sky', 'sub-orbital-lullaby',
+      'glasshouse', 'the-last-transmission',
     ]);
     const localPosterFor = (title) => {
       const slug = slugify(title);
@@ -411,10 +428,18 @@
     function actionBtns(mintTxid, filmId) {
       const canTrade = isHexTxid(mintTxid);
       const tokenId = canTrade ? `${mintTxid}_0` : '';
+      // On-chain "view" link points at GorillaPool which shows token
+      // metadata + indexed state — no trading UI, just proof-of-mint.
       const viewHref = canTrade
         ? `https://ordinals.gorillapool.io/api/bsv20/id/${tokenId}`
         : (filmId ? `film.html?id=${encodeURIComponent(filmId)}` : '#');
-      const tradeHref = canTrade ? `https://1sat.market/outpoint/${tokenId}/bsv21` : '#';
+      // Trade button points at 1sat.market's /market/bsv21/<tokenId>
+      // view — that's the page that surfaces active listings + the buy
+      // interface. The earlier /outpoint/<tokenId>/bsv21 URL was the
+      // explorer view which only shows ownership history, no trading.
+      // Confirmed against 1sat.market's own home page which links to
+      // /market/bsv21 as the BSV21 marketplace root.
+      const tradeHref = canTrade ? `https://1sat.market/market/bsv21/${tokenId}` : '#';
       return `
         <div class="action-btns">
           ${filmId ? `<a class="btn" href="film.html?id=${encodeURIComponent(filmId)}">Film page</a>` : ''}

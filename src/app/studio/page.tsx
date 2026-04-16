@@ -144,7 +144,7 @@ export default function StudioPage() {
                   <div className="flex flex-wrap gap-1.5 pt-3 border-t border-[#1a1a1a]">
                     {onChain && (
                       <a
-                        href={`https://1sat.market/outpoint/${s.token_mint_txid}_0/bsv21`}
+                        href={`https://1sat.market/market/bsv21/${s.token_mint_txid}_0`}
                         target="_blank"
                         rel="noopener"
                         className="text-[0.55rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
