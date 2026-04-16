@@ -1402,10 +1402,17 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               </a>
             </div>
           )}
-          <div className={!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}>
-          {/* BSV Desktop — primary */}
+          <div className={!walletData?.kycVerified ? 'opacity-40' : ''}>
+          {/* BSV Desktop — primary. KYC enforced in JS, not just CSS. */}
           <button
             onClick={async () => {
+              // HARD KYC GATE — enforced in JS, not just CSS opacity
+              if (!walletData?.kycVerified) {
+                if (confirm('Identity verification required before connecting a wallet.\n\nComplete KYC now? (~90 seconds via Veriff)')) {
+                  window.location.href = '/kyc.html'
+                }
+                return
+              }
               try {
                 const { connectBsvDesktop } = await import('@/lib/brc100')
                 const status = await connectBsvDesktop()

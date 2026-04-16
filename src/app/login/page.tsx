@@ -113,6 +113,7 @@ function LoginContent() {
           token: response.credential,
         })
         if (error) throw error
+        window.dispatchEvent(new Event('bmovies:auth-changed'))
         router.replace(returnTo)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Google sign-in failed')
@@ -245,6 +246,7 @@ function LoginContent() {
       if (setErr) throw setErr
 
       setInfo(newUser ? 'Welcome to bMovies. Opening your studio…' : 'Signed in. Opening your studio…')
+      window.dispatchEvent(new Event('bmovies:auth-changed'))
       router.replace(returnTo)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'BRC-100 sign-in failed')

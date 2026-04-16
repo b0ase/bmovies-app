@@ -350,6 +350,9 @@ window.addEventListener('storage', (e) => {
 window.addEventListener('bmovies:auth-changed', updateNav);
 
 // On Next.js pages the Supabase client may write the session to
-// localStorage AFTER this script runs. A single deferred check
-// catches late-arriving sessions without hammering the DOM.
-setTimeout(updateNav, 800);
+// localStorage AFTER this script runs. Multiple deferred checks
+// catch late-arriving sessions (Google OAuth can take 1-2s to
+// write the session after redirect).
+setTimeout(updateNav, 500);
+setTimeout(updateNav, 1500);
+setTimeout(updateNav, 3000);
