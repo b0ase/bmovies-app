@@ -748,6 +748,17 @@
       return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="#111"/><rect width="80" height="2" fill="#E50914"/><text x="40" y="38" text-anchor="middle" font-family="sans-serif" font-size="7" font-weight="900" fill="#fff">${t.length > 14 ? t.slice(0,12) + '…' : t}</text>${tk ? `<text x="40" y="52" text-anchor="middle" font-family="monospace" font-size="7" fill="#E50914">${tk}</text>` : ''}</svg>`);
     }
 
+    // Agent headshot: try headshot_url from DB, else construct from file convention
+    function agentHeadshot(a) {
+      if (a.headshot_url) return a.headshot_url;
+      // File convention: {studio}--{role}{name-slug}.jpg
+      const studio = (a.studio || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-');
+      const name = (a.name || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-');
+      const role = (a.role || '').toLowerCase().replace(/_/g, '-');
+      if (studio && name) return `/img/studios/agents/${studio}--${role}${name}.jpg`;
+      return '';
+    }
+
     // Poster helpers
     const slugify = (s) => String(s || '').toLowerCase()
       .replace(/['\u2018\u2019]/g, '')
@@ -1408,7 +1419,7 @@
             <td class="rank-cell">${i + 1}</td>
             <td>
               <div class="asset-cell">
-                ${a.headshot_url ? `<img class="asset-thumb" src="${esc(a.headshot_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" style="border-radius:50%;" />` : '<div class="asset-thumb" style="border-radius:50%;background:#111;"></div>'}
+                ${agentHeadshot(a) ? `<img class="asset-thumb" src="${esc(agentHeadshot(a))}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot; style=&quot;border-radius:50%;background:#111;&quot;></div>'" style="border-radius:50%;" />` : '<div class="asset-thumb" style="border-radius:50%;background:#111;"></div>'}
                 <div>
                   <div class="asset-name"><a href="agent.html?id=${encodeURIComponent(a.id)}" style="color:inherit;text-decoration:none;">${esc(a.name)}</a></div>
                   <div class="asset-sub">${esc(a.persona || a.bio || '').slice(0, 60)}${(a.persona || a.bio || '').length > 60 ? '...' : ''}</div>
@@ -1470,7 +1481,7 @@
             <td class="rank-cell">${i + 1}</td>
             <td>
               <div class="asset-cell">
-                ${a.headshot_url ? `<img class="asset-thumb" src="${esc(a.headshot_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" style="border-radius:50%;" />` : '<div class="asset-thumb" style="border-radius:50%;background:#111;"></div>'}
+                ${agentHeadshot(a) ? `<img class="asset-thumb" src="${esc(agentHeadshot(a))}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot; style=&quot;border-radius:50%;background:#111;&quot;></div>'" style="border-radius:50%;" />` : '<div class="asset-thumb" style="border-radius:50%;background:#111;"></div>'}
                 <div>
                   <div class="asset-name"><a href="agent.html?id=${encodeURIComponent(a.id)}" style="color:inherit;text-decoration:none;">${esc(a.name)}</a></div>
                   <div class="asset-sub">${esc(a.persona || a.bio || '').slice(0, 60)}${(a.persona || a.bio || '').length > 60 ? '...' : ''}</div>
