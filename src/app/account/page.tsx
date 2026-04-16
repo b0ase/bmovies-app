@@ -1893,6 +1893,56 @@ interface StudioData {
   aesthetic: string | null
   owner_account_id: string | null
   created_by: string | null
+  is_public: boolean
+}
+
+/* ─── Public toggle for studio listing on /exchange.html ─── */
+
+function PublicToggle({ studio, onToggled }: { studio: StudioData; onToggled: (val: boolean) => void }) {
+  const [saving, setSaving] = useState(false)
+
+  async function toggle() {
+    setSaving(true)
+    try {
+      const next = !studio.is_public
+      const { error } = await bmovies
+        .from('bct_studios')
+        .update({ is_public: next })
+        .eq('id', studio.id)
+      if (error) throw new Error(error.message)
+      onToggled(next)
+    } catch (err) {
+      alert('Failed to update: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={saving}
+      className="flex items-center gap-1.5 text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border transition-colors"
+      style={{
+        borderColor: studio.is_public ? '#E50914' : '#333',
+        color: studio.is_public ? '#E50914' : '#666',
+        background: studio.is_public ? 'rgba(229, 9, 20, 0.08)' : 'transparent',
+        opacity: saving ? 0.5 : 1,
+      }}
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          width: '0.5rem',
+          height: '0.5rem',
+          borderRadius: '50%',
+          background: studio.is_public ? '#E50914' : '#333',
+          transition: 'background 150ms',
+        }}
+      />
+      {studio.is_public ? 'Listed publicly' : 'Private studio'}
+    </button>
+  )
 }
 
 function StudioInfoSection({
@@ -2125,8 +2175,8 @@ function StudioInfoSection({
             </div>
           </div>
 
-          {/* Action buttons — top of box */}
-          <div className="flex flex-wrap gap-2 mb-5">
+          {/* Action buttons + public toggle — top of box */}
+          <div className="flex flex-wrap items-center gap-2 mb-5">
             <a
               href={`https://whatsonchain.com/address/${studio.treasury_address}`}
               target="_blank"
@@ -2141,6 +2191,7 @@ function StudioInfoSection({
             >
               Commission a film
             </a>
+            <PublicToggle studio={studio} onToggled={(val) => setStudio({ ...studio, is_public: val })} />
           </div>
 
           {/* Roster poster — the cinematic team card generated at studio creation */}

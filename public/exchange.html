@@ -828,6 +828,7 @@
       const { data, error } = await supabase
         .from('bct_studios')
         .select('*')
+        .eq('is_public', true)
         .order('founded_year', { ascending: true });
       if (error) { console.error('studios:', error); return []; }
       return data || [];
