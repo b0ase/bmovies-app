@@ -27,6 +27,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/productions.html', label: 'Live' },
   { href: '/studios.html', label: 'Studios' },
   { href: '/watch.html', label: 'Watch' },
+  { href: '/judges.html', label: 'Judges' },
 ]
 
 function isSessionValid(): boolean {
@@ -126,7 +127,7 @@ export function Navigation() {
           )
         })}
         <Link
-          href="/account"
+          href={signedIn ? '/account' : '/login'}
           className="signin-cta"
           style={{
             padding: '0.5rem 1rem',
@@ -142,8 +143,34 @@ export function Navigation() {
             marginLeft: '0.75rem',
           }}
         >
-          {signedIn ? 'Account' : 'Sign In'}
+          {signedIn ? 'Account ▾' : 'Sign In'}
         </Link>
+        {signedIn && (
+          <button
+            onClick={() => {
+              localStorage.removeItem('bmovies-auth')
+              window.dispatchEvent(new Event('bmovies:auth-changed'))
+              window.location.href = '/'
+            }}
+            style={{
+              padding: '0.5rem 0.8rem',
+              fontFamily: "'Inter', -apple-system, sans-serif",
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: '#888',
+              background: 'none',
+              border: '1px solid #333',
+              cursor: 'pointer',
+              marginLeft: '0.3rem',
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#E50914'; e.currentTarget.style.color = '#fff'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888'; }}
+          >
+            Sign Out
+          </button>
+        )}
       </nav>
     </header>
   )
