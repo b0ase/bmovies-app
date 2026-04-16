@@ -47,9 +47,8 @@ type Tab =
   | 'chat'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'chat',            label: 'Agent' },
-  { id: 'agents',          label: 'Agents' },
   { id: 'cap-tables',      label: 'Cap Tables' },
+  { id: 'agents',          label: 'Crew' },
   { id: 'my-films',        label: 'Films' },
   { id: 'investor-packs',  label: 'Investor Packs' },
   { id: 'studio',          label: 'Studio' },
@@ -194,7 +193,7 @@ function AccountContent() {
   const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('chat')
+  const [activeTab, setActiveTab] = useState<Tab>('studio')
   const [films, setFilms] = useState<Film[]>([])
   const [filmsLoading, setFilmsLoading] = useState(false)
   const [filmsError, setFilmsError] = useState<string | null>(null)

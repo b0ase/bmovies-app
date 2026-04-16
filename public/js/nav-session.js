@@ -348,6 +348,17 @@ mountLegalRow();
 mountJudgesLink();
 updateNav();
 
+// Load the floating bMovies agent chat widget on every page.
+// The widget script is self-contained (IIFE, zero deps) and renders
+// a red "bM" button bottom-right that expands to a chat panel.
+(function loadAgentChat() {
+  if (document.querySelector('script[src*="agent-chat"]')) return;
+  const s = document.createElement('script');
+  s.src = '/js/agent-chat.js';
+  s.defer = true;
+  document.body.appendChild(s);
+})();
+
 // Expose for in-page updates after the session flip runs
 window.updateBmoviesNav = updateNav;
 
