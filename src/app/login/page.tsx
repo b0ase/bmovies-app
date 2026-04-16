@@ -289,54 +289,8 @@ function LoginContent() {
             </p>
           </div>
 
-          {/* ── BRC-100 wallet — hackathon priority ── */}
+          {/* ── Google (primary) ── */}
           <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-5 mb-5">
-            <div className="text-[0.55rem] uppercase tracking-[0.18em] font-bold text-[#E50914] mb-1">
-              BSV-native sign-in
-            </div>
-            <h2
-              className="text-xl font-black leading-none mb-2"
-              style={{ fontFamily: 'var(--font-bebas)' }}
-            >
-              Connect a BRC-100 wallet
-            </h2>
-            <p className="text-[#bbb] text-xs leading-relaxed mb-4">
-              BSV Desktop or Yours Wallet. No email, no password — your
-              wallet is your identity. Signing a one-time challenge proves
-              you control the key, nothing else.
-            </p>
-            <button
-              type="button"
-              onClick={handleBrc100SignIn}
-              disabled={walletBusy || busy}
-              className="w-full px-4 py-3 bg-[#E50914] hover:bg-[#b00610] disabled:bg-[#3a0004] disabled:text-[#666] text-white text-xs font-black uppercase tracking-wider"
-            >
-              {walletBusy
-                ? 'Waiting for wallet…'
-                : wallet.connected
-                  ? `Re-sign with ${wallet.provider}`
-                  : 'Connect BSV wallet →'}
-            </button>
-            {wallet.connected && wallet.address && (
-              <div className="mt-3 text-[0.6rem] text-[#888] font-mono break-all">
-                {wallet.provider} · {wallet.address}
-              </div>
-            )}
-            <div className="mt-3 text-[0.55rem] text-[#666]">
-              No wallet?{' '}
-              <a
-                href="https://github.com/bsv-blockchain/bsv-desktop/releases/latest"
-                target="_blank"
-                rel="noopener"
-                className="text-[#E50914] hover:underline"
-              >
-                Get BSV Desktop →
-              </a>
-            </div>
-          </div>
-
-          {/* ── Google ── */}
-          <div className="border border-[#222] bg-[#0a0a0a] p-5 mb-5">
             <div className="flex justify-center">
               <div ref={googleBtnRef} style={{ minHeight: 40, minWidth: 240 }} />
             </div>
@@ -345,6 +299,10 @@ function LoginContent() {
                 Loading Google sign-in…
               </div>
             )}
+            <div className="text-center text-[0.55rem] text-[#666] mt-3">
+              Once signed in, you can link a BRC-100 wallet (BSV Desktop / Yours)<br/>
+              from your account dashboard to enable BSV payments and token purchases.
+            </div>
           </div>
 
           {/* ── Email / password ── */}
