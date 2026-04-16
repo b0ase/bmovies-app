@@ -92,6 +92,41 @@
     }
     .btn-secondary:hover { border-color: #E50914; color: #fff; }
 
+    .btn-small {
+      display: inline-block;
+      margin-top: 0.6rem;
+      margin-right: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid #333;
+      background: transparent;
+      color: #ccc;
+      cursor: pointer;
+    }
+    .btn-small:hover { border-color: #E50914; color: #fff; }
+    .btn-small.green { border-color: #1a5a1a; color: #6bff8a; }
+    .btn-small.green:hover { background: #0e3a0e; }
+
+    .verify-result {
+      margin-top: 0.8rem;
+      padding: 0.6rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      display: none;
+    }
+    .verify-result.valid { background: #0e3a0e; border: 1px solid #1a5a1a; color: #6bff8a; }
+    .verify-result.invalid { background: #3a0e0e; border: 1px solid #5a1a1a; color: #ff6b7a; }
+
+    .cert-note {
+      margin-top: 0.8rem;
+      font-size: 0.7rem;
+      color: #555;
+      font-style: italic;
+    }
+
     /* BRC certificate section */
     .section { margin-top: 3rem; }
     .section h2 {
@@ -213,22 +248,34 @@
         platform public key — if it's valid, they know you're verified.
       </p>
       <div class="cert-card" id="cert-display">
-        <div class="field"><span class="key">type</span><span class="val">"BRC-KYC-Certificate"</span></div>
-        <div class="field"><span class="key">version</span><span class="val">"1.0"</span></div>
-        <div class="field"><span class="key">issuer</span><span class="val">"bMovies Platform (The Bitcoin Corporation Ltd)"</span></div>
-        <div class="field"><span class="key">issuerAddress</span><span class="val" id="cert-issuer">1G9wojxX3zs2Sy2JxT3Y9E3JMtFgdSCKAf</span></div>
+        <div class="field"><span class="key">type</span><span class="val" id="cert-type">"BRC-KYC-Certificate"</span></div>
+        <div class="field"><span class="key">version</span><span class="val" id="cert-version">"1.0"</span></div>
+        <div class="field"><span class="key">issuer</span><span class="val" id="cert-issuer-name">"bMovies Platform (The Bitcoin Corporation Ltd)"</span></div>
+        <div class="field"><span class="key">issuerPublicKey</span><span class="val" id="cert-issuer-pubkey" style="font-size:0.65rem;">[platform public key]</span></div>
+        <div class="field"><span class="key">issuerAddress</span><span class="val" id="cert-issuer">[platform address]</span></div>
         <div class="separator"></div>
         <div class="field"><span class="key">subject</span><span class="val" id="cert-subject">[your BSV address]</span></div>
         <div class="field"><span class="key">kycProvider</span><span class="val">"Veriff OÜ"</span></div>
         <div class="field"><span class="key">kycLevel</span><span class="val">"document + biometric"</span></div>
         <div class="field"><span class="key">status</span><span class="val" id="cert-status">pending</span></div>
-        <div class="field"><span class="key">verifiedAt</span><span class="val" id="cert-date">—</span></div>
+        <div class="field"><span class="key">verifiedAt</span><span class="val" id="cert-date">--</span></div>
         <div class="separator"></div>
         <div class="field"><span class="key">protocolID</span><span class="val">[1, "bmovies-kyc"]</span></div>
         <div class="field"><span class="key">keyID</span><span class="val">"kyc-cert-1"</span></div>
-        <div class="field"><span class="key">signature</span><span class="val" id="cert-sig">[signed by platform key via BRC-100 createSignature]</span></div>
+        <div class="field"><span class="key">issuedAt</span><span class="val" id="cert-issued-at">--</span></div>
+        <div class="separator"></div>
+        <div class="field"><span class="key">signature</span><span class="val" id="cert-sig" style="font-size:0.65rem;">[signed by platform key via BSM/ECDSA]</span></div>
         <div class="separator"></div>
         <div class="field"><span class="key">note</span><span class="val" style="color:#666;">Certificate does NOT contain name, DOB, or ID details. Only attests that the address holder passed Veriff's document + biometric check. Privacy-preserving by design.</span></div>
+      </div>
+      <div id="cert-actions" style="display:none;">
+        <button class="btn-small green" id="btn-verify-cert">Verify signature</button>
+        <button class="btn-small" id="btn-copy-sig">Copy full signature</button>
+        <button class="btn-small" id="btn-download-cert">Download certificate</button>
+        <div id="verify-result" class="verify-result"></div>
+      </div>
+      <div id="cert-schema-note" class="cert-note">
+        This is the certificate schema. A real signed certificate will appear here after completing Veriff verification.
       </div>
     </div>
 
@@ -303,12 +350,12 @@
         .eq('auth_user_id', user.id)
         .maybeSingle();
 
-      // Check KYC status
+      // Check KYC status (include certificate columns)
       let kyc = null;
       if (account?.id) {
         const { data } = await supabase
           .from('bct_user_kyc')
-          .select('status, verified_at, veriff_session')
+          .select('status, verified_at, veriff_session, certificate_json, certificate_signature, certificate_public_key, subject_address')
           .eq('account_id', account.id)
           .maybeSingle();
         kyc = data;
@@ -321,12 +368,84 @@
       if (bsvAddress) {
         document.getElementById('cert-subject').textContent = bsvAddress;
       }
-      if (isVerified) {
+
+      // Track the live certificate data for actions
+      let liveCertJson = null;
+      let liveCertSig = null;
+      let liveCertPubKey = null;
+
+      // If verified but no certificate yet, try to issue one
+      if (isVerified && kyc && !kyc.certificate_json) {
+        try {
+          const { data: sessionData2 } = await supabase.auth.getSession();
+          const accessToken = sessionData2?.session?.access_token;
+          if (accessToken) {
+            const issueRes = await fetch('/api/kyc/issue-cert', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+            });
+            if (issueRes.ok) {
+              const issued = await issueRes.json();
+              kyc.certificate_json = JSON.stringify(issued.certificate);
+              kyc.certificate_signature = issued.signature;
+              kyc.certificate_public_key = issued.publicKey;
+              kyc.subject_address = issued.certificate.subject;
+            }
+          }
+        } catch (e) {
+          console.warn('Certificate bootstrap failed:', e);
+        }
+      }
+
+      // Populate the certificate display with real data if available
+      if (isVerified && kyc?.certificate_json) {
+        try {
+          const cert = JSON.parse(kyc.certificate_json);
+          liveCertJson = kyc.certificate_json;
+          liveCertSig = kyc.certificate_signature;
+          liveCertPubKey = kyc.certificate_public_key;
+
+          document.getElementById('cert-type').textContent = `"${cert.type}"`;
+          document.getElementById('cert-version').textContent = `"${cert.version}"`;
+          document.getElementById('cert-issuer-name').textContent = `"${cert.issuer}"`;
+          document.getElementById('cert-issuer-pubkey').textContent = cert.issuerPublicKey;
+          document.getElementById('cert-issuer').textContent = cert.issuerAddress;
+          document.getElementById('cert-subject').textContent = cert.subject;
+          document.getElementById('cert-status').textContent = 'verified';
+          document.getElementById('cert-status').style.color = '#6bff8a';
+          document.getElementById('cert-date').textContent = cert.verifiedAt;
+          document.getElementById('cert-issued-at').textContent = cert.issuedAt;
+
+          // Show truncated signature with full on hover
+          const sigTruncated = kyc.certificate_signature.slice(0, 32) + '...' + kyc.certificate_signature.slice(-16);
+          const sigEl = document.getElementById('cert-sig');
+          sigEl.textContent = sigTruncated;
+          sigEl.style.color = '#6bff8a';
+          sigEl.title = kyc.certificate_signature;
+
+          // Store cert data globally for action buttons
+          window.__bmCert = {
+            json: liveCertJson,
+            sig: liveCertSig,
+            pubKey: liveCertPubKey,
+          };
+
+          // Show action buttons
+          document.getElementById('cert-actions').style.display = 'block';
+          document.getElementById('cert-schema-note').style.display = 'none';
+        } catch (e) {
+          console.warn('Failed to parse certificate:', e);
+        }
+      } else if (isVerified) {
         document.getElementById('cert-status').textContent = 'verified';
         document.getElementById('cert-status').style.color = '#6bff8a';
-        document.getElementById('cert-date').textContent = kyc.verified_at || '—';
-        document.getElementById('cert-sig').textContent = '[valid — signed by bMovies platform key]';
-        document.getElementById('cert-sig').style.color = '#6bff8a';
+        document.getElementById('cert-date').textContent = kyc.verified_at || '--';
+        document.getElementById('cert-sig').textContent = '[certificate pending — will be issued after Veriff check]';
+        document.getElementById('cert-schema-note').textContent =
+          'Certificate will be issued after completing a real Veriff check. Demo-verified users can trigger issuance by refreshing.';
       }
 
       if (isVerified) {
@@ -405,7 +524,80 @@
       }
     }
 
-    load();
+    load().then(() => {
+      // Wire up certificate action buttons (only active when cert is loaded)
+      const btnVerify = document.getElementById('btn-verify-cert');
+      const btnCopySig = document.getElementById('btn-copy-sig');
+      const btnDownload = document.getElementById('btn-download-cert');
+      const resultEl = document.getElementById('verify-result');
+
+      if (btnVerify) {
+        btnVerify.addEventListener('click', async () => {
+          const certJson = document.querySelector('[data-cert-json]')?.dataset.certJson
+            || btnVerify.closest('.section')?.querySelector('.cert-card')?.dataset.certJson;
+          // We stored the live values in the load() closure — access via the DOM
+          // Actually, let's use a global
+          if (!window.__bmCert) { resultEl.textContent = 'No certificate loaded'; resultEl.className = 'verify-result invalid'; resultEl.style.display = 'block'; return; }
+          btnVerify.disabled = true;
+          btnVerify.textContent = 'Verifying...';
+          try {
+            const res = await fetch('/api/kyc/verify-cert', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                certificate: window.__bmCert.json,
+                signature: window.__bmCert.sig,
+              }),
+            });
+            const data = await res.json();
+            resultEl.style.display = 'block';
+            if (data.valid) {
+              resultEl.className = 'verify-result valid';
+              resultEl.textContent = 'Signature valid. Certificate is authentic and was signed by the bMovies platform key.';
+            } else {
+              resultEl.className = 'verify-result invalid';
+              resultEl.textContent = 'Signature invalid. ' + (data.error || 'Verification failed.');
+            }
+          } catch (e) {
+            resultEl.style.display = 'block';
+            resultEl.className = 'verify-result invalid';
+            resultEl.textContent = 'Verification request failed: ' + e.message;
+          }
+          btnVerify.disabled = false;
+          btnVerify.textContent = 'Verify signature';
+        });
+      }
+
+      if (btnCopySig) {
+        btnCopySig.addEventListener('click', () => {
+          if (!window.__bmCert?.sig) return;
+          navigator.clipboard.writeText(window.__bmCert.sig).then(() => {
+            btnCopySig.textContent = 'Copied!';
+            setTimeout(() => { btnCopySig.textContent = 'Copy full signature'; }, 2000);
+          });
+        });
+      }
+
+      if (btnDownload) {
+        btnDownload.addEventListener('click', () => {
+          if (!window.__bmCert) return;
+          const payload = {
+            certificate: JSON.parse(window.__bmCert.json),
+            signature: window.__bmCert.sig,
+            publicKey: window.__bmCert.pubKey,
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'bmovies-kyc-certificate.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      }
+    });
   </script>
   <script type="module" src="js/nav-session.js"></script>
 </body>

@@ -458,6 +458,14 @@
           </div>
         ` : ''}
 
+        <div id="cert-section" style="margin-top:1.2rem;border:1px solid #222;background:#0a0a0a;padding:1.5rem;display:none;">
+          <div style="font-size:0.55rem;color:#E50914;letter-spacing:0.18em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">BRC-43</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;margin-bottom:0.8rem;">Agent Certificate</div>
+          <div id="cert-body" style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.7;color:#888;">
+            Loading certificate...
+          </div>
+        </div>
+
         ${films.length > 0 ? `
           <div class="section">
             <div class="eyebrow">Portfolio</div>
@@ -496,7 +504,83 @@
       `;
     }
 
-    load();
+    // Load and display the BRC-43 agent certificate
+    async function loadCertificate(agentId) {
+      const section = document.getElementById('cert-section');
+      const body = document.getElementById('cert-body');
+      if (!section || !body) return;
+
+      try {
+        const res = await fetch(`/api/certificates/agent?agentId=${encodeURIComponent(agentId)}`);
+        if (!res.ok) { section.style.display = 'none'; return; }
+        const data = await res.json();
+        const cert = data.certificate;
+        const sig = data.signature || '';
+        const pubKey = data.publicKey || '';
+        const sigShort = sig.length > 48 ? sig.slice(0, 24) + '...' + sig.slice(-16) : sig;
+
+        section.style.display = 'block';
+        body.innerHTML = `
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">type</span><span style="color:#ccc;">"${esc(cert.type)}"</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">version</span><span style="color:#ccc;">"${esc(cert.version)}"</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">issuer</span><span style="color:#ccc;">${esc(cert.issuer)}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">role</span><span style="color:#ccc;">${esc(cert.role)}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">studio</span><span style="color:#ccc;">${esc(cert.studioName)}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">wallet</span><span style="color:#ccc;word-break:break-all;">${esc(cert.walletAddress)}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">capabilities</span><span style="color:#ccc;">${(cert.capabilities || []).join(', ')}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">reputation</span><span style="color:#ccc;">${cert.reputation}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">protocolID</span><span style="color:#ccc;">[${cert.protocolID[0]}, "${esc(cert.protocolID[1])}"]</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">issuedAt</span><span style="color:#ccc;">${esc(cert.issuedAt)}</span></div>
+          <div style="border-top:1px dashed #222;margin:0.8rem 0;"></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">signature</span><span style="color:#6bff8a;word-break:break-all;" title="${esc(sig)}">${esc(sigShort)}</span></div>
+          <div style="display:flex;gap:0.8rem;margin-bottom:0.3rem;"><span style="color:#E50914;min-width:130px;">publicKey</span><span style="color:#ccc;word-break:break-all;">${esc(pubKey.slice(0, 20))}...${esc(pubKey.slice(-12))}</span></div>
+          <div style="margin-top:1rem;">
+            <button type="button" id="verify-cert-btn" style="padding:0.5rem 1rem;background:#1a1a1a;border:1px solid #333;color:#ccc;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;font-family:inherit;">Verify signature</button>
+            <span id="verify-cert-result" style="margin-left:0.8rem;font-size:0.7rem;"></span>
+          </div>
+        `;
+
+        // Wire up the verify button
+        const verifyBtn = document.getElementById('verify-cert-btn');
+        const verifyResult = document.getElementById('verify-cert-result');
+        if (verifyBtn) {
+          verifyBtn.addEventListener('click', async () => {
+            verifyBtn.disabled = true;
+            verifyResult.textContent = 'Verifying...';
+            verifyResult.style.color = '#aaa';
+            try {
+              const verifyRes = await fetch('/api/kyc/verify-cert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  certificate: JSON.stringify(cert),
+                  signature: sig,
+                }),
+              });
+              const result = await verifyRes.json();
+              if (result.valid) {
+                verifyResult.textContent = 'Valid -- signature verified against platform public key';
+                verifyResult.style.color = '#6bff8a';
+              } else {
+                verifyResult.textContent = 'Invalid -- ' + (result.error || 'signature check failed');
+                verifyResult.style.color = '#ff6b7a';
+              }
+            } catch (err) {
+              verifyResult.textContent = 'Error: ' + (err.message || err);
+              verifyResult.style.color = '#ff6b7a';
+            }
+            verifyBtn.disabled = false;
+          });
+        }
+      } catch (err) {
+        // Certificate loading failed silently -- non-critical feature
+        console.warn('[cert] Failed to load agent certificate:', err);
+      }
+    }
+
+    load().then(() => {
+      if (agentId) loadCertificate(agentId);
+    });
   </script>
   <script type="module" src="js/nav-session.js"></script>
 </body>

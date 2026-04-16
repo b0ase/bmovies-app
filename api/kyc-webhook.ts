@@ -14,7 +14,71 @@
  *   SUPABASE_SERVICE_ROLE_KEY — bypasses RLS
  */
 
-import { createHmac } from 'node:crypto';
+import { webcrypto, createHmac } from 'node:crypto';
+if (!(globalThis as any).crypto) (globalThis as any).crypto = webcrypto;
+
+import { PrivateKey, BSM, Signature } from '@bsv/sdk';
+
+// --- Inlined BRC certificate helpers (canonical source: src/kyc/certificate.ts) ---
+
+interface BrcKycCertificate {
+  type: 'BRC-KYC-Certificate';
+  version: '1.0';
+  issuer: string;
+  issuerPublicKey: string;
+  issuerAddress: string;
+  subject: string;
+  kycProvider: 'Veriff OÜ';
+  kycLevel: 'document + biometric';
+  status: 'verified';
+  verifiedAt: string;
+  protocolID: [number, string];
+  keyID: string;
+  issuedAt: string;
+}
+
+function getSigningKeyFromSecret(serviceRoleKey: string) {
+  const hmac = createHmac('sha256', serviceRoleKey);
+  hmac.update('bmovies-kyc-cert-signer');
+  const seed = hmac.digest('hex');
+  
+  const privateKey = PrivateKey.fromString(seed, 'hex');
+  const publicKey = privateKey.toPublicKey().toString();
+  const address = privateKey.toAddress();
+  return { privateKey, publicKey, address };
+}
+
+function _createCertificate(
+  subjectAddress: string,
+  verifiedAt: string,
+  signingPublicKey: string,
+  signingAddress: string,
+): BrcKycCertificate {
+  return {
+    type: 'BRC-KYC-Certificate',
+    version: '1.0',
+    issuer: 'bMovies Platform (The Bitcoin Corporation Ltd)',
+    issuerPublicKey: signingPublicKey,
+    issuerAddress: signingAddress,
+    subject: subjectAddress,
+    kycProvider: 'Veriff OÜ',
+    kycLevel: 'document + biometric',
+    status: 'verified',
+    verifiedAt,
+    protocolID: [1, 'bmovies-kyc'],
+    keyID: 'kyc-cert-1',
+    issuedAt: new Date().toISOString(),
+  };
+}
+
+function _signCertificate(cert: BrcKycCertificate, privateKey: PrivateKey): string {
+  const message = JSON.stringify(cert);
+  const messageBytes = Array.from(Buffer.from(message, 'utf-8'));
+  const sig = BSM.sign(messageBytes, privateKey, 'raw') as unknown as Signature;
+  return Buffer.from(sig.toDER()).toString('hex');
+}
+
+// --- End inlined helpers ---
 
 interface VercelRequest {
   method?: string;
@@ -125,6 +189,50 @@ export default async function handler(
     console.error('[kyc-webhook] Failed to update KYC row:', error);
     res.status(500).json({ error: 'DB update failed' });
     return;
+  }
+
+  // Issue BRC certificate for the verified user
+  try {
+    // Find the account that owns this Veriff session
+    const { data: kycRow } = await supabase
+      .from('bct_user_kyc')
+      .select('account_id')
+      .eq('veriff_session', verification.id)
+      .maybeSingle();
+
+    if (kycRow?.account_id) {
+      const accountId = kycRow.account_id;
+
+      // Get the user's BSV address from bct_user_wallets
+      const { data: wallet } = await supabase
+        .from('bct_user_wallets')
+        .select('address')
+        .eq('account_id', accountId)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      const subjectAddress = wallet?.address || accountId;
+
+      const { privateKey, publicKey, address: signerAddress } = getSigningKeyFromSecret(supabaseKey);
+      const cert = _createCertificate(subjectAddress, new Date().toISOString(), publicKey, signerAddress);
+      const certSignature = _signCertificate(cert, privateKey);
+
+      // Store the certificate on the KYC row
+      await supabase
+        .from('bct_user_kyc')
+        .update({
+          certificate_json: JSON.stringify(cert),
+          certificate_signature: certSignature,
+          certificate_public_key: publicKey,
+          subject_address: subjectAddress,
+        })
+        .eq('account_id', accountId);
+
+      console.log(`[kyc-webhook] BRC certificate issued for ${subjectAddress}`);
+    }
+  } catch (certErr) {
+    // Certificate issuance failure is non-blocking — KYC is still approved
+    console.warn('[kyc-webhook] certificate issuance failed:', certErr);
   }
 
   res.status(200).json({ received: true, status: 'approved', session: verification.id });

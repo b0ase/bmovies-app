@@ -1080,6 +1080,15 @@
             : `<div class="art-grid">${artifacts.map(renderArtifactCard).join('')}</div>`
           }
         </div>
+
+        ${artifacts.length > 0 ? `
+        <div style="border:1px solid #222;background:#0a0a0a;padding:1.5rem;margin-top:1.5rem;" id="audit-trail-section">
+          <div style="font-size:0.55rem;color:#E50914;letter-spacing:0.18em;text-transform:uppercase;font-weight:900;">BRC-77</div>
+          <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:#fff;margin-top:0.3rem;margin-bottom:0.4rem;border:none;padding:0;">Cryptographic audit trail</h2>
+          <div style="font-size:0.75rem;color:#777;margin-bottom:1rem;">Every artifact is signed by the platform key on behalf of the producing agent. Signatures are verifiable with the platform public key.</div>
+          <div id="audit-trail-body" style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#888;">Loading signatures...</div>
+        </div>
+        ` : ''}
       `;
 
       // Wire the rough cut player + draft-only action buttons after
@@ -1103,6 +1112,81 @@
           if (id) openTextArtifactModal(id);
         });
       });
+
+      // Load BRC-77 audit trail (non-blocking, fires after main render)
+      if (artifacts.length > 0) {
+        loadAuditTrail(offer.id);
+      }
+    }
+
+    // ─── BRC-77 Audit Trail ───
+    //
+    // Loads production step signatures from /api/certificates/production-step
+    // and renders them in a table below the deliverables section.
+    let _auditTrailLoaded = '';
+    async function loadAuditTrail(offerId) {
+      // Only load once per offer (avoid re-fetching on every 5s tick)
+      if (_auditTrailLoaded === offerId) return;
+      const body = document.getElementById('audit-trail-body');
+      if (!body) return;
+
+      try {
+        const res = await fetch(`/api/certificates/production-step?offerId=${encodeURIComponent(offerId)}`);
+        if (!res.ok) {
+          body.textContent = 'Failed to load audit trail.';
+          return;
+        }
+        const data = await res.json();
+        _auditTrailLoaded = offerId;
+
+        if (!data.steps || data.steps.length === 0) {
+          body.textContent = 'No signed artifacts yet.';
+          return;
+        }
+
+        const ROLE_COLORS = {
+          writer: '#3B82F6', director: '#E50914', cinematographer: '#F59E0B',
+          storyboard: '#8B5CF6', editor: '#10B981', composer: '#EC4899',
+          sound_designer: '#6366F1', producer: '#F97316',
+        };
+
+        let html = `
+          <div style="font-size:0.6rem;color:#555;margin-bottom:0.8rem;">Platform public key: <span style="color:#888;">${esc(data.publicKey?.slice(0, 20))}...${esc(data.publicKey?.slice(-12))}</span></div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid #222;">
+                <th style="text-align:left;padding:0.4rem 0.6rem;font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Step</th>
+                <th style="text-align:left;padding:0.4rem 0.6rem;font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Agent</th>
+                <th style="text-align:left;padding:0.4rem 0.6rem;font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Artifact</th>
+                <th style="text-align:left;padding:0.4rem 0.6rem;font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Hash</th>
+                <th style="text-align:left;padding:0.4rem 0.6rem;font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        for (const step of data.steps) {
+          const roleColor = ROLE_COLORS[step.agentRole] || '#888';
+          const sigShort = step.signature.length > 32 ? step.signature.slice(0, 12) + '...' + step.signature.slice(-8) : step.signature;
+          const hashShort = step.artifactHash.slice(0, 10) + '...' + step.artifactHash.slice(-6);
+          html += `
+            <tr style="border-bottom:1px solid #111;">
+              <td style="padding:0.4rem 0.6rem;color:#ddd;white-space:nowrap;">${esc((step.stepId || '').replace(/[._]/g, ' '))}</td>
+              <td style="padding:0.4rem 0.6rem;"><span style="color:${roleColor};">${esc(step.agentName)}</span> <span style="color:#555;font-size:0.6rem;">${esc(step.agentRole)}</span></td>
+              <td style="padding:0.4rem 0.6rem;color:#888;">${esc(step.artifactKind)}</td>
+              <td style="padding:0.4rem 0.6rem;color:#888;" title="${esc(step.artifactHash)}">${esc(hashShort)}</td>
+              <td style="padding:0.4rem 0.6rem;color:#6bff8a;" title="${esc(step.signature)}">${esc(sigShort)}</td>
+            </tr>
+          `;
+        }
+
+        html += '</tbody></table>';
+        html += `<div style="font-size:0.6rem;color:#555;margin-top:0.8rem;">${data.steps.length} artifact${data.steps.length === 1 ? '' : 's'} signed by platform key. Each signature covers the artifact hash + agent identity + step metadata.</div>`;
+        body.innerHTML = html;
+      } catch (err) {
+        console.warn('[audit-trail] Failed to load:', err);
+        body.textContent = 'Audit trail unavailable.';
+      }
     }
 
     function wireDraftActions(offer) {
