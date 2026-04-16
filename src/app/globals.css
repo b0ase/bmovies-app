@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Critical: prevent hamburger X flash on page load.
+   nav-session.js injects two SVGs (open + close). Without this,
+   both are visible for 200-500ms until theme.css loads.
+   These rules are parsed immediately from the CSS bundle. */
+.site-header .nav-toggle .icon-close { display: none !important; }
+.site-header.nav-open .nav-toggle .icon-open { display: none !important; }
+.site-header.nav-open .nav-toggle .icon-close { display: block !important; }
+.site-header .nav-toggle { background: none; border: none; cursor: pointer; padding: 0.5rem; color: #fff; }
+.site-header .nav-toggle svg { width: 1.2rem; height: 1.2rem; }
+
 /*
  * bMovies global theme.
  *

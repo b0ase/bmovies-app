@@ -33,8 +33,11 @@ import {
   type WalletProtocol,
 } from '@bsv/sdk'
 
-// BSV Desktop listens on 3321 (current) or 2121 (legacy). We probe both.
-const METANET_PORTS = [3321, 2121]
+// BSV Desktop / Antigravity (Metanet Client Desktop) port detection.
+// Old BSV Desktop: hardcoded 3321 or 2121.
+// New Antigravity: dynamic ports, typically in the 50000-60000 range.
+// We probe hardcoded ports first, then scan the dynamic range if needed.
+const LEGACY_PORTS = [3321, 2121]
 
 // Protocol tag used to scope key derivation for bMovies actions.
 // Security level 1 = "app" scope — the wallet prompts for permission
@@ -106,48 +109,88 @@ let _publicKey: string | null = null
  * Probe BSV Desktop / Metanet Client on 3321 + 2121. Returns a fully
  * wired WalletClient + address on success, null on failure.
  */
+/**
+ * Detect BSV Desktop / Antigravity (Metanet Client Desktop).
+ *
+ * Strategy (in order):
+ *   1. Check window.CWI — injected by Antigravity when the page is
+ *      running inside the wallet's embedded browser. Zero network calls.
+ *   2. Probe legacy hardcoded ports (3321, 2121) via raw fetch.
+ *   3. Full SDK handshake via HTTPWalletJSON on discovered port.
+ *
+ * The constructor for HTTPWalletJSON is:
+ *   new HTTPWalletJSON(originator?, baseUrl?, httpClient?)
+ * — NOT (url). Our originator is 'bmovies.online'.
+ */
 export async function detectMetanet(): Promise<
   | { url: string; client: WalletInterface; address: string; publicKey: string }
   | null
 > {
-  // Try both HTTP and HTTPS on each port. BSV Desktop listens on HTTP but
-  // some browser+OS combos block mixed-content fetches (HTTPS page → HTTP
-  // localhost). Trying HTTPS first catches self-signed cert setups; HTTP
-  // is the fallback that works on most configurations.
+  // ── Strategy 1: window.CWI (Antigravity embedded browser) ──
+  if (typeof window !== 'undefined' && (window as any).CWI) {
+    console.info('[brc100] window.CWI detected — using WindowCWI substrate')
+    try {
+      // window.CWI implements WalletInterface directly — use it as-is
+      const cwiWallet = (window as any).CWI as WalletInterface
+      const { publicKey } = await cwiWallet.getPublicKey({
+        protocolID: BMOVIES_PROTOCOL_ID,
+        keyID: BMOVIES_KEY_ID,
+      })
+      const pk = PublicKey.fromString(publicKey)
+      const address = pk.toAddress().toString()
+      console.info(`[brc100] window.CWI handshake OK → ${address}`)
+      return { url: 'window.CWI', client: cwiWallet, address, publicKey }
+    } catch (err) {
+      console.warn('[brc100] window.CWI handshake failed:', err instanceof Error ? err.message : err)
+    }
+  }
+
+  // ── Strategy 2: HTTP probe on known ports ──
+  // Legacy BSV Desktop: 3321, 2121
+  // New Antigravity: dynamic, but we can't scan 65k ports.
+  // Instead, try the SDK's default constructor which uses 3321.
+  const originator = typeof location !== 'undefined' ? location.hostname : 'bmovies.online'
   const candidates: string[] = []
-  for (const port of METANET_PORTS) {
-    candidates.push(`https://localhost:${port}`)
+  for (const port of LEGACY_PORTS) {
     candidates.push(`http://localhost:${port}`)
     candidates.push(`http://127.0.0.1:${port}`)
   }
 
   for (const url of candidates) {
-    // Step 1 — lightweight presence check. /isAuthenticated never touches
-    // the overlay network so it works even when the wallet's internal
-    // messaging is misbehaving.
-    let authed = false
+    // Lightweight presence check — does anything respond on this port?
     try {
       const res = await fetch(`${url}/isAuthenticated`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(2000),
       })
-      if (!res.ok) continue
-      const body = (await res.json()) as { authenticated?: boolean }
-      authed = Boolean(body?.authenticated)
+      // Any response (even CSRF error) means the wallet is here
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        // CSRF error means Antigravity is running on this port
+        if (text.includes('CSRF')) {
+          console.info(`[brc100] Antigravity detected on ${url} (CSRF response)`)
+        } else {
+          console.debug(`[brc100] ${url} responded ${res.status}: ${text.slice(0, 100)}`)
+          continue
+        }
+      } else {
+        const body = await res.json().catch(() => ({})) as { authenticated?: boolean }
+        if (!body?.authenticated) {
+          console.info(`[brc100] BSV Desktop found on ${url} but wallet is locked.`)
+          continue
+        }
+      }
     } catch (err) {
-      console.debug(`[brc100] probe ${url} failed:`, err instanceof Error ? err.message : err)
-      continue
-    }
-    if (!authed) {
-      console.info(`[brc100] BSV Desktop found on ${url} but wallet is locked.`)
+      console.debug(`[brc100] probe ${url} — no response`)
       continue
     }
 
-    // Step 2 — full BRC-100 handshake via the SDK substrate.
+    // Full BRC-100 handshake via the SDK.
+    // HTTPWalletJSON(originator, baseUrl, httpClient)
     try {
-      const substrate = new HTTPWalletJSON(url)
+      const substrate = new HTTPWalletJSON(originator, url)
       const client = new WalletClient(substrate)
       const handshake = client.getPublicKey({
         protocolID: BMOVIES_PROTOCOL_ID,
@@ -173,6 +216,29 @@ export async function detectMetanet(): Promise<
       }
     }
   }
+
+  // ── Strategy 3: Try the SDK default (localhost:3321) with proper originator ──
+  // In case the wallet IS on 3321 but our raw fetch failed due to CORS/CSRF
+  try {
+    console.debug('[brc100] Trying SDK default HTTPWalletJSON with originator...')
+    const substrate = new HTTPWalletJSON(originator)
+    const client = new WalletClient(substrate)
+    const handshake = client.getPublicKey({
+      protocolID: BMOVIES_PROTOCOL_ID,
+      keyID: BMOVIES_KEY_ID,
+    })
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('SDK default timeout (8s)')), 8_000),
+    )
+    const { publicKey } = await Promise.race([handshake, timeout])
+    const pk = PublicKey.fromString(publicKey)
+    const address = pk.toAddress().toString()
+    console.info(`[brc100] SDK default handshake OK → ${address}`)
+    return { url: 'http://localhost:3321', client, address, publicKey }
+  } catch (err) {
+    console.debug('[brc100] SDK default failed:', err instanceof Error ? err.message : err)
+  }
+
   return null
 }
 
