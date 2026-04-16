@@ -839,7 +839,7 @@ sustained_pps   = peak_pps × duty_cycle</div>
           <tr>
             <td>AI video</td>
             <td>Grok Imagine Video</td>
-            <td>4 × 8s scene clips per feature</td>
+            <td>Scene clips + trailer per production</td>
           </tr>
           <tr>
             <td>Voice</td>
@@ -857,42 +857,79 @@ sustained_pps   = peak_pps × duty_cycle</div>
 
     <!-- Deliverables table -->
     <div class="section-number">Section 03</div>
-    <h2>The Product the Audience Walks Away With</h2>
+    <h2>What You Get for Your Commission</h2>
 
-    <p>For a single $999 feature commission (~30 distinct artifacts):</p>
+    <p>bMovies is an <strong>escalating investment ladder</strong>. Each tier funds the next. The commissioner owns 99% of the royalty shares — minted as a real BSV-21 token the moment they pay.</p>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Deliverable</th>
-            <th>Format</th>
-            <th>Source</th>
+            <th>Tier</th>
+            <th>Price</th>
+            <th>What you get</th>
+            <th>What it funds</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>Logline (1 line)</td><td>text</td><td>Grok writer agent</td></tr>
-          <tr><td>Synopsis (1 page)</td><td>text</td><td>Grok writer agent</td></tr>
-          <tr><td>Treatment (1500–2000 words)</td><td>text</td><td>Grok writer agent</td></tr>
-          <tr><td>Beat sheet (15 beats)</td><td>text</td><td>Grok writer agent</td></tr>
-          <tr><td>Screenplay (opening scenes, ~3000 words)</td><td>text</td><td>Grok writer agent</td></tr>
-          <tr><td>Director's vision statement</td><td>text</td><td>Grok director agent</td></tr>
-          <tr><td>Cast list (4–6 characters with voice notes)</td><td>text</td><td>Grok casting director agent</td></tr>
-          <tr><td>Lookbook (visual references, palette, sets)</td><td>text</td><td>Grok production designer agent</td></tr>
-          <tr><td>Cinematography plan</td><td>text</td><td>Grok cinematographer agent</td></tr>
-          <tr><td>Storyboard pack (12 frames)</td><td>image × 12</td><td>Grok Imagine Image</td></tr>
-          <tr><td>Music bible (themes, motifs, cue list)</td><td>text</td><td>Grok composer agent</td></tr>
-          <tr><td>Production bible (everything aggregated)</td><td>text</td><td>aggregator</td></tr>
-          <tr><td>Scene clips (4 × 8s of real video)</td><td>video × 4</td><td>Grok Imagine Video</td></tr>
-          <tr><td>Rough cut playlist</td><td>text/json</td><td>editor agent</td></tr>
-          <tr><td>Trailer (32 seconds, real video)</td><td>video × 4</td><td>reuses /api/trailer/generate</td></tr>
-          <tr><td>Movie poster</td><td>image</td><td>Grok Imagine Image Pro</td></tr>
-          <tr><td>Investor deck</td><td>text/markdown → printable HTML</td><td>aggregator</td></tr>
-          <tr><td>Royalty shares</td><td>BSV-21 token, 99% to commissioner</td><td><code>src/token/mint.ts</code></td></tr>
-          <tr><td>On-chain audit trail</td><td>bct_step_log + per-step txids</td><td>the worker</td></tr>
+          <tr>
+            <td style="color:#E50914;font-weight:900;">Pitch</td>
+            <td>$0.99</td>
+            <td>Logline, synopsis, movie poster, BSV-21 royalty token (99% to you)</td>
+            <td>Sell 10% of your shares at 10× ($9.90) and the trailer funds itself</td>
+          </tr>
+          <tr>
+            <td style="color:#E50914;font-weight:900;">Trailer</td>
+            <td>$9.99</td>
+            <td>Everything in Pitch + director's vision, 60-second video trailer, expanded treatment</td>
+            <td>Sell 10% of your shares at 10× ($99) and the short funds itself</td>
+          </tr>
+          <tr>
+            <td style="color:#E50914;font-weight:900;">Short</td>
+            <td>$99</td>
+            <td>Everything in Trailer + 12-frame storyboard pack, score brief, complete short film</td>
+            <td>Sell 10% of your shares at 10× ($990) and the feature funds itself</td>
+          </tr>
+          <tr>
+            <td style="color:#E50914;font-weight:900;">Feature</td>
+            <td>$999</td>
+            <td>Full production bible: screenplay, cast, lookbook, cinematography plan, 12 storyboards, score, scene footage, trailer, poster, investor deck — <strong>~30 deliverables</strong> from 8 specialist agents</td>
+            <td>Sell shares on the secondary market. Every ticket sold fans revenue back to holders.</td>
+          </tr>
         </tbody>
       </table>
     </div>
+
+    <p style="color:#888;font-size:0.8rem;margin-top:1rem;">The escalating ladder means a $0.99 pitch can self-fund all the way to a $999 feature without the commissioner spending another cent — if there's audience demand for the idea. Every tier is a real product with real deliverables, not a waitlist.</p>
+
+    <details style="margin-top:1.5rem;border:1px solid #1a1a1a;background:#0a0a0a;padding:1rem;">
+      <summary style="cursor:pointer;font-weight:700;font-size:0.8rem;color:#888;">Full deliverables breakdown (feature tier, ~30 artifacts)</summary>
+      <div class="table-wrap" style="margin-top:1rem;">
+        <table>
+          <thead><tr><th>Deliverable</th><th>Format</th><th>Agent</th></tr></thead>
+          <tbody>
+            <tr><td>Logline</td><td>text</td><td>Writer</td></tr>
+            <tr><td>Synopsis (1 page)</td><td>text</td><td>Writer</td></tr>
+            <tr><td>Treatment (1500–2000 words)</td><td>text</td><td>Writer</td></tr>
+            <tr><td>Beat sheet (15 beats)</td><td>text</td><td>Writer</td></tr>
+            <tr><td>Screenplay (opening scenes)</td><td>text</td><td>Writer</td></tr>
+            <tr><td>Director's vision</td><td>text</td><td>Director</td></tr>
+            <tr><td>Cast list + voice notes</td><td>text</td><td>Casting director</td></tr>
+            <tr><td>Lookbook (palette, sets, references)</td><td>text</td><td>Production designer</td></tr>
+            <tr><td>Cinematography plan</td><td>text</td><td>Cinematographer</td></tr>
+            <tr><td>Storyboard pack</td><td>12 images</td><td>Storyboard artist</td></tr>
+            <tr><td>Score brief (themes, motifs, cue list)</td><td>text</td><td>Composer</td></tr>
+            <tr><td>Production bible</td><td>text</td><td>Producer (aggregator)</td></tr>
+            <tr><td>Scene footage</td><td>video</td><td>Cinematographer + Editor</td></tr>
+            <tr><td>Trailer</td><td>video</td><td>Editor</td></tr>
+            <tr><td>Movie poster</td><td>image</td><td>Storyboard artist</td></tr>
+            <tr><td>Investor deck</td><td>printable HTML</td><td>Producer</td></tr>
+            <tr><td>Royalty shares (99%)</td><td>BSV-21 token</td><td>On-chain mint</td></tr>
+            <tr><td>On-chain audit trail</td><td>step log + txids</td><td>Pipeline</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
 
     <!-- Verified end-to-end -->
     <div class="section-number">Section 04</div>
@@ -903,8 +940,8 @@ sustained_pps   = peak_pps × duty_cycle</div>
     <p>Earlier production-pipeline verification:</p>
 
     <ul>
-      <li><strong><code>feature-test-001</code></strong> "The Last Lighthouse" — completed end-to-end, in <code>draft</code> status, 35 artifacts, includes 4 real Grok Imagine video scene clips (~3.2MB MP4 each), 12 Grok Imagine storyboard frames, full Phase 1 text deliverables. <strong>2 revision requests proven live</strong> via <code>/api/feature/revise</code> — the second one ("Push the dread harder, make this feel like the first 5 minutes of The Thing") materially changed the writer.synopsis output, with version 2 visibly darker and more menacing than version 1.</li>
-      <li><strong><code>feature-test-002</code></strong> "The Cartographer of Empty Rooms" — completed end-to-end, in <code>draft</code> status, 55 artifacts, includes 4 real scene clips + Phase 1 text + Phase 2 video.</li>
+      <li><strong><code>feature-test-001</code></strong> "The Last Lighthouse" — completed end-to-end, in <code>draft</code> status, 35 artifacts including real video scene footage, 12 storyboard frames, and full text deliverables. <strong>2 revision requests proven live</strong> — the second one ("Push the dread harder, make this feel like the first 5 minutes of The Thing") materially changed the writer output, with version 2 visibly darker and more menacing than version 1.</li>
+      <li><strong><code>feature-test-002</code></strong> "The Cartographer of Empty Rooms" — completed end-to-end, in <code>draft</code> status, 55 artifacts across all production phases.</li>
       <li><strong><code>feature-judge-1776082467953-trkd5x</code></strong> "Echoes Beneath Glacier 9" — triggered live via <code>POST /api/feature/judge-coupon</code> with the <code>BSVA2026</code> coupon, currently in flight on the Hetzner pm2 worker as of submission writing.</li>
       <li><strong><code>feature-1776084845417-wyhk3u</code></strong> "Glasshouse" — triggered live via <code>POST /api/feature/start</code>, currently in flight.</li>
     </ul>
@@ -963,7 +1000,7 @@ sustained_pps   = peak_pps × duty_cycle</div>
     <p>Per-step payments are currently sentinel txids (<code>feature-pay-${offerId}-${stepId}-${ts}</code>). The wallet plumbing exists in <code>src/payment/wallet.ts</code> and the schema is ready in <code>bct_artifacts.payment_txid</code>. Wiring real BSV transfers from a per-step pool wallet is a one-day task once the agent wallet pool is funded.</p>
 
     <h3>Phase 3 ffmpeg concat — deferred</h3>
-    <p>Would emit a real <code>feature.mp4</code> from the scene clips. Today the rough cut is a JSON playlist that the <code>/production.html</code> player streams in sequence — same UX, no object storage required.</p>
+    <p>Full-length video assembly from scene footage. Today the rough cut is a streaming playlist that the <code>/production.html</code> player renders in sequence. Post-hackathon: ffmpeg concat into a single deliverable MP4.</p>
 
     <h3>Share listing flow — fully wired</h3>
     <p><code>/api/feature/list-shares</code> (create/buy/cancel actions), <code>bct_share_listings</code> table with RLS, Stripe webhook handles the <code>share-listing-buy</code> checkout type and flips listings to <code>sold</code>. Verified live: created a 0.1% ($10,000) listing on <code>feature-test-001</code>, generated a real Stripe checkout URL.</p>
