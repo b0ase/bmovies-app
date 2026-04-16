@@ -27,19 +27,23 @@ const LOGO_HTML = '<a href="index.html" class="logo">b<span>Movies</span></a>';
 // The page journey is carried by the logo → hero copy; the nav is just
 // a flat directory so visitors can teleport anywhere.
 //
-// Note: /x402.html still exists for judges and developers who want to
-// look under the hood, but it's deliberately not in the consumer nav.
-// It's linked from the About page footer instead.
+// Protocol (x402) and Jobs (jobboard) are in the main nav because they
+// ARE the platform — the micropayment protocol and the agent-to-agent
+// job market are the defining features, not technical easter eggs.
+// Earlier versions had them as hidden "judges + developers" pages but
+// they deserve to be first-class.
 const NAV_LINKS = [
   { href: 'about.html',       label: 'About' },
   { href: 'commission.html',  label: 'Commission' },
   { href: 'exchange.html',    label: 'Exchange' },
+  { href: 'jobboard.html',    label: 'Jobs' },
   // { href: 'invest.html',   label: 'Invest' },  // $bMovies — temporarily
   //   removed from nav until the platform-token mechanics (on-chain
   //   mint, tranche schedule, legal disclosures, non-custodial payout
   //   rail) are ready to ship. Page still exists at /invest.html for
   //   direct-link access; add back to NAV_LINKS when ready.
   { href: 'productions.html', label: 'Live' },          // renamed from "Productions"
+  { href: 'x402.html',        label: 'Protocol' },
   { href: 'studios.html',     label: 'Studios' },
   { href: 'watch.html',       label: 'Watch' },
   // "My studio" used to live here as an external link to app.bmovies.online
@@ -60,7 +64,7 @@ const ACTIVE_ALIASES = {
   'trade.html':       'exchange.html',
   'studio.html':      'studios.html',
   'agents.html':      'studios.html',
-  'jobboard.html':    'studios.html',
+  // jobboard.html now has its own top-level Jobs link — no alias needed.
   'leaderboard.html': 'studios.html',
   'production.html':  'productions.html',
   'deck.html':        'productions.html',
@@ -234,6 +238,36 @@ function mountLegalRow() {
   footer.appendChild(row);
 }
 
+/**
+ * Discreet "For BSVA judges →" link mounted under the legal row.
+ * Not in any primary nav — this page is linked from the BSVA
+ * submission form as the "start here" URL for reviewers. Regular
+ * visitors won't notice it; judges who land here from the submission
+ * packet can still find it from the footer of any page.
+ */
+function mountJudgesLink() {
+  const footer = document.querySelector('footer.site-footer .footer-inner');
+  if (!footer) return;
+  if (footer.querySelector('.footer-judges')) return;
+  // Don't render on /judges.html itself — the page already has its
+  // own header + BSVA coupon CTA, the extra link would be noise.
+  if (/\/judges\.html$/.test(window.location.pathname)) return;
+  // Also hide when we're on a legal page — the legal footer is its
+  // own thing and this link doesn't belong there.
+  if (/\/legal\//.test(window.location.pathname)) return;
+  const insideLegal = /\/legal\//.test(window.location.pathname);
+  const prefix = insideLegal ? '../' : '';
+  const row = document.createElement('div');
+  row.className = 'footer-judges';
+  row.style.cssText = 'text-align:center;margin-top:1rem;font-size:0.7rem;';
+  row.innerHTML = `
+    <a href="${prefix}judges.html" style="color:#666;text-decoration:none;">
+      For BSVA judges <span style="color:#E50914;">→</span>
+    </a>
+  `;
+  footer.appendChild(row);
+}
+
 // ─── 2. Session state flip ───
 
 function isSessionValid() {
@@ -269,6 +303,7 @@ function updateNav() {
 mountNav();
 mountSocialRow();
 mountLegalRow();
+mountJudgesLink();
 updateNav();
 
 // Expose for in-page updates after the session flip runs
