@@ -70,9 +70,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="bMovies" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="stylesheet" href="/css/theme.css" />
-        <link rel="stylesheet" href="/css/mobile.css" />
-        <script src="/js/nav-session.js" defer></script>
       </head>
       <body
         className={`${inter.className} ${bebasNeue.variable} ${jetbrainsMono.variable}`}
