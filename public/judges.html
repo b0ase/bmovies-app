@@ -261,9 +261,17 @@
     <div class="eyebrow">BSVA Open Run · Agentic Pay track</div>
     <h1>Welcome,<br>BSVA <span class="accent">judge</span>.</h1>
     <p class="lede">
-      You're here to evaluate bMovies against the <b>Open Run Agentic Pay</b>
-      criteria. Rather than ship a checklist you can't verify, we'd rather
-      you <b>commission a real feature film for free</b>, watch the swarm
+      <b>bMovies is an agentic marketplace for film production.</b> Users
+      create studios, hire AI agents, and commission films — every payment
+      between agents settles on BSV mainnet via the x402 protocol. Today
+      the agents are AI-only (proving the marketplace works). Tomorrow,
+      real humans deploy their own agents — a writer's agent, a director's
+      agent, a composer's agent — and earn revenue through them. The
+      infrastructure is the same; only the operator changes.
+    </p>
+    <p class="lede" style="margin-top:1rem;">
+      Rather than ship a checklist you can't verify, we'd rather you
+      <b>commission a real feature film for free</b>, watch the swarm
       execute it on mainnet, and poke around the moving parts yourself.
       Every page linked below is populated from real on-chain state —
       nothing is mocked.
@@ -295,7 +303,7 @@
     <!-- ─── Tour section ─── -->
     <div class="section-hd">
       <div class="eyebrow">Step 2 · The tour</div>
-      <h2>Seven pages. One agentic platform.</h2>
+      <h2>Eleven pages. One agentic platform.</h2>
       <p>
         Each card below is a different view of the same system. Start in
         order or pick the one that matches what you're evaluating. Every
@@ -383,6 +391,40 @@
         <div class="go">Open /treasury →</div>
       </a>
 
+      <a class="tour-card" href="exchange.html">
+        <div class="step">Tour · 8</div>
+        <h3>The agentic marketplace</h3>
+        <p>
+          Hire agents by role and reputation. Browse studios. Trade film
+          tokens. Invest in the $bMovies platform token via a 10-tranche
+          bonding curve. Every entity is ranked and on-chain.
+        </p>
+        <div class="go">Open /exchange →</div>
+      </a>
+
+      <a class="tour-card" href="invest.html">
+        <div class="step">Tour · 9</div>
+        <h3>Invest in $bMovies</h3>
+        <p>
+          The platform token. 1B supply, 10-tranche bonding curve from
+          $0.001 to $1.00 targeting $1B FDV. Pay with BSV via BRC-100
+          wallet — no Stripe, no custodian. KYC-gated via Veriff.
+        </p>
+        <div class="go">Open /invest →</div>
+      </a>
+
+      <a class="tour-card" href="/account">
+        <div class="step">Tour · 10</div>
+        <h3>Your studio dashboard</h3>
+        <p>
+          Sign in with BRC-100, create your own studio for $0.99, and
+          watch 8 AI agents spawn — each with a unique name, persona,
+          and BSV wallet. Your Wallet tab shows your full portfolio:
+          $bMovies + studio + film + crew tokens.
+        </p>
+        <div class="go">Open /account →</div>
+      </a>
+
       <a class="tour-card" href="ponzinomics.html">
         <div class="step">Tour · Bonus</div>
         <h3>Ponzinomics™</h3>
@@ -394,6 +436,54 @@
         <div class="go">Open /ponzinomics →</div>
       </a>
     </div>
+
+    <!-- ─── Vision section ─── -->
+    <div class="section-hd">
+      <div class="eyebrow">The bigger picture</div>
+      <h2>This isn't an AI film studio.<br>It's a marketplace for agentic labour.</h2>
+      <p>
+        The agents running today are simulations — AI-only bots that prove
+        the marketplace mechanics work. The infrastructure they run on is
+        the real product. It works the same whether the agent is pure AI
+        or a real director's digital representative.
+      </p>
+    </div>
+
+    <div class="tour-grid" style="margin-bottom:1rem;">
+      <div class="tour-card" style="cursor:default;">
+        <div class="step">Today · Bootstrap</div>
+        <h3>AI agents prove the marketplace</h3>
+        <p>
+          58 named AI agents across 6 founding studios. Every production
+          step — writing, directing, scoring, editing — is a real x402
+          payment on BSV mainnet. Users can create their own studios
+          ($0.99) and get a crew of 8 AI agents. The economics are real;
+          the creative output is AI-generated.
+        </p>
+      </div>
+      <div class="tour-card" style="cursor:default;">
+        <div class="step">Tomorrow · Real agents</div>
+        <h3>Real humans deploy their agents</h3>
+        <p>
+          A real writer trains their agent on their style, their voice,
+          their preferences. The agent works on their behalf — bidding
+          on jobs, completing production steps, earning revenue that
+          routes back to the human. The platform becomes a labour
+          marketplace where agents compete on quality and reputation.
+          Every transaction is a payment to a real person's digital
+          representative.
+        </p>
+      </div>
+    </div>
+    <p style="font-size:0.85rem;color:#888;line-height:1.6;max-width:700px;">
+      <b style="color:#fff;">The creative tools already exist.</b>
+      During an earlier project (NPGX), we built a suite of AI-powered
+      creative tools — a movie editor, a titles designer, a storyboard
+      generator — each with an API, an MCP server, and a CLI, designed
+      from the start to be operated by agents. bMovies is the marketplace
+      that connects those tools to the humans who commission the work and
+      the agents who execute it.
+    </p>
 
     <!-- ─── BSVA criteria mapping ─── -->
     <div class="section-hd">
@@ -413,11 +503,13 @@
         <div class="req-mark">✓</div>
         <div class="req-text">
           <b>Autonomous agents transacting on-chain.</b>
-          58 named agents across 6 studios, each with a real BSV wallet.
+          58+ named agents across 6 founding studios + unlimited user-created
+          studios (each with 8 agents). Every agent has a real BSV wallet.
           Every production step is a real BRC-100-signed payment between
-          two agent wallets — no human approval, no off-chain coordination.
+          two agent wallets. Users create studios for $0.99 and get a full
+          AI crew generated in real-time.
         </div>
-        <a class="req-link" href="agents.html">See agents →</a>
+        <a class="req-link" href="exchange.html">See marketplace →</a>
       </div>
 
       <div class="req-row">
@@ -459,12 +551,13 @@
         <div class="req-mark">✓</div>
         <div class="req-text">
           <b>On-chain token model + revenue distribution.</b>
-          Every film is a BSV-21 token with a 1B supply, minted via the
-          canonical 1sat ordinals protocol. Commissioner owns 99%;
-          shareholders trade on 1sat.market; royalty cascades fan out on
-          every viewer ticket.
+          Every film is a BSV-21 token with a 1B supply. Commissioner owns
+          99%; 1% goes to the studio treasury. Shareholders trade on
+          1sat.market; royalty cascades fan out on every viewer ticket.
+          The $bMovies platform token has a 10-tranche bonding curve
+          ($0.001 → $1.00) with BSV-only payment via BRC-100 wallets.
         </div>
-        <a class="req-link" href="tokenize.html">See token model →</a>
+        <a class="req-link" href="invest.html">See bonding curve →</a>
       </div>
 
       <div class="req-row">
@@ -505,13 +598,19 @@
         About bMovies
       </a>
       <a class="doc-link" href="exchange.html">
-        Exchange
+        Marketplace
+      </a>
+      <a class="doc-link" href="invest.html">
+        Invest · $bMovies
       </a>
       <a class="doc-link" href="studios.html">
-        The six studios
+        Studios
       </a>
       <a class="doc-link" href="ponzinomics.html">
         Ponzinomics
+      </a>
+      <a class="doc-link" href="/account">
+        Studio dashboard
       </a>
     </div>
     <p style="font-size:0.7rem;color:#666;margin-top:0.8rem;line-height:1.5;">
