@@ -285,7 +285,7 @@ export function AccountToolbar() {
         })}
 
         {/* Sign out — pushed right */}
-        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+        <div style={{ marginLeft: 'auto', flexShrink: 0, paddingRight: '1rem' }}>
           <button
             onClick={() => {
               localStorage.removeItem('bmovies-auth')
