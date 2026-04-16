@@ -217,7 +217,7 @@ export function AccountToolbar() {
     fontWeight: 400,
     letterSpacing: '0.12em',
     textTransform: 'uppercase' as const,
-    color: isActive ? '#fff' : '#E50914',
+    color: '#E50914',
     background: isActive ? 'rgba(229, 9, 20, 0.15)' : 'transparent',
     border: 'none',
     borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
@@ -233,10 +233,10 @@ export function AccountToolbar() {
     fontWeight: 700,
     letterSpacing: '0.08em',
     textTransform: 'uppercase' as const,
-    color: isActive ? '#E50914' : '#555',
-    background: isActive ? 'rgba(229, 9, 20, 0.08)' : 'transparent',
+    color: isActive ? '#fff' : '#E50914',
+    background: isActive ? 'rgba(229, 9, 20, 0.15)' : 'transparent',
     border: 'none',
-    borderBottom: isActive ? '2px solid #E50914' : '2px solid transparent',
+    borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
     whiteSpace: 'nowrap' as const,
     cursor: 'pointer',
     transition: 'color 150ms',
@@ -277,8 +277,8 @@ export function AccountToolbar() {
               key={tab.id}
               onClick={() => navigateTo(href)}
               style={tabStyle(isActive)}
-              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#fff' }}
-              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = isActive ? '#fff' : '#E50914' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#E50914' }}
             >
               {tab.label}
             </button>
