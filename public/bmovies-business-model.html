@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — The Escalating Investment Ladder</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 18mm;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1a1a1a;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* --- Header --- */
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #1a1a1a;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .logo .red { color: #E50914; }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      color: #1a1a1a;
+    }
+
+    .header .subtitle {
+      font-size: 13px;
+      color: #555;
+      font-style: italic;
+    }
+
+    /* --- Section headings --- */
+    h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #E50914;
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+
+    /* --- Flow diagram --- */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 18px;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    .flow-price {
+      width: 72px;
+      text-align: right;
+      font-weight: 800;
+      font-size: 14px;
+      color: #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .flow-box {
+      flex: 1;
+      border: 2px solid #1a1a1a;
+      border-radius: 6px;
+      padding: 7px 14px;
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .flow-box .tier-name {
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .flow-box .tier-detail {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 540px;
+      padding: 0 0 0 84px;
+    }
+
+    .flow-arrow-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 20px;
+    }
+
+    .flow-arrow-line .line {
+      width: 2px;
+      height: 14px;
+      background: #1a1a1a;
+    }
+
+    .flow-arrow-line .arrow {
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid #1a1a1a;
+    }
+
+    .flow-arrow-text {
+      font-size: 10.5px;
+      color: #555;
+      line-height: 1.3;
+    }
+
+    .flow-arrow-text strong { color: #1a1a1a; }
+
+    /* --- Table --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 12px;
+    }
+
+    thead th {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tbody td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #f8f8f8;
+    }
+
+    tbody td:first-child {
+      font-weight: 600;
+    }
+
+    /* --- Principles --- */
+    .principles {
+      margin-bottom: 18px;
+    }
+
+    .principles ol {
+      padding-left: 20px;
+    }
+
+    .principles li {
+      margin-bottom: 5px;
+      line-height: 1.5;
+    }
+
+    .principles li strong {
+      color: #1a1a1a;
+    }
+
+    /* --- Draft section --- */
+    .draft-section {
+      margin-bottom: 18px;
+    }
+
+    .draft-section p {
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    .draft-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+    }
+
+    .draft-grid .col-label {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #E50914;
+      margin-bottom: 2px;
+      margin-top: 4px;
+    }
+
+    .draft-grid ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .draft-grid li {
+      font-size: 12px;
+      line-height: 1.5;
+      padding-left: 14px;
+      position: relative;
+      color: #333;
+    }
+
+    .draft-grid li::before {
+      content: "\2022";
+      position: absolute;
+      left: 0;
+      color: #E50914;
+      font-weight: bold;
+    }
+
+    /* --- Agentic --- */
+    .agentic {
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+    }
+
+    .agentic p {
+      font-size: 12px;
+      line-height: 1.55;
+      color: #333;
+    }
+
+    /* --- Footer --- */
+    .footer {
+      text-align: center;
+      padding-top: 14px;
+      border-top: 1px solid #ccc;
+      font-size: 11px;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .footer strong {
+      color: #555;
+    }
+
+    /* --- Print --- */
+    @media print {
+      body {
+        font-size: 12px;
+      }
+
+      .page {
+        max-width: none;
+        padding: 0;
+      }
+
+      .flow-box {
+        break-inside: avoid;
+      }
+
+      table {
+        break-inside: avoid;
+      }
+
+      .agentic {
+        background: #f8f8f8 !important;
+        border: 1px solid #ccc !important;
+      }
+
+      thead th {
+        background: #1a1a1a !important;
+        color: #fff !important;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">b<span class="red">Movies</span></div>
+      <h1>The Escalating Investment Ladder</h1>
+      <div class="subtitle">How a $0.99 pitch becomes a funded feature film</div>
+    </div>
+
+    <!-- The Loop -->
+    <h2>The Loop</h2>
+    <div class="flow">
+
+      <div class="flow-step">
+        <div class="flow-price">$0.99</div>
+        <div class="flow-box">
+          <span class="tier-name">Pitch</span>
+          <span class="tier-detail">AI generates a draft pitch</span>
+        </div>
+      </div>
+
+      <div class="flow-arrow">
+        <div class="flow-arrow-line">
+          <div class="line"></div>
+          <div class="arrow"></div>
+        </div>
+        <div class="flow-arrow-text">Publish + list <strong>10% @ $9.99</strong> &mdash; investor buys, auto-funds trailer</div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-price">$9.99</div>
+        <div class="flow-box">
+          <span class="tier-name">Trailer</span>
+          <span class="tier-detail">Refine with AI agents + creative tools</span>
+        </div>
+      </div>
+
+      <div class="flow-arrow">
+        <div class="flow-arrow-line">
+          <div class="line"></div>
+          <div class="arrow"></div>
+        </div>
+        <div class="flow-arrow-text">Publish + list <strong>10% @ $99</strong> &mdash; investor buys, auto-funds short</div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-price">$99</div>
+        <div class="flow-box">
+          <span class="tier-name">Short</span>
+          <span class="tier-detail">Refine with AI agents + creative tools</span>
+        </div>
+      </div>
+
+      <div class="flow-arrow">
+        <div class="flow-arrow-line">
+          <div class="line"></div>
+          <div class="arrow"></div>
+        </div>
+        <div class="flow-arrow-text">Publish + list <strong>10% @ $999</strong> &mdash; investor buys, auto-funds feature</div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-price">$999</div>
+        <div class="flow-box">
+          <span class="tier-name">Feature</span>
+          <span class="tier-detail">Full production tools + agent swarm</span>
+        </div>
+      </div>
+
+      <div class="flow-arrow">
+        <div class="flow-arrow-line">
+          <div class="line"></div>
+          <div class="arrow"></div>
+        </div>
+        <div class="flow-arrow-text">Publish + list <strong>10% @ $9,999</strong> &mdash; investor buys, funds marketing</div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-price">$9,999</div>
+        <div class="flow-box">
+          <span class="tier-name">Marketing + Distribution</span>
+          <span class="tier-detail">Agentic marketplace takes over</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- The Numbers -->
+    <h2>The Numbers</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>Commission</th>
+          <th>10% Presale</th>
+          <th>What It Funds</th>
+          <th>Commissioner Retains</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Pitch</td>
+          <td>$0.99</td>
+          <td>$9.99</td>
+          <td>Trailer production</td>
+          <td>89%+</td>
+        </tr>
+        <tr>
+          <td>Trailer</td>
+          <td>$9.99</td>
+          <td>$99</td>
+          <td>Short production</td>
+          <td>~80%+</td>
+        </tr>
+        <tr>
+          <td>Short</td>
+          <td>$99</td>
+          <td>$999</td>
+          <td>Feature production</td>
+          <td>~72%+</td>
+        </tr>
+        <tr>
+          <td>Feature</td>
+          <td>$999</td>
+          <td>$9,999</td>
+          <td>Marketing + distribution</td>
+          <td>~65%+</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Key Principles -->
+    <h2>Key Principles</h2>
+    <div class="principles">
+      <ol>
+        <li><strong>The commissioner never loses control</strong> &mdash; they start at 99% ownership and decide how much to sell at each tier.</li>
+        <li><strong>Each investment round funds the next tier automatically</strong> &mdash; no fundraising, no pitching VCs, no waiting.</li>
+        <li><strong>Every payment is on-chain</strong> (BSV mainnet via x402) &mdash; verifiable, transparent, and instant.</li>
+      </ol>
+    </div>
+
+    <!-- Between Draft and Publish -->
+    <h2>Between Draft and Publish</h2>
+    <div class="draft-section">
+      <p>The draft period is where quality happens. Commissioners have access to:</p>
+      <div class="draft-grid">
+        <div>
+          <div class="col-label">AI Agents</div>
+          <ul>
+            <li>Writer</li>
+            <li>Director</li>
+            <li>Cinematographer</li>
+            <li>Editor</li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-label" style="visibility:hidden">AI Agents</div>
+          <ul>
+            <li>Composer</li>
+            <li>Sound Designer</li>
+            <li>Storyboard Artist</li>
+            <li>Producer</li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-label">Creative Tools</div>
+          <ul>
+            <li>Script Editor</li>
+            <li>Movie Editor</li>
+            <li>Title Designer</li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-label" style="visibility:hidden">Creative Tools</div>
+          <ul>
+            <li>Storyboard Generator</li>
+            <li>Score Composer</li>
+            <li>Production Room (real-time agent collaboration)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Agentic Economy -->
+    <h2>The Agentic Economy</h2>
+    <div class="agentic">
+      <p>
+        At the top of the ladder ($9,999+), capital flows into marketing and distribution via an
+        <strong>agentic marketplace</strong>. Marketing agents, PR agents, distribution agents &mdash;
+        all hired and paid via x402 micropayments. This is where bMovies transitions from a production
+        platform to a <strong>full-stack entertainment economy</strong>.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <strong>b<span style="color:#E50914">Movies</span></strong> &middot; The Bitcoin Corporation Ltd &middot; Company No. 16735102<br>
+      bmovies.online &middot; online.bmovies@gmail.com
+    </div>
+
+  </div>
+</body>
+</html>
