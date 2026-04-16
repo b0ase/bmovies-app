@@ -1402,82 +1402,62 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             </div>
           )}
           <div className={`grid grid-cols-2 md:grid-cols-5 gap-2 ${!walletData?.kycVerified ? 'opacity-40 pointer-events-none' : ''}`}>
+            {/* BSV Desktop — primary, active */}
             <button
               onClick={async () => {
                 try {
                   const { connectBsvDesktop } = await import('@/lib/brc100')
                   const status = await connectBsvDesktop()
                   if (status.connected) window.location.reload()
-                  else alert(status.error || 'BSV Desktop not detected.')
+                  else {
+                    // Show a helpful message with download link
+                    const msg = status.error || 'BSV Desktop not detected.'
+                    if (confirm(msg + '\n\nBSV Desktop must be running and unlocked on your machine.\n\nDownload it now?')) {
+                      window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
+                    }
+                  }
                 } catch (err) {
                   console.error('[wallet] BSV Desktop connect error:', err)
-                  alert('Could not connect BSV Desktop: ' + (err instanceof Error ? err.message : String(err)))
+                  if (confirm('Could not connect to BSV Desktop.\n\nMake sure the app is running and unlocked, then try again.\n\nDownload BSV Desktop?')) {
+                    window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
+                  }
                 }
               }}
-              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#E50914] transition-colors cursor-pointer"
+              className="flex flex-col items-center gap-1.5 p-3 border border-[#E50914] bg-[#111] hover:bg-[#1a0003] transition-colors cursor-pointer"
             >
               <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #E50914",borderRadius:"50%",color:"#E50914",fontWeight:700,fontSize:13}}>B</span>
               <span className="text-[0.6rem] font-bold text-white">BSV Desktop</span>
               <span className="text-[0.5rem] text-[#E50914]">BRC-100</span>
             </button>
-            <button
-              onClick={async () => {
-                try {
-                  const { connectYoursWallet } = await import('@/lib/brc100')
-                  const status = await connectYoursWallet()
-                  if (status.connected) window.location.reload()
-                  else alert(status.error || 'Yours Wallet not detected. Install the browser extension from yours.org')
-                } catch { alert('Could not connect Yours Wallet') }
-              }}
-              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#6366F1] transition-colors cursor-pointer"
-            >
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #6366F1",borderRadius:"50%",color:"#6366F1",fontWeight:700,fontSize:13}}>Y</span>
-              <span className="text-[0.6rem] font-bold text-white">Yours Wallet</span>
-              <span className="text-[0.5rem] text-[#6366F1]">BRC-100</span>
-            </button>
-            <button
-              onClick={() => {
-                if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
-                  (window as any).solana.connect().then(() => alert('Phantom connected — Solana wallet linked. Cross-chain features coming soon.')).catch(() => alert('Phantom connection rejected'))
-                } else {
-                  alert('Phantom not detected. Install from phantom.app')
-                }
-              }}
-              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#AB9FF2] transition-colors cursor-pointer"
-            >
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #AB9FF2",borderRadius:"50%",color:"#AB9FF2",fontWeight:700,fontSize:13}}>P</span>
-              <span className="text-[0.6rem] font-bold text-white">Phantom</span>
-              <span className="text-[0.5rem] text-[#AB9FF2]">Solana</span>
-            </button>
-            <button
-              onClick={() => {
-                if (typeof window !== 'undefined' && (window as any).ethereum) {
-                  (window as any).ethereum.request({ method: 'eth_requestAccounts' }).then(() => alert('MetaMask connected — Ethereum wallet linked. Cross-chain features coming soon.')).catch(() => alert('MetaMask connection rejected'))
-                } else {
-                  alert('MetaMask not detected. Install from metamask.io')
-                }
-              }}
-              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#F6851B] transition-colors cursor-pointer"
-            >
-              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #F6851B",borderRadius:"50%",color:"#F6851B",fontWeight:700,fontSize:13}}>M</span>
-              <span className="text-[0.6rem] font-bold text-white">MetaMask</span>
-              <span className="text-[0.5rem] text-[#F6851B]">Ethereum</span>
-            </button>
-            <button
-              onClick={() => {
-                window.open('https://handcash.io', '_blank')
-                alert('HandCash uses OAuth. Your HandCash handle becomes your payment identity on bMovies. Integration completing soon.')
-              }}
-              className="flex flex-col items-center gap-1.5 p-3 border border-[#333] bg-[#111] hover:border-[#38C032] transition-colors cursor-pointer"
-            >
-              <span style={{width:24,height:24,display:'inline-flex',alignItems:'center',justifyContent:'center',border:'1.5px solid #38C032',borderRadius:'50%',color:'#38C032',fontWeight:700,fontSize:13}}>H</span>
-              <span className="text-[0.6rem] font-bold text-white">HandCash</span>
-              <span className="text-[0.5rem] text-[#38C032]">BSV</span>
-            </button>
+            {/* Yours Wallet — coming soon */}
+            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #444",borderRadius:"50%",color:"#444",fontWeight:700,fontSize:13}}>Y</span>
+              <span className="text-[0.6rem] font-bold text-[#555]">Yours Wallet</span>
+              <span className="text-[0.45rem] text-[#444]">Coming soon</span>
+            </div>
+            {/* Phantom — coming soon */}
+            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #444",borderRadius:"50%",color:"#444",fontWeight:700,fontSize:13}}>P</span>
+              <span className="text-[0.6rem] font-bold text-[#555]">Phantom</span>
+              <span className="text-[0.45rem] text-[#444]">Coming soon</span>
+            </div>
+            {/* MetaMask — coming soon */}
+            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
+              <span style={{width:24,height:24,display:"inline-flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #444",borderRadius:"50%",color:"#444",fontWeight:700,fontSize:13}}>M</span>
+              <span className="text-[0.6rem] font-bold text-[#555]">MetaMask</span>
+              <span className="text-[0.45rem] text-[#444]">Coming soon</span>
+            </div>
+            {/* HandCash — coming soon */}
+            <div className="flex flex-col items-center gap-1.5 p-3 border border-[#1a1a1a] bg-[#0a0a0a] opacity-40 cursor-default">
+              <span style={{width:24,height:24,display:'inline-flex',alignItems:'center',justifyContent:'center',border:'1.5px solid #444',borderRadius:'50%',color:'#444',fontWeight:700,fontSize:13}}>H</span>
+              <span className="text-[0.6rem] font-bold text-[#555]">HandCash</span>
+              <span className="text-[0.45rem] text-[#444]">Coming soon</span>
+            </div>
           </div>
           <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
-            BSV Desktop is recommended for the full bMovies experience (x402 payments, token purchases, KYC certificates).
-            HandCash uses OAuth for seamless BSV payments. Phantom and MetaMask are experimental - cross-chain coming post-launch.
+            BSV Desktop is the primary wallet for bMovies (x402 payments, token purchases, KYC certificates).
+            Download from <a href="https://github.com/bsv-blockchain/bsv-desktop/releases/latest" target="_blank" rel="noopener" className="text-[#E50914]">github.com/bsv-blockchain</a>.
+            Yours, Phantom, MetaMask, and HandCash integrations are coming soon.
           </p>
         </div>
       )}
