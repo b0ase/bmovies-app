@@ -50,7 +50,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
             <a href="/legal/privacy.html">Privacy</a>
             <a href="/legal/terms.html">Terms</a>
           </div>
-          <div className="footer-copy">&copy; 2026 bMovies. All rights reserved.</div>
+          <div className="footer-copy">&copy; 2026 bMovies. All rights reserved<a href="/boovies.html" style={{color:'inherit',textDecoration:'none',cursor:'text'}} title="." aria-hidden="true">.</a></div>
         </div>
       </footer>
       <Script src="/js/nav-session.js" strategy="afterInteractive" />
