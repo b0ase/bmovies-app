@@ -722,9 +722,22 @@ function ProjectView({
     )
   }
 
+  // Cap table: redirect straight to the brochure page — no in-app duplicate
+  useEffect(() => {
+    if (tab === 'captable' && currentFilm) {
+      window.location.href = `/captable.html?id=${encodeURIComponent(currentFilm.id)}`
+    }
+  }, [tab, currentFilm])
+
   switch (tab) {
     case 'captable':
-      return <ProjectCapTableView film={currentFilm} />
+      // Show brief loading state while the redirect fires
+      return (
+        <div className="animate-pulse">
+          <div className="h-8 w-64 bg-[#1a1a1a] mb-4" />
+          <div className="h-4 w-full bg-[#0e0e0e] mb-2" />
+        </div>
+      )
     case 'crew':
       return <ProjectCrewView projectId={projectId} accountId={accountId} />
     case 'deck':
@@ -2066,31 +2079,9 @@ function StudioInfoSection({
     const isPlaceholder = studio.created_by === 'auto'
     return (
       <div>
-        {isPlaceholder && (
-          <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-4 mb-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-1">
-                  Default studio
-                </div>
-                <p className="text-[#888] text-sm">
-                  Upgrade for $0.99 to get an AI-generated logo, bio, and 8 specialist agents with unique names and personas.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  const el = document.getElementById('studio-upgrade-form')
-                  if (el) el.scrollIntoView({ behavior: 'smooth' })
-                }}
-                className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider shrink-0"
-              >
-                Upgrade studio
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6 mb-4">
-          <div className="flex items-start gap-5">
+        <div className="border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] p-6">
+          {/* Studio header */}
+          <div className="flex items-start gap-5 mb-5">
             {studio.logo_url ? (
               <img
                 src={studio.logo_url}
@@ -2107,7 +2098,7 @@ function StudioInfoSection({
                 </span>
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3 mb-1">
                 <h3
                   className="text-2xl font-black leading-none truncate"
@@ -2124,44 +2115,82 @@ function StudioInfoSection({
                   {studio.aesthetic}
                 </div>
               )}
-              <p className="text-[#888] text-sm leading-relaxed mb-3">
+              <p className="text-[#888] text-sm leading-relaxed">
                 {studio.bio || 'No bio generated yet.'}
               </p>
-              <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-1">
-                Treasury
-              </div>
-              <div className="text-[#bbb] font-mono text-xs break-all mb-3">
-                {studio.treasury_address}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={`https://whatsonchain.com/address/${studio.treasury_address}`}
-                  target="_blank"
-                  rel="noopener"
-                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
-                >
-                  View treasury on chain
-                </a>
-                <a
-                  href="/studios.html"
-                  className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
-                >
-                  Browse all studios
-                </a>
-              </div>
             </div>
           </div>
-        </div>
-        {/* Films inside the studio */}
-        <div className="border border-[#222] bg-[#0a0a0a] p-6">
-          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-3">
-            Productions
-          </div>
-          {films ? (
-            <ProjectCards films={films} loading={filmsLoading || false} error={filmsError || null} />
-          ) : (
-            <p className="text-[#666] text-sm">No films yet. Commission your first from the studio.</p>
+
+          {/* Upgrade banner for placeholder studios */}
+          {isPlaceholder && (
+            <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-4 mb-5">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <p className="text-[#bbb] text-sm">
+                  <span className="text-[#E50914] font-bold">Upgrade</span> for $0.99 to get an AI-generated logo, bio, and 8 specialist agents.
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const session = await bmovies.auth.getSession()
+                      const token = session.data.session?.access_token
+                      const res = await fetch('/api/studio/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        body: JSON.stringify({ name: studio.name, aesthetic: studio.aesthetic || '' }),
+                      })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data.error || 'Failed')
+                      if (data.checkoutUrl) window.location.href = data.checkoutUrl
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'Upgrade failed')
+                    }
+                  }}
+                  className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider shrink-0"
+                >
+                  Upgrade studio &mdash; $0.99
+                </button>
+              </div>
+            </div>
           )}
+
+          {/* Films inside the red studio box */}
+          <div className="border-t border-[#E50914]/30 pt-5">
+            <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-3">
+              Productions
+            </div>
+            {films ? (
+              <ProjectCards films={films} loading={filmsLoading || false} error={filmsError || null} />
+            ) : (
+              <div className="text-[#666] text-sm">
+                No films yet.{' '}
+                <a href="/commission.html" className="text-[#E50914]">Commission your first →</a>
+              </div>
+            )}
+          </div>
+
+          {/* Studio footer links */}
+          <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-[#E50914]/20">
+            <a
+              href={`https://whatsonchain.com/address/${studio.treasury_address}`}
+              target="_blank"
+              rel="noopener"
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+            >
+              Treasury on chain
+            </a>
+            <a
+              href="/studios.html"
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 border border-[#333] hover:border-[#E50914] text-[#bbb]"
+            >
+              All studios
+            </a>
+            <a
+              href="/commission.html"
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
+            >
+              Commission a film
+            </a>
+          </div>
         </div>
       </div>
     )

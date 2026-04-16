@@ -311,11 +311,15 @@ export function AccountToolbar() {
             {/* Project tabs */}
             {PROJECT_TABS.map((tab) => {
               const isActive = activeTab === tab.id
-              const href = `/account?project=${projectId}&tab=${tab.id}`
+              // Cap Table links directly to brochure page — no in-app duplicate
+              const isCaptable = tab.id === 'captable'
+              const href = isCaptable
+                ? `/captable.html?id=${projectId}`
+                : `/account?project=${projectId}&tab=${tab.id}`
               return (
                 <button
                   key={tab.id}
-                  onClick={() => navigateTo(href)}
+                  onClick={() => isCaptable ? (window.location.href = href) : navigateTo(href)}
                   style={{
                     padding: '0.65rem 0.85rem',
                     fontFamily: "'Inter', -apple-system, sans-serif",
