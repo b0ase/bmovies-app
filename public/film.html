@@ -108,6 +108,36 @@
     @media (max-width: 720px) {
       .tier-row { grid-template-columns: 1fr; max-width: none; }
     }
+
+    /* Fund sub-row — a slimmer secondary row under the tier-row for
+       the BSV-funding alternative. Only tiers without a derivative
+       show a Fund button; matches the Make layout columns so the
+       buttons stack vertically under their Make counterparts. */
+    .fund-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem; margin-top: 0.4rem;
+      max-width: 620px;
+    }
+    .fund-btn {
+      padding: 0.55rem 0.6rem; font-family: inherit;
+      font-size: 0.52rem; font-weight: 900; letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: transparent; color: #888;
+      border: 1px solid #2a1414;
+      text-align: center; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .fund-btn:hover {
+      border-color: #E50914; color: #E50914;
+      background: rgba(229, 9, 20, 0.05);
+    }
+    .fund-btn.placeholder {
+      visibility: hidden;
+    }
+    @media (max-width: 720px) {
+      .fund-row { grid-template-columns: 1fr; max-width: none; }
+      .fund-btn.placeholder { display: none; }
+    }
     .film-hero .cta {
       padding: 1rem 2rem; font-size: 0.8rem; font-weight: 900;
       letter-spacing: 0.1em; text-transform: uppercase;
@@ -360,48 +390,65 @@
       const byTier = {};
       for (const d of derivatives) byTier[d.tier] = d;
 
+      // Fund sub-row: show a "Fund [tier]" BSV button beneath each
+      // Make/Watch slot. Only the same offer needs funding (royalty
+      // shares settle on one pitch's cap table), so the href points
+      // back to offer.html with the target tier as context. Current
+      // tier and already-produced tiers don't get a Fund button —
+      // the columns hold a placeholder so the grid aligns vertically.
+      const fundRowButtons = TIER_ORDER.map(t => {
+        const meta = TIER_META[t];
+        const isCurrent = t === currentTier;
+        const derivative = byTier[t];
+        if (isCurrent || derivative) {
+          return '<span class="fund-btn placeholder"></span>';
+        }
+        return `<a class="fund-btn" href="offer.html?id=${encodeURIComponent(offer.id)}&target=${t}">Fund ${meta.label.toLowerCase()} · BSV</a>`;
+      }).join('');
+
+      const tierRowButtons = TIER_ORDER.map(t => {
+        const meta = TIER_META[t];
+        const isCurrent = t === currentTier;
+        const derivative = byTier[t];
+        let state = '';
+        let label = '';
+        let href = '';
+        let disabled = false;
+
+        if (isCurrent) {
+          state = 'current';
+          label = `✓ ${meta.label}`;
+          disabled = true;
+        } else if (derivative) {
+          // Already produced — link to the derivative's film page.
+          state = 'included';
+          label = `▶ Watch ${meta.label.toLowerCase()}`;
+          href = `film.html?id=${encodeURIComponent(derivative.id)}`;
+        } else {
+          // Not yet produced — commission it, linked back to this
+          // pitch via parentOfferId so the cap table rolls up.
+          state = 'upgrade';
+          label = `Make ${meta.label.toLowerCase()} · ${meta.display}`;
+          href = `commission.html?tier=${t}&parentId=${encodeURIComponent(offer.id)}&title=${encodeURIComponent(offer.title || '')}&ticker=${encodeURIComponent(offer.token_ticker || '')}`;
+        }
+
+        if (href) {
+          return `
+            <a class="tier-btn ${state}" href="${href}" style="text-align:center;text-decoration:none;">
+              ${label}
+            </a>
+          `;
+        }
+        return `
+          <button class="tier-btn ${state}" data-tier="${t}" ${disabled ? 'disabled' : ''}>
+            ${label}
+          </button>
+        `;
+      }).join('');
+
       return `
-        <div class="tier-row">
-          ${TIER_ORDER.map(t => {
-            const meta = TIER_META[t];
-            const isCurrent = t === currentTier;
-            const derivative = byTier[t];
-            let state = '';
-            let label = '';
-            let href = '';
-            let disabled = false;
-
-            if (isCurrent) {
-              state = 'current';
-              label = `✓ ${meta.label}`;
-              disabled = true;
-            } else if (derivative) {
-              // Already produced — link to the derivative's film page.
-              state = 'included';
-              label = `▶ Watch ${meta.label.toLowerCase()}`;
-              href = `film.html?id=${encodeURIComponent(derivative.id)}`;
-            } else {
-              // Not yet produced — commission it, linked back to this
-              // pitch via parentOfferId so the cap table rolls up.
-              state = 'upgrade';
-              label = `Make ${meta.label.toLowerCase()} · ${meta.display}`;
-              href = `commission.html?tier=${t}&parentId=${encodeURIComponent(offer.id)}&title=${encodeURIComponent(offer.title || '')}&ticker=${encodeURIComponent(offer.token_ticker || '')}`;
-            }
-
-            if (href) {
-              return `
-                <a class="tier-btn ${state}" href="${href}" style="text-align:center;text-decoration:none;">
-                  ${label}
-                </a>
-              `;
-            }
-            return `
-              <button class="tier-btn ${state}" data-tier="${t}" ${disabled ? 'disabled' : ''}>
-                ${label}
-              </button>
-            `;
-          }).join('')}
-        </div>
+        <div class="tier-row">${tierRowButtons}</div>
+        <div class="fund-row">${fundRowButtons}</div>
       `;
     }
 
@@ -808,7 +855,7 @@
 
                 <div style="display:flex;gap:0.8rem;margin-top:1.2rem;flex-wrap:wrap;">
                   <button class="cta primary" id="btn-watch">▶ Watch now</button>
-                  <a class="cta" href="offer.html?id=${encodeURIComponent(offer.id)}">Invest</a>
+                  <a class="cta" href="offer.html?id=${encodeURIComponent(offer.id)}">Fund</a>
                 </div>
                 <div id="buy-status" style="margin-top:1rem;font-size:0.75rem;color:#ccc;min-height:1em;"></div>
               </div>
@@ -932,6 +979,18 @@
     function wirePlayback(offer, arts, writerText) {
       const btn = document.getElementById('btn-watch');
       const status = document.getElementById('buy-status');
+
+      // Nothing to watch? Hide the button. A pitch-tier offer is
+      // just a logline + synopsis + poster — no video exists, no
+      // paywall applies. A short/feature whose video-gen hasn't
+      // finished yet falls into the same bucket. Offering "Watch
+      // now" in either case sends a $2.99 paywall at a film that
+      // doesn't exist.
+      const hasVideo = (arts || []).some(a => a.kind === 'video');
+      if (offer.tier === 'pitch' || !hasVideo) {
+        btn.style.display = 'none';
+        return;
+      }
 
       // Trailer-tier films are free to watch — the trailer IS the
       // product. Short/feature tiers use the paywall.

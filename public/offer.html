@@ -352,6 +352,34 @@
     </div>
   </div>
 
+  <!-- Fund modal — summarises what a $9.99 / $99 / $999 buy looks like
+       at the current tranche price. Populated on open, not at render. -->
+  <div class="modal-backdrop" id="fund-modal">
+    <div class="modal">
+      <div class="kicker" id="fund-modal-kicker">Fund trailer</div>
+      <h3 id="fund-modal-title">Fund trailer · $9.99</h3>
+      <p id="fund-modal-body" style="color:#bbb;font-size:0.9rem;line-height:1.55;">
+        Loading…
+      </p>
+
+      <!-- Mini 10×10 preview of the 100 squares. Script paints the
+           tier grid (sold / current / future) and highlights the N
+           squares the fund amount would buy. -->
+      <div id="fund-modal-grid" style="display:grid;grid-template-columns:repeat(10, 1fr);gap:3px;margin:1rem 0 1.2rem;max-width:280px;"></div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="fund-cancel">Cancel</button>
+        <button class="btn-primary" id="fund-confirm">Buy these shares →</button>
+      </div>
+      <div class="modal-status" id="fund-status"></div>
+      <p style="margin-top:0.8rem;font-size:0.65rem;color:#888;line-height:1.5;">
+        Royalty shares are securities. BSV payment only — no card
+        checkout. You'll be asked to verify identity once, then the
+        same purchase flow as any other share buy.
+      </p>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <div class="footer-inner">
       <div class="footer-links">
@@ -475,7 +503,7 @@
 
       const [offerRes, statsRes, ticketsRes] = await Promise.all([
         supabase.from('bct_offers')
-          .select('id, title, synopsis, status, token_ticker, created_at, bct_artifacts(kind, url, role)')
+          .select('id, title, synopsis, status, token_ticker, tier, parent_offer_id, created_at, bct_artifacts(kind, url, role)')
           .eq('id', offerId).maybeSingle(),
         supabase.from('bct_film_stats').select('percent_sold, gross_usd, tickets_sold').eq('offer_id', offerId).maybeSingle(),
         supabase.from('bct_share_sales').select('id').eq('offer_id', offerId),
@@ -504,6 +532,19 @@
       const arts = (offer.bct_artifacts || []).filter((a) => !isEphemeralUrl(a.url));
       const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
       const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
+      const hasVideo = arts.some(a => a.kind === 'video');
+
+      // Which Fund buttons to show in the hero: every tier ABOVE this
+      // offer's own tier. A pitch-tier offer can be funded toward a
+      // trailer, short, or feature. A short-tier offer can only be
+      // funded toward a feature. Funding always buys shares of THIS
+      // offer's royalty pool — the tier label just tells the user what
+      // the capital is going to help create next.
+      const TIER_ORDER = ['pitch', 'trailer', 'short', 'feature'];
+      const TIER_BUDGETS_USD = { trailer: 9.99, short: 99, feature: 999 };
+      const currentTier = offer.tier || 'pitch';
+      const currentTierIdx = TIER_ORDER.indexOf(currentTier);
+      const upstreamTiers = TIER_ORDER.slice(currentTierIdx + 1);
       // Priority: POSTER_MAP override → non-ephemeral poster artifact →
       // non-ephemeral storyboard frame.
       const heroImage = posterUrl || posterArt?.url || storyboard?.url || null;
@@ -523,15 +564,21 @@
               <div class="kicker">Investment opportunity</div>
               <h1>${esc(offer.title)}</h1>
               <p class="tagline">${esc(offer.synopsis || '')}</p>
-              <div style="margin-top:1.5rem;display:flex;gap:1rem;">
-                <a href="film.html?id=${encodeURIComponent(offer.id)}" style="padding:0.8rem 1.5rem;border:1px solid #fff;color:#fff;text-decoration:none;font-size:0.7rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;">Watch trailer</a>
+              <div style="margin-top:1.5rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
+                ${hasVideo ? `<a href="film.html?id=${encodeURIComponent(offer.id)}" style="padding:0.8rem 1.5rem;border:1px solid #fff;color:#fff;text-decoration:none;font-size:0.7rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;">▶ Watch</a>` : ''}
+                ${upstreamTiers.map(t => `
+                  <button type="button" class="fund-tier-btn" data-fund-tier="${t}"
+                    style="padding:0.8rem 1.2rem;background:transparent;border:1px solid #E50914;color:#E50914;font-family:inherit;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">
+                    Fund ${t} · $${TIER_BUDGETS_USD[t]}
+                  </button>
+                `).join('')}
               </div>
             </div>
           </div>
         </div>
 
         <main>
-          <div class="section">
+          <div class="section" id="buy-royalty-shares">
             <h2>Buy royalty shares</h2>
             <div class="buy-panel">
               <div class="buy-main">
@@ -610,12 +657,80 @@
         </main>
       `;
 
-      document.getElementById('buy-btn').addEventListener('click', handleBuy);
+      document.getElementById('buy-btn').addEventListener('click', () => handleBuy());
 
       // Wire up clickable squares in the current tier
       document.querySelectorAll('.sq.clickable').forEach(sq => {
         sq.addEventListener('click', () => handleBuy());
       });
+
+      // Wire Fund tier buttons in the hero. Each opens the fund modal
+      // populated with its tier's budget and a preview of how many
+      // squares that buys at the current tranche price. Scrolls the
+      // underlying buy section into view under the modal so the user
+      // lands on it after confirming.
+      document.querySelectorAll('.fund-tier-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tier = btn.dataset.fundTier;
+          const budget = TIER_BUDGETS_USD[tier];
+          if (!budget) return;
+          openFundModal(tier, budget, pctSold);
+          document.getElementById('buy-royalty-shares')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+
+    // Populate and show the Fund modal for a given tier + budget.
+    // Computes the % this budget buys at the CURRENT tranche price,
+    // clamps to what's still available at that tier, and paints a
+    // 10×10 preview grid mirroring the main tranche grid.
+    function openFundModal(tier, budgetUsd, pctSold) {
+      const pricePerPct = currentTranche.pricePerPercent;
+      const availableAtTier = Math.max(0, currentTranche.maxPct - pctSold);
+      // Raw % this budget would buy at the current tranche price.
+      const rawPct = budgetUsd / pricePerPct;
+      // Clamped to what's actually available in the tier — anything
+      // beyond that would cross into the next tranche with a
+      // different price, which this simple modal doesn't yet model.
+      const pctToBuy = Math.min(rawPct, availableAtTier);
+      const tokens = Math.round(pctToBuy * 10_000_000);  // 1% = 10M tokens
+      const actualCost = pctToBuy * pricePerPct;
+
+      document.getElementById('fund-modal-kicker').textContent = `Fund ${tier}`;
+      document.getElementById('fund-modal-title').textContent =
+        `Fund ${tier} · $${budgetUsd.toFixed(2)}`;
+      document.getElementById('fund-modal-body').innerHTML = `
+        At the current tranche price of <strong style="color:#fff;">${formatUsd(pricePerPct)} per 1%</strong>,
+        <strong style="color:#E50914;">$${budgetUsd.toFixed(2)}</strong> buys you
+        <strong style="color:#fff;">${pctToBuy.toFixed(2)}% (${tokens.toLocaleString()} tokens)</strong>
+        in this film's royalty pool. You're funding the <strong style="color:#fff;">${tier}</strong>
+        tier of production — ticket revenue from this film will flow to you and every other shareholder.
+        ${rawPct > availableAtTier ? `<br><br><span style="color:#e09b09;font-size:0.8rem;">Note: $${budgetUsd} would normally buy ${rawPct.toFixed(2)}%, but only ${availableAtTier.toFixed(2)}% is left in this tranche. Buying more rolls to the next tier at a higher price — click a specific square on the grid to size it yourself.</span>` : ''}
+      `;
+
+      // Paint the preview grid. 100 squares total; mark sold, current
+      // tranche, future; highlight the N squares this buy would take.
+      const soldCeil = Math.ceil(pctSold);
+      const wouldBuyUpTo = Math.ceil(pctSold + pctToBuy);
+      const gridEl = document.getElementById('fund-modal-grid');
+      let html = '';
+      for (let i = 0; i < 100; i++) {
+        let bg = '#1a1a1a';   // future
+        if (i < soldCeil) bg = '#444';  // sold
+        else if (i >= currentTranche.minPct && i < currentTranche.maxPct) bg = '#2a1414'; // current tranche
+        if (i >= soldCeil && i < wouldBuyUpTo) bg = '#E50914';  // this buy
+        html += `<div style="aspect-ratio:1;background:${bg};border:1px solid #0a0a0a;"></div>`;
+      }
+      gridEl.innerHTML = html;
+
+      // Stash the pending buy so the confirm button uses the correct
+      // priceUsd (the user's budget, not the default 1%).
+      fundPending = { tier, budgetUsd: actualCost, pctToBuy };
+
+      const status = document.getElementById('fund-status');
+      if (status) { status.textContent = ''; status.className = 'modal-status'; }
+      showModal('fund-modal');
     }
 
     // Modal helpers
@@ -699,12 +814,21 @@
       });
     }
 
-    async function handleBuy() {
+    // fundPending carries the state of an in-flight Fund modal buy:
+    //   { tier, budgetUsd, pctToBuy }
+    // When the user confirms, handleBuy reads this to override the
+    // default 1%-at-current-price behaviour.
+    let fundPending = null;
+
+    async function handleBuy(override) {
+      const priceUsd = override?.priceUsd ?? currentTranche.pricePerPercent;
       pendingPurchase = {
         offerId: currentOffer.id,
         title: currentOffer.title,
         ticker: currentOffer.token_ticker,
-        priceUsd: currentTranche.pricePerPercent,
+        priceUsd,
+        tier: override?.tier,
+        pctToBuy: override?.pctToBuy,
       };
       if (!currentSession) { showModal('signin-modal'); return; }
       if (currentKyc?.status !== 'verified') {
@@ -715,6 +839,21 @@
       }
       proceed(pendingPurchase);
     }
+
+    // Fund modal actions
+    document.getElementById('fund-cancel').addEventListener('click', () => {
+      hideModal('fund-modal');
+      fundPending = null;
+    });
+    document.getElementById('fund-confirm').addEventListener('click', () => {
+      if (!fundPending) { hideModal('fund-modal'); return; }
+      hideModal('fund-modal');
+      handleBuy({
+        priceUsd: fundPending.budgetUsd,
+        tier: fundPending.tier,
+        pctToBuy: fundPending.pctToBuy,
+      });
+    });
 
     loadUserState().then(load);
   </script>
