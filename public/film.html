@@ -321,6 +321,107 @@
       text-align: left;
     }
 
+    /* ─── Post-production: title-card overlays + sound toggle ─── */
+    .trailer-player { position: relative; }
+    .trailer-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      z-index: 3;
+    }
+    .trailer-card {
+      position: absolute;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      padding: 1.2rem 1.8rem;
+      text-align: center;
+      max-width: 90%;
+      color: #fff;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
+    }
+    .trailer-card.visible { opacity: 1; }
+    .trailer-card.studio {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #fff;
+      bottom: 12%;
+    }
+    .trailer-card.tagline {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.4rem, 4vw, 2.8rem);
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+      font-style: italic;
+      font-weight: 400;
+    }
+    .trailer-card.cast {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.1rem, 2.6vw, 1.8rem);
+      letter-spacing: 0.06em;
+      bottom: 20%;
+    }
+    .trailer-card.cast .subtitle {
+      display: block;
+      font-size: 0.55em;
+      letter-spacing: 0.22em;
+      color: #E50914;
+      margin-bottom: 0.4rem;
+    }
+    .trailer-card.title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.6rem, 8vw, 6rem);
+      letter-spacing: 0.03em;
+      font-weight: 900;
+      line-height: 0.95;
+      text-transform: uppercase;
+    }
+    .trailer-card.title .ticker {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.2em;
+      color: #E50914;
+      margin-top: 0.8rem;
+      letter-spacing: 0.3em;
+    }
+    /* Fade tint over the video the instant a title card appears so it
+       reads cleanly even on bright clips. */
+    .trailer-overlay .tint {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.65) 75%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .trailer-overlay.has-card .tint { opacity: 1; }
+
+    /* Sound toggle pill — floats over the player */
+    .trailer-sound-toggle {
+      position: absolute;
+      bottom: 0.8rem;
+      left: 0.9rem;
+      z-index: 4;
+      padding: 0.4rem 0.7rem;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .trailer-sound-toggle:hover { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
+    .trailer-sound-toggle.on { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
+
     /* Studio card */
     .studio-card {
       border: 1px solid #222; background: #0a0a0a; padding: 1.5rem;
@@ -1137,11 +1238,23 @@
               <video controls autoplay muted playsinline
                 id="main-video"
                 src="${esc(videoClips[0].url)}"></video>
+              <div class="trailer-overlay" id="trailer-overlay">
+                <div class="tint"></div>
+              </div>
+              <button type="button" class="trailer-sound-toggle" id="trailer-sound-toggle" aria-label="Toggle trailer audio">
+                <span id="trailer-sound-icon">🔇</span>
+                <span id="trailer-sound-label">Sound off</span>
+              </button>
               ${videoClips.length > 1 ? `
                 <div id="main-video-counter" class="trailer-counter">
                   Clip <span id="main-video-idx">1</span> / ${videoClips.length}
                 </div>
               ` : ''}
+              <!-- Music bed + voiceover tracks. Hidden controls; routed
+                   through the main-video mute toggle so users can't get
+                   music without visuals or vice-versa. -->
+              <audio id="trailer-music" preload="auto" loop></audio>
+              <audio id="trailer-vo"    preload="auto"></audio>
             </div>
             ${videoClips.length > 1 ? `
               <div id="main-video-thumbs" class="trailer-strip">
@@ -1257,6 +1370,193 @@
             });
           });
         }
+      })();
+
+      // ─── Post-production compositor ───
+      //
+      // Takes the raw 4-clip reel and layers on top:
+      //   • title cards (from editor.trailer_titles JSON)
+      //   • music bed  (from composer.trailer_score — audio artifact)
+      //   • voiceover   (from vo.trailer_narration — audio artifact)
+      //
+      // Runs independently of the sequential clip player above so
+      // either can ship without the other. If no compositor data is
+      // attached to the offer, this block is a no-op.
+      (function wireCompositor() {
+        const player = document.getElementById('main-video');
+        const overlay = document.getElementById('trailer-overlay');
+        const musicEl = document.getElementById('trailer-music');
+        const voEl    = document.getElementById('trailer-vo');
+        const soundBtn = document.getElementById('trailer-sound-toggle');
+        if (!player || !overlay) return;
+
+        // Pull the compositor artifacts from the offer's artifact set.
+        const titlesArt = arts.find(a => a.role === 'editor' && (a.step_id || '').endsWith('trailer_titles'));
+        const musicArt  = arts.find(a => a.role === 'composer' && a.kind === 'audio');
+        const voArt     = arts.find(a => a.role === 'vo' && a.kind === 'audio');
+
+        // Parse titles JSON. Accept data: URLs (the endpoint writes
+        // these) or remote URLs.
+        let timeline = null;
+        if (titlesArt?.url) {
+          try {
+            if (titlesArt.url.startsWith('data:')) {
+              const decoded = decodeDataUrl(titlesArt.url);
+              if (decoded) timeline = JSON.parse(decoded);
+            } else {
+              // Remote URL — fire-and-forget; apply when it lands.
+              fetch(titlesArt.url).then(r => r.ok ? r.json() : null).then(j => {
+                if (j?.cards) { timeline = j; renderCards(); }
+              }).catch(() => {});
+            }
+          } catch (err) { console.warn('[compositor] bad titles JSON', err); }
+        }
+
+        // Always add a minimal fallback so the final title card at least
+        // reveals the film's name even when Grok's titles-pass failed.
+        if (!timeline) {
+          const fallbackEnd = Math.max(24, (player.duration || 32) - 4);
+          timeline = {
+            duration: 32,
+            cards: [
+              { text: 'A bMovies production', startAt: 0.5, duration: 2.5, style: 'studio' },
+              { text: (offer.title || 'Untitled').toUpperCase(), startAt: fallbackEnd, duration: 6, style: 'title' },
+            ],
+          };
+        }
+
+        // Render the cards once up-front; show/hide by visibility class.
+        function renderCards() {
+          if (!overlay || !timeline?.cards) return;
+          overlay.querySelectorAll('.trailer-card').forEach(n => n.remove());
+          timeline.cards.forEach((card, i) => {
+            const div = document.createElement('div');
+            div.className = `trailer-card ${card.style || 'tagline'}`;
+            div.dataset.cardIdx = String(i);
+            if (card.style === 'title') {
+              const tickerHtml = offer.token_ticker
+                ? `<span class="ticker">$${esc(offer.token_ticker)}</span>`
+                : '';
+              div.innerHTML = esc(card.text) + tickerHtml;
+            } else if (card.style === 'cast' && card.subtitle) {
+              div.innerHTML = `<span class="subtitle">${esc(card.subtitle)}</span>${esc(card.text)}`;
+            } else {
+              div.textContent = card.text;
+            }
+            overlay.appendChild(div);
+          });
+        }
+        renderCards();
+
+        // Wire music + VO audio sources. We do NOT autoplay until the
+        // user toggles sound on — browsers reject autoplay-with-audio
+        // and the sequential video is already autoplaying muted.
+        if (musicArt?.url) musicEl.src = musicArt.url;
+        if (voArt?.url)    voEl.src    = voArt.url;
+
+        // Sound toggle — mutes/unmutes the main video AND starts the
+        // music + VO tracks in lockstep.
+        let soundOn = false;
+        function updateSoundButton() {
+          if (!soundBtn) return;
+          soundBtn.classList.toggle('on', soundOn);
+          const icon = document.getElementById('trailer-sound-icon');
+          const label = document.getElementById('trailer-sound-label');
+          if (icon)  icon.textContent  = soundOn ? '🔊' : '🔇';
+          if (label) label.textContent = soundOn ? 'Sound on' : 'Sound off';
+        }
+        function syncSound() {
+          player.muted = !soundOn;
+          if (musicEl) {
+            musicEl.volume = 0.35;  // music bed, ducks under VO
+            if (soundOn && musicEl.src) {
+              musicEl.currentTime = Math.min(musicEl.currentTime || 0, (musicEl.duration || 32) - 0.1);
+              musicEl.play().catch(() => {});
+            } else {
+              musicEl.pause();
+            }
+          }
+          if (voEl) {
+            voEl.volume = 1.0;
+            if (soundOn && voEl.src) {
+              voEl.play().catch(() => {});
+            } else {
+              voEl.pause();
+            }
+          }
+        }
+        updateSoundButton();
+        soundBtn?.addEventListener('click', () => {
+          soundOn = !soundOn;
+          updateSoundButton();
+          syncSound();
+        });
+        // When the user manually unmutes via the native video controls,
+        // keep music + VO in sync.
+        player.addEventListener('volumechange', () => {
+          const shouldBeOn = !player.muted && player.volume > 0;
+          if (shouldBeOn !== soundOn) {
+            soundOn = shouldBeOn;
+            updateSoundButton();
+            syncSound();
+          }
+        });
+
+        // ─── Timeline-driven overlay loop ───
+        //
+        // Each video clip is ~8s. The compositor tracks GLOBAL trailer
+        // time = (sum of prior clip durations) + current clip.currentTime.
+        // We step through timeline.cards and flip the `visible` class on
+        // their DOM nodes when the global clock crosses each card's
+        // [startAt, startAt+duration] window.
+        const clips = window._trailerClips || [];
+        const CLIP_ESTIMATED = 8;  // fallback when metadata isn't loaded
+        function currentClipIndex() {
+          // Read from the counter span wired by wireSequentialPlayer.
+          const el = document.getElementById('main-video-idx');
+          const n = el ? Number(el.textContent || '1') : 1;
+          return Math.max(0, Math.min(clips.length - 1, n - 1));
+        }
+        function globalTime() {
+          const idx = currentClipIndex();
+          const priorDuration = idx * CLIP_ESTIMATED;
+          const within = Math.min(player.currentTime || 0, CLIP_ESTIMATED);
+          return priorDuration + within;
+        }
+        function tick() {
+          if (!timeline?.cards) return;
+          const t = globalTime();
+          let anyVisible = false;
+          overlay.querySelectorAll('.trailer-card').forEach((node) => {
+            const i = Number(node.dataset.cardIdx || '-1');
+            const card = timeline.cards[i];
+            if (!card) return;
+            const vis = t >= card.startAt && t <= card.startAt + card.duration;
+            node.classList.toggle('visible', vis);
+            if (vis) anyVisible = true;
+          });
+          overlay.classList.toggle('has-card', anyVisible);
+        }
+        setInterval(tick, 150);
+        player.addEventListener('play', () => {
+          // If music/VO are armed, keep them aligned with the video's
+          // global playback time.
+          if (soundOn) syncSound();
+        });
+
+        // When the trailer loops back to clip 1 (after all clips played),
+        // reset audio tracks so music + VO restart with the video.
+        player.addEventListener('ended', () => {
+          // wireSequentialPlayer handles the next-clip switch; we rewind
+          // both audio tracks here when we loop back to clip 0.
+          setTimeout(() => {
+            const idx = currentClipIndex();
+            if (idx === 0) {
+              if (musicEl) { musicEl.currentTime = 0; if (soundOn) musicEl.play().catch(() => {}); }
+              if (voEl)    { voEl.currentTime = 0;    if (soundOn) voEl.play().catch(() => {}); }
+            }
+          }, 350);
+        });
       })();
 
       // Wire storyboard modal
