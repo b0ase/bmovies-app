@@ -96,6 +96,32 @@ export default async function handler(
     auth: { persistSession: false },
   });
 
+  // KYC gate (defense in depth — primary gate is /api/checkout).
+  // Every real user commission must have a KYC-approved account.
+  // Exceptions: judge-coupon flow (BSVA demo) skips this via source.
+  const isJudgeFlow = body.source === 'judge-coupon';
+  if (!isJudgeFlow) {
+    if (!body.accountId) {
+      res.status(403).json({
+        error: 'accountId required — commissions must be linked to a KYC-verified account.',
+        reason: 'account_missing',
+      });
+      return;
+    }
+    const { data: kyc } = await supabase
+      .from('bct_user_kyc')
+      .select('status')
+      .eq('account_id', body.accountId)
+      .maybeSingle();
+    if (!kyc || kyc.status !== 'verified') {
+      res.status(403).json({
+        error: 'KYC verification required for the commissioner account.',
+        reason: 'kyc_required',
+      });
+      return;
+    }
+  }
+
   // Compute the commissioner's percentage from the parent chain, mirroring
   // computeCommissionerPercent() in api/checkout.ts. If the caller already
   // computed it, trust them.

@@ -108,6 +108,56 @@ export default async function handler(
   const tierInfo = TIER_PRICES[tier] || TIER_PRICES.feature;
   const origin = 'https://bmovies.online';
 
+  // KYC gate: commissions birth a tokenizable offer, so the commissioner
+  // must be a verified human. We require supabaseUserId in the body and
+  // verify the linked bct_accounts row has bct_user_kyc.status='verified'.
+  // Judge-coupon flow bypasses this via /api/feature/judge-coupon, which
+  // calls /api/feature/start directly — not this endpoint.
+  {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      res.status(500).json({ error: 'Supabase env vars missing' });
+      return;
+    }
+    if (!body.supabaseUserId) {
+      res.status(401).json({
+        error: 'Sign in required before commissioning a film.',
+        reason: 'signin_required',
+        next: '/login',
+      });
+      return;
+    }
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+    const { data: account } = await supabase
+      .from('bct_accounts')
+      .select('id')
+      .eq('auth_user_id', body.supabaseUserId)
+      .maybeSingle();
+    if (!account) {
+      res.status(403).json({
+        error: 'No bMovies account linked to this user. Complete sign-in, then verify KYC.',
+        reason: 'account_missing',
+        next: '/kyc.html',
+      });
+      return;
+    }
+    const { data: kyc } = await supabase
+      .from('bct_user_kyc')
+      .select('status')
+      .eq('account_id', account.id)
+      .maybeSingle();
+    if (!kyc || kyc.status !== 'verified') {
+      res.status(403).json({
+        error: 'KYC verification required before commissioning a film.',
+        reason: 'kyc_required',
+        next: '/kyc.html',
+      });
+      return;
+    }
+  }
+
   // Resolve the parent chain so we can compute the actual royalty %
   // the commissioner walks away with. A fresh feature should never be
   // shown as "you own 84%" on the Stripe page — it's 99%.

@@ -349,19 +349,78 @@
     async function loadAllReady() {
       // "Now showing" — only offers that have at least one image
       // artifact (the storyboard hero) qualify for the catalogue.
+      //
+      // We include tier + parent_offer_id so we can collapse a film
+      // family (pitch -> trailer -> short -> feature, all linked via
+      // parent_offer_id) into a single row. Otherwise a pitch and its
+      // upgraded trailer both render, duplicating the same film.
       const { data, error } = await supabase
         .from('bct_offers')
         .select(`
-          id, title, status, token_ticker, created_at,
+          id, title, status, token_ticker, tier, parent_offer_id, created_at,
           bct_artifacts ( id, kind, url, role )
         `)
         .in('status', ['published', 'auto_published', 'released'])
         .not('is_swarm', 'is', true)
         .is('archived_at', null)
         .order('created_at', { ascending: false })
-        .limit(60);
+        .limit(120);
       if (error) throw error;
       return data || [];
+    }
+
+    // Tier ordering — higher wins when collapsing a family.
+    const TIER_RANK = { pitch: 1, trailer: 2, short: 3, feature: 4 };
+
+    /**
+     * Collapse film families into one row per root.
+     *
+     * Each pitch, trailer, short, or feature row is linked to its
+     * ancestor via parent_offer_id (pitch is root, trailer points at
+     * the pitch, short points at the trailer, feature at the short).
+     * For /watch.html we show ONE card per film family — the highest
+     * tier that exists — and stash the sibling rows on it so the card
+     * can render tier badges ("pitch ✓ · trailer ✓ · short · feature").
+     *
+     * This also de-dupes stray same-title, non-linked rows by falling
+     * back to (title + token_ticker) when parent_offer_id is null —
+     * older offers from before the upgrade flow didn't always chain.
+     */
+    function collapseFamilies(offers) {
+      const byId = new Map(offers.map((o) => [o.id, o]));
+      const rootOf = (offer) => {
+        let cur = offer;
+        const seen = new Set();
+        while (cur.parent_offer_id && byId.has(cur.parent_offer_id) && !seen.has(cur.id)) {
+          seen.add(cur.id);
+          cur = byId.get(cur.parent_offer_id);
+        }
+        return cur;
+      };
+
+      // Group by (root.id) — or fallback to (lowercase title + token_ticker)
+      // so pre-upgrade-flow duplicates still collapse.
+      const groups = new Map();
+      for (const o of offers) {
+        const root = rootOf(o);
+        const key = root.id || `${(o.title || '').toLowerCase()}|${o.token_ticker || ''}`;
+        const g = groups.get(key) || { rootTitle: root.title, members: [] };
+        g.members.push(o);
+        groups.set(key, g);
+      }
+
+      // Pick the highest-tier member of each group as the display row,
+      // attach the full member list for tier-badge rendering.
+      const result = [];
+      for (const g of groups.values()) {
+        g.members.sort((a, b) => (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0));
+        const head = g.members[0];
+        head.__family = g.members; // stash siblings for the card
+        result.push(head);
+      }
+      // Keep the original date-desc order using each family head's created_at.
+      result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      return result;
     }
 
     // Poster overrides — keep in sync with film.html / productions.html /
@@ -453,13 +512,27 @@
             const hero = pickHeroImage(arts, o.title);
             const heroSrc = hero?.url || '';
             const teamCount = arts.filter((a) => a.role).length;
+            // Tier badges from the collapsed family — lights up a dot
+            // for every tier that exists for this film. Gives viewers
+            // an at-a-glance sense of how far the production has gone.
+            const family = o.__family || [o];
+            const hasTier = (t) => family.some((m) => m.tier === t);
+            const tierDot = (t, label) => {
+              const on = hasTier(t);
+              return `<span style="display:inline-flex;align-items:center;gap:0.3rem;color:${on ? '#E50914' : '#555'};font-weight:${on ? 700 : 400};">
+                <span style="width:6px;height:6px;border-radius:50%;background:${on ? '#E50914' : '#333'};"></span>${label}</span>`;
+            };
+            const tierRow = `<div class="meta" style="display:flex;gap:0.6rem;font-size:0.5rem;margin-top:0.3rem;text-transform:uppercase;letter-spacing:0.08em;">
+              ${tierDot('pitch','Pitch')}${tierDot('trailer','Trailer')}${tierDot('short','Short')}${tierDot('feature','Feature')}
+            </div>`;
             return `
               <a class="ns-card" href="watch.html?id=${encodeURIComponent(o.id)}" ${!heroSrc ? 'style="background:#111;"' : ''}>
                 <span class="badge">${esc(o.status)}</span>
                 ${heroSrc ? `<img src="${esc(heroSrc)}" alt="${esc(o.title)}" loading="lazy" />` : ''}
                 <div class="label">
                   <div class="title">${esc(o.title)}</div>
-                  <div class="meta">$${esc(o.token_ticker)} · ${teamCount}/8 roles</div>
+                  <div class="meta">$${esc(o.token_ticker)} · ${esc(o.tier || 'pitch')} tier · ${teamCount}/8 roles</div>
+                  ${tierRow}
                 </div>
               </a>
             `;
@@ -670,7 +743,8 @@
 
       try {
         const offers = await loadAllReady();
-        renderNowShowing(offers);
+        const collapsed = collapseFamilies(offers);
+        renderNowShowing(collapsed);
       } catch (err) {
         document.getElementById('root').innerHTML = `
           <div class="state"><h2>Error</h2><p>${esc(err.message)}</p></div>

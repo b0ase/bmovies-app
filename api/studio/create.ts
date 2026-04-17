@@ -111,6 +111,24 @@ export default async function handler(
 
   const accountId = account.id as string;
 
+  // KYC gate: nothing tokenizable gets created without a verified owner.
+  // Studios mint a BSV-21 token on completion, so creation requires KYC.
+  // (Same gate is applied to film commissions and token mints.)
+  const { data: kyc } = await supabase
+    .from('bct_user_kyc')
+    .select('status')
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (!kyc || kyc.status !== 'verified') {
+    res.status(403).json({
+      error: 'KYC verification required before creating a studio.',
+      reason: 'kyc_required',
+      next: '/kyc.html',
+    });
+    return;
+  }
+
   // Check if user already owns a studio
   const { data: existing } = await supabase
     .from('bct_studios')
