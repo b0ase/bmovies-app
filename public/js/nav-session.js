@@ -47,37 +47,44 @@
 
 const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 
-// Alphabetical left→right with About on the far left, evenly spread.
-// The page journey is carried by the logo → hero copy; the nav is just
-// a flat directory so visitors can teleport anywhere.
+// Five items, ordered as a user journey:
 //
-// Protocol (x402) and Jobs (jobboard) are in the main nav because they
-// ARE the platform — the micropayment protocol and the agent-to-agent
-// job market are the defining features, not technical easter eggs.
-// Earlier versions had them as hidden "judges + developers" pages but
-// they deserve to be first-class.
-// All hrefs are ROOT-relative (leading "/") so the same nav works
-// whether this script runs on /index.html, /watch.html, or a nested
-// page like /legal/platform-token-prospectus.html. Relative paths
-// (just "about.html") 404'd inside /legal/ because the browser
-// resolved them against the legal/ directory.
+//   About  → what is this?
+//   Pitch  → commission a film ($0.99+)
+//   Fund   → invest in the cap table (BSV or fiat)
+//   Watch  → see what's produced / in production
+//   Judge  → BSVA-judge shortcut with the free-trailer coupon
+//
+// Naming: action verbs where the page is a thing-you-do (Pitch, Fund, Watch,
+// Judge), nouns where the page is informational (About). "Commission" was
+// accurate but sounded expensive; "Pitch" meets users at the $0.99 entry
+// tier without hiding the upsell. "Exchange" was jargon; "Fund" maps
+// directly to buying shares. "Live" / "Watch" both pointed at catalogs of
+// completed work — consolidated into a single Watch → /productions.html
+// (productions.html is the better-presented of the two; /watch.html still
+// reachable by deep link and aliased below).
+//
+// Studios and Agents are deliberately NOT in the nav:
+//   - /studios.html is a directory, not a user flow (we haven't established
+//     what a user DOES with studios beyond browsing).
+//   - /agents.html has drifting hardcoded counts and no judge-flow purpose.
+//   Both remain as deep-link pages and are surfaced on the /judges.html
+//   tour for BSVA review.
+//
+// Jobboard (the agent job market that satisfies the BSVA "create a market
+// for agents" criterion) also lives on the /judges.html tour rather than
+// the consumer nav — a judge gets curated discovery, regular users don't
+// see an empty-looking page.
+//
+// All hrefs are ROOT-relative (leading "/") so the same nav works whether
+// this script runs on /index.html, /watch.html, or a nested page like
+// /legal/platform-token-prospectus.html.
 const NAV_LINKS = [
   { href: '/about.html',       label: 'About' },
-  { href: '/commission.html',  label: 'Commission' },
-  { href: '/exchange.html',    label: 'Exchange' },
-  // jobboard.html — surfaced on /judges.html tour, not in consumer nav.
-  // { href: '/jobboard.html',    label: 'Jobs' },
-  // { href: '/invest.html',   label: 'Invest' },  // $bMovies — temporarily
-  //   removed from nav until the platform-token mechanics (on-chain
-  //   mint, tranche schedule, legal disclosures, non-custodial payout
-  //   rail) are ready to ship. Page still exists at /invest.html for
-  //   direct-link access; add back to NAV_LINKS when ready.
-  { href: '/productions.html', label: 'Live' },          // renamed from "Productions"
-  // x402.html — surfaced on /judges.html tour, not in consumer nav.
-  // { href: '/x402.html',        label: 'Protocol' },
-  { href: '/studios.html',     label: 'Studios' },
-  { href: '/watch.html',       label: 'Watch' },
-  { href: '/judges.html',      label: 'Judges' },
+  { href: '/commission.html',  label: 'Pitch' },
+  { href: '/exchange.html',    label: 'Fund' },
+  { href: '/productions.html', label: 'Watch' },
+  { href: '/judges.html',      label: 'Judge' },
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
   // so it was pulled to avoid two adjacent links pointing at the same URL.
@@ -88,20 +95,34 @@ const NAV_LINKS = [
 // direct href match). E.g. /film.html should highlight "Watch".
 // Marketplace is a soft-redirect to Watch — highlight Watch when
 // the user lands on the old URL. Leaderboard lives under Studios.
+// Map deep-link pages to the nav item they should highlight. Pages that
+// live outside the consumer nav (agents, studios, jobboard, x402, etc.)
+// intentionally have NO active nav item so nothing misleads.
 const ACTIVE_ALIASES = {
-  'film.html':        'watch.html',
-  'marketplace.html': 'watch.html',
-  'offer.html':       'exchange.html',
-  'pitch.html':       'commission.html',
-  'trade.html':       'exchange.html',
-  'agent.html':       'exchange.html',
-  'studio.html':      'studios.html',
-  'agents.html':      'studios.html',
-  // jobboard.html now has its own top-level Jobs link — no alias needed.
-  'leaderboard.html': 'studios.html',
+  // Watch: productions.html is the canonical "see what's running / ran";
+  // /watch.html, /film.html, /marketplace.html, /production.html all point here.
+  'watch.html':            'productions.html',
+  'film.html':             'productions.html',
+  'marketplace.html':      'productions.html',
   'production.html':       'productions.html',
   'production-room.html':  'productions.html',
   'deck.html':             'productions.html',
+  // Fund: the cap-table / equity pages all highlight Fund.
+  'offer.html':            'exchange.html',
+  'trade.html':            'exchange.html',
+  'invest.html':           'exchange.html',
+  // Pitch: the legacy pitch.html still aliases to Pitch (commission.html).
+  'pitch.html':            'commission.html',
+  // Judge: the jobboard, x402 protocol explainer, and bsva-submission
+  // documents are all reached via the Judge tour, so highlight Judge when
+  // a visitor deep-links into any of them.
+  'jobboard.html':         'judges.html',
+  'x402.html':             'judges.html',
+  'bsva-submission.html':  'judges.html',
+  // studios.html, agents.html, agent.html, studio.html, leaderboard.html
+  // are intentionally unaliased — no nav item highlights when you're on
+  // them. They're deep-link destinations surfaced from the Judge tour and
+  // the per-film pages, not consumer nav targets.
 };
 
 function currentPageFile() {

@@ -65,3 +65,53 @@ Each new commit gets one bullet:
 
 Order newest-first within each day. Add a new date heading when the date
 rolls over.
+
+- **`<pending>`** — `fix(post-submission): 5-item nav + genericize drifting agent counts`
+
+  **Nav rename and re-order.** `nav-session.js` `NAV_LINKS` cut from 7 items
+  to 5, labelled as actions where the page is something-you-do and ordered
+  as a user journey:
+
+  ```
+  About · Pitch · Fund · Watch · Judge
+  ```
+
+  Why each change:
+  - **Commission → Pitch.** "Commission" sounded expensive and formal;
+    "Pitch" meets users at the $0.99 entry tier without hiding the upsell
+    — the page itself still presents all four tiers.
+  - **Exchange → Fund.** "Exchange" was jargon. "Fund" is the verb users
+    are actually performing when they buy into a cap table.
+  - **Live + Watch merged → Watch (routes to /productions.html).** Both
+    "Live" and "Watch" used to point at catalogs of films; /productions.html
+    is the better-presented of the two, so Watch now routes there and
+    /watch.html is kept as a deep-link alias. Visitors with bookmarks still
+    land on the Watch highlight.
+  - **Studios dropped from nav.** The page is a directory, not a user
+    flow — we haven't established what a signed-in user DOES with studios
+    beyond browsing. Page is still reachable as a deep link and surfaced
+    on the Judge tour. Revisit when there's a clear user action.
+  - **Agents dropped from nav** (see genericize item below for why).
+  - **Judges → Judge** (singular — it's the shortcut for a single visitor).
+
+  The agent job market (`/jobboard.html`) is intentionally NOT in the
+  consumer nav despite satisfying the BSVA "market for agents" criterion
+  — it's surfaced on the `/judges.html` tour instead. Reason: top-nav
+  pages that look sparse to a regular visitor hurt more than they help.
+  Curated discovery via the Judge tour keeps it visible where it matters.
+
+  **`ACTIVE_ALIASES` rewritten** to match: Watch highlights on
+  `/film.html`, `/marketplace.html`, etc.; Fund on `/offer.html` and
+  `/invest.html`; Judge on `/jobboard.html`, `/x402.html`, and
+  `/bsva-submission.html`. Pages outside the nav (studios, agents,
+  leaderboard) are intentionally unaliased — no nav item lights up, which
+  is honest about where you are.
+
+  **`agents.html` genericized.** The `58 agents · 6 studios + shared
+  specialists` h2, the `48 studio agents / 10 shared / 11-specialist crew`
+  breakdown, and the inline comments are all replaced with count-free
+  copy. The page loads the roster live from `bct_agents` — the DB already
+  knows how many agents exist, so hardcoding was drift-prone.
+
+  **`judges.html` count stripped.** The tour card `The 73 agents` →
+  `The agent roster`. Same reason.
