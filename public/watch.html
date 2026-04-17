@@ -42,39 +42,49 @@
       line-height: 1; text-transform: uppercase; margin-top: 0.6rem;
     }
     .ns-intro p { font-size: 0.9rem; color: #555; line-height: 1.6; margin-top: 1rem; }
+    /* Posters are 2:3 one-sheets — no cropping, no stub framing.
+       Give each one its own portrait card with the title strip below
+       the artwork so the poster stays uncluttered. */
     .ns-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.5rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.25rem;
     }
     .ns-card {
-      border: 1px solid #000; background: #000; color: #fff;
-      text-decoration: none; display: block; position: relative;
-      overflow: hidden; aspect-ratio: 16 / 9;
+      background: #000; color: #fff;
+      text-decoration: none; display: flex; flex-direction: column;
+      position: relative;
+    }
+    .ns-poster {
+      position: relative; overflow: hidden;
+      aspect-ratio: 2 / 3;
+      background: #0a0a0a;
+      border: 1px solid #0a0a0a;
     }
     .ns-card img {
       width: 100%; height: 100%; object-fit: cover;
-      transition: transform 0.4s ease, opacity 0.4s ease;
-      opacity: 0.7;
+      transition: transform 0.4s ease;
+      display: block;
     }
-    .ns-card:hover img { transform: scale(1.04); opacity: 1; }
-    .ns-card .label {
-      position: absolute; left: 0; right: 0; bottom: 0;
-      padding: 1rem 1.2rem;
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+    .ns-card:hover img { transform: scale(1.03); }
+    .ns-card:hover .ns-poster { border-color: #E50914; }
+    .ns-label {
+      padding: 0.7rem 0.1rem 0.2rem;
     }
-    .ns-card .label .title {
-      font-size: 1.1rem; font-weight: 900; text-transform: uppercase;
-      letter-spacing: -0.01em; line-height: 1.05;
+    .ns-label .title {
+      font-size: 0.95rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: -0.01em; line-height: 1.1;
+      color: #fff;
     }
-    .ns-card .label .meta {
+    .ns-label .meta {
       font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
-      margin-top: 0.4rem; opacity: 0.7;
+      margin-top: 0.4rem; color: #888;
     }
     .ns-card .badge {
-      position: absolute; top: 0.8rem; left: 0.8rem;
-      color: #000;
+      position: absolute; top: 0.6rem; left: 0.6rem;
+      color: #000; background: #fff;
       font-size: 0.5rem; font-weight: 900; letter-spacing: 0.12em;
-      padding: 0.3rem 0.55rem; text-transform: uppercase;
+      padding: 0.25rem 0.5rem; text-transform: uppercase;
+      z-index: 2;
     }
     .ns-empty {
       grid-column: 1 / -1; padding: 3rem 0; text-align: center;
@@ -526,12 +536,14 @@
               ${tierDot('pitch','Pitch')}${tierDot('trailer','Trailer')}${tierDot('short','Short')}${tierDot('feature','Feature')}
             </div>`;
             return `
-              <a class="ns-card" href="watch.html?id=${encodeURIComponent(o.id)}" ${!heroSrc ? 'style="background:#111;"' : ''}>
-                <span class="badge">${esc(o.status)}</span>
-                ${heroSrc ? `<img src="${esc(heroSrc)}" alt="${esc(o.title)}" loading="lazy" />` : ''}
-                <div class="label">
+              <a class="ns-card" href="watch.html?id=${encodeURIComponent(o.id)}">
+                <div class="ns-poster">
+                  <span class="badge">${esc(o.status)}</span>
+                  ${heroSrc ? `<img src="${esc(heroSrc)}" alt="${esc(o.title)} poster" loading="lazy" />` : ''}
+                </div>
+                <div class="ns-label">
                   <div class="title">${esc(o.title)}</div>
-                  <div class="meta">$${esc(o.token_ticker)} · ${esc(o.tier || 'pitch')} tier · ${teamCount}/8 roles</div>
+                  <div class="meta">$${esc(o.token_ticker)} · ${esc(o.tier || 'pitch')} · ${teamCount}/8 roles</div>
                   ${tierRow}
                 </div>
               </a>
