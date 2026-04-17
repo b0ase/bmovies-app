@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star bOOrs — Trailer Preview</title>
+  <meta name="description" content="Watch the 8-bit trailer. Chiptune engaged. May the jiggle be with you.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/boovies-film.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    .preview-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      position: relative;
+      z-index: 2;
+    }
+    .preview-eyebrow {
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 0.3em;
+      color: #FF69B4;
+      font-size: 0.8rem;
+      text-align: center;
+      margin-bottom: 0.4rem;
+    }
+    .preview-title {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(2.2rem, 6vw, 4.2rem);
+      color: #FFE81F;
+      letter-spacing: 0.08em;
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+      text-shadow: 0 0 24px rgba(255, 232, 31, 0.35);
+    }
+    .preview-title .oo { color: #FF69B4; }
+    .preview-tagline {
+      text-align: center;
+      color: #ccc;
+      font-style: italic;
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+    }
+
+    .screen {
+      position: relative;
+      border: 3px solid #FF69B4;
+      box-shadow:
+        0 0 0 2px #000,
+        0 0 40px rgba(255, 105, 180, 0.4),
+        inset 0 0 80px rgba(0, 0, 0, 0.6);
+      background: #02030a;
+      border-radius: 6px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+    }
+    .screen img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+    .scanlines {
+      position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.25) 3px,
+        rgba(0,0,0,0) 4px
+      );
+      mix-blend-mode: multiply;
+    }
+    .screen-glow {
+      position: absolute; inset: -1px; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      margin-top: 1.2rem;
+      flex-wrap: wrap;
+    }
+    .pbtn {
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 0.2em;
+      font-size: 0.95rem;
+      padding: 0.75rem 1.4rem;
+      background: #FF69B4;
+      color: #000;
+      border: 2px solid #FF69B4;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-radius: 2px;
+    }
+    .pbtn:hover { background: #FFE81F; border-color: #FFE81F; }
+    .pbtn.ghost {
+      background: transparent; color: #FFE81F; border-color: #FFE81F;
+    }
+    .pbtn.ghost:hover { background: #FFE81F; color: #000; }
+    .pbtn[aria-pressed="true"] { background: #FFE81F; border-color: #FFE81F; }
+
+    .eq {
+      display: inline-flex;
+      gap: 3px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+      height: 14px;
+      align-items: flex-end;
+    }
+    .eq span {
+      display: inline-block;
+      width: 3px;
+      background: #000;
+      height: 4px;
+    }
+    .playing .eq span { animation: eq 0.6s ease-in-out infinite alternate; }
+    .playing .eq span:nth-child(2) { animation-delay: 0.1s; }
+    .playing .eq span:nth-child(3) { animation-delay: 0.2s; }
+    .playing .eq span:nth-child(4) { animation-delay: 0.15s; }
+    @keyframes eq { from { height: 3px; } to { height: 14px; } }
+
+    .specs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin: 2.5rem 0;
+    }
+    .spec {
+      border: 1px solid rgba(255, 105, 180, 0.3);
+      padding: 0.9rem 1rem;
+      background: rgba(255, 105, 180, 0.04);
+    }
+    .spec-k {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #FF69B4;
+      margin-bottom: 0.3rem;
+    }
+    .spec-v {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      color: #fff;
+      letter-spacing: 0.06em;
+    }
+
+    .synopsis-mini {
+      max-width: 720px;
+      margin: 0 auto 2.5rem;
+      text-align: center;
+      line-height: 1.7;
+      color: #bbb;
+      font-size: 0.95rem;
+    }
+    .synopsis-mini em { color: #FF69B4; font-style: italic; }
+
+    .pill-row {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .pill {
+      border: 1px solid #333;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #888;
+      border-radius: 999px;
+    }
+
+    .cta-strip {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.2rem;
+      border: 1px solid rgba(255, 232, 31, 0.3);
+      background: rgba(255, 232, 31, 0.04);
+      margin-top: 2rem;
+      flex-wrap: wrap; gap: 0.8rem;
+    }
+    .cta-strip .cta-text { color: #FFE81F; letter-spacing: 0.08em; font-weight: 700; }
+
+    .audio-hint {
+      font-size: 0.7rem;
+      color: #666;
+      text-align: center;
+      margin-top: 0.6rem;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-circle c1"></div>
+  <div class="bg-circle c2"></div>
+
+  <div class="preview-wrap">
+
+    <nav class="breadcrumb">
+      <a href="boovies.html">&larr; bOOvies Drive-In</a> &middot;
+      <a href="boovies-star.html">Star bOOrs</a> &middot; Trailer Preview
+    </nav>
+
+    <div class="preview-eyebrow">★ OFFICIAL 8-BIT TRAILER ★</div>
+    <h1 class="preview-title">Star b<span class="oo">OO</span>rs</h1>
+    <div class="preview-tagline">"May the jiggle be with you."</div>
+
+    <div class="pill-row">
+      <span class="pill">PG-OO</span>
+      <span class="pill">121 min</span>
+      <span class="pill">Cheekier Galaxy</span>
+      <span class="pill">IMAX-OO</span>
+    </div>
+
+    <div class="screen" id="screen">
+      <img src="boovies-star-trailer.gif" alt="Star bOOrs animated trailer" />
+      <div class="scanlines"></div>
+      <div class="screen-glow"></div>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="pbtn" id="playBtn" aria-pressed="false">
+        <span id="playLabel">▶ Play Chiptune</span>
+        <span class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+      </button>
+      <a class="pbtn ghost" href="boovies-star.html">View Full Listing</a>
+    </div>
+    <div class="audio-hint">8-bit main-theme cover · square waves, one chip, no regrets</div>
+
+    <div class="specs">
+      <div class="spec"><div class="spec-k">Format</div><div class="spec-v">GIF · 720×405</div></div>
+      <div class="spec"><div class="spec-k">Runtime</div><div class="spec-v">6 seconds</div></div>
+      <div class="spec"><div class="spec-k">Palette</div><div class="spec-v">96 colours</div></div>
+      <div class="spec"><div class="spec-k">Score</div><div class="spec-v">John Williams-<span style="color:#FF69B4">OO</span></div></div>
+    </div>
+
+    <p class="synopsis-mini">
+      A long time ago in a galaxy <em>cheekier</em> than most, the evil Empire built a moon-sized
+      battle station called the <em>Death Star-OO</em>. Only two perfect pink circles and one
+      restless moisture farmer stand between the <em>Force</em> and total disequilibrium.
+    </p>
+
+    <div class="cta-strip">
+      <div class="cta-text">Want the full feature?</div>
+      <a class="pbtn" href="boovies-star.html">Book Tickets →</a>
+    </div>
+
+  </div>
+
+  <footer class="site-footer" style="border-top-color: #FF69B4 !important; position: relative; z-index: 2;">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="boovies.html">bOOvies Home</a>
+        <a href="boovies-star.html">Star bOOrs</a>
+        <a href="about.html">About</a>
+        <a href="watch.html">Watch</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 bOOvies. No OO's were harmed. Chiptune by silicon.</div>
+    </div>
+  </footer>
+
+  <script src="js/boovies-nav.js"></script>
+  <script>
+    // ═════════════ Star Wars main theme — chiptune ═════════════
+    // Square-wave synthesis via Web Audio. Lead + bass counter-line.
+    // Autoplay is gated on user click (browser policy).
+
+    (function () {
+      const btn     = document.getElementById('playBtn');
+      const label   = document.getElementById('playLabel');
+      const screen  = document.getElementById('screen');
+      const controls = document.getElementById('controls');
+
+      let ctx = null;
+      let playing = false;
+      let stopAt = 0;
+      let scheduled = [];
+
+      // Note frequencies (equal temperament, A4 = 440)
+      const N = {
+        G3: 196.00, Ab3: 207.65, A3: 220.00, Bb3: 233.08, B3: 246.94,
+        C4: 261.63, D4: 293.66, Eb4: 311.13, F4: 349.23, G4: 392.00,
+        Ab4: 415.30, A4: 440.00, Bb4: 466.16, B4: 493.88,
+        C5: 523.25, D5: 587.33, Eb5: 622.25, F5: 698.46, G5: 783.99,
+        R: 0
+      };
+
+      // beat = quarter note. Lead melody — opening of Star Wars main theme.
+      // [pitch, beats]  triplets represented as 1/3-beat each.
+      const T = 1/3;
+      const lead = [
+        // pickup triplet: G G G
+        ['G4', T], ['G4', T], ['G4', T],
+        // held "Eb" then "Bb" (low-ish) beat
+        ['Eb5', 1.5], ['Bb4', 0.5],
+        // G G G
+        ['G4', T], ['G4', T], ['G4', T],
+        ['Eb5', 1.5], ['Bb4', 0.5],
+        // G G G
+        ['G4', T], ['G4', T], ['G4', T],
+        ['Eb5', 1.5], ['D5', 0.25], ['C5', 0.25],
+        // scale down flourish
+        ['Bb4', 0.5], ['A4', 0.5], ['G4', 0.5], ['C5', 1.0],
+        // reprise
+        ['G4', T], ['G4', T], ['G4', T],
+        ['Eb5', 1.5], ['Bb4', 0.5],
+        ['C5', 0.5], ['C5', 0.5], ['C5', 0.5], ['Bb4', 0.5],
+        ['G4', 1.0],
+        ['R', 0.5]
+      ];
+
+      const bass = [
+        ['Bb3', 1], ['Bb3', 1], ['Eb3' in N ? 'Eb3' : 'Eb4', 0.5], ['F4', 0.5],
+        ['Bb3', 1], ['Bb3', 1], ['G3', 0.5], ['F4', 0.5],
+        ['Bb3', 1], ['Bb3', 1], ['Eb4', 1],
+        ['F4', 1], ['Bb3', 2],
+        ['Bb3', 1], ['Bb3', 1], ['G3', 0.5], ['F4', 0.5],
+        ['Bb3', 1], ['Bb3', 1], ['Eb4', 1],
+        ['Bb3', 1.5], ['R', 0.5]
+      ];
+
+      function playVoice(sequence, opts) {
+        const { bpm, type = 'square', gain = 0.15, detune = 0 } = opts;
+        const secPerBeat = 60 / bpm;
+        let t = ctx.currentTime + 0.05;
+        for (const [name, beats] of sequence) {
+          const dur = beats * secPerBeat;
+          const freq = N[name] ?? 0;
+          if (freq > 0) {
+            const osc = ctx.createOscillator();
+            const g   = ctx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.detune.value = detune;
+            // Short attack/release envelope — avoids clicks, adds chip bounce
+            const a = 0.008, r = 0.04;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(gain, t + a);
+            g.gain.setValueAtTime(gain, t + Math.max(a, dur - r));
+            g.gain.linearRampToValueAtTime(0, t + dur);
+            osc.connect(g).connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + dur + 0.02);
+            scheduled.push(osc);
+          }
+          t += dur;
+        }
+        return t;
+      }
+
+      function percClick(when) {
+        // snare-ish noise hit
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        }
+        const src = ctx.createBufferSource();
+        const g = ctx.createGain();
+        g.gain.value = 0.06;
+        src.buffer = buffer;
+        src.connect(g).connect(ctx.destination);
+        src.start(when);
+        scheduled.push(src);
+      }
+
+      function stop() {
+        playing = false;
+        scheduled.forEach(n => { try { n.stop(); } catch {} });
+        scheduled = [];
+        btn.setAttribute('aria-pressed', 'false');
+        controls.classList.remove('playing');
+        label.textContent = '▶ Play Chiptune';
+      }
+
+      function play() {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
+        playing = true;
+        btn.setAttribute('aria-pressed', 'true');
+        controls.classList.add('playing');
+        label.textContent = '■ Stop Chiptune';
+
+        const bpm = 108;
+        const endLead = playVoice(lead, { bpm, type: 'square', gain: 0.14, detune: 0 });
+        const endBass = playVoice(bass, { bpm, type: 'triangle', gain: 0.22, detune: -1200 });
+        // snare hits on beats
+        const secPerBeat = 60 / bpm;
+        for (let beat = 1; beat < 18; beat += 2) {
+          percClick(ctx.currentTime + 0.05 + beat * secPerBeat);
+        }
+
+        stopAt = Math.max(endLead, endBass);
+        const dur = (stopAt - ctx.currentTime) * 1000;
+        setTimeout(() => { if (playing) stop(); }, dur);
+      }
+
+      btn.addEventListener('click', () => {
+        if (playing) stop(); else play();
+      });
+
+      // Clicking the screen also toggles chiptune (cinema vibe)
+      screen.addEventListener('click', () => {
+        if (playing) stop(); else play();
+      });
+    })();
+  </script>
+
+</body>
+</html>
