@@ -2,7 +2,13 @@
 
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
+import { Suspense } from 'react'
 
+// AccountToolbar calls useSearchParams(), which Next 16 requires to be
+// wrapped in a Suspense boundary. Without it, hydrating the /account
+// route after navigating from an external static HTML page
+// (offer.html / deck.html / production.html) throws the default
+// "Application error: a client-side exception has occurred" screen.
 const AccountToolbar = dynamic(() => import('@/components/AccountToolbar').then(m => m.AccountToolbar), { ssr: false })
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
@@ -24,7 +30,9 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       `}} />
 
       <header className="site-header"></header>
-      <AccountToolbar />
+      <Suspense fallback={null}>
+        <AccountToolbar />
+      </Suspense>
       <main className="flex-1">{children}</main>
       <footer className="site-footer">
         <div className="footer-inner">

@@ -555,7 +555,7 @@
         const factsSection = `
           <div class="section">
             <h2>Facts</h2>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0.6rem;font-family:'JetBrains Mono','Menlo',monospace;font-size:0.75rem;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0.6rem;font-size:0.8rem;">
               <div style="border:1px solid #1e1e1e;background:#0a0a0a;padding:0.9rem 1rem;">
                 <div style="font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Ticker</div>
                 <div style="color:#e50914;font-weight:700;margin-top:0.3rem;">$${esc(offer.token_ticker || '')}</div>
@@ -582,7 +582,7 @@
               </div>
               <div style="border:1px solid #1e1e1e;background:#0a0a0a;padding:0.9rem 1rem;">
                 <div style="font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Artifacts</div>
-                <div style="color:#fff;font-weight:700;margin-top:0.3rem;">${artifactCounts.total} total · ${artifactCounts.image}🖼 ${artifactCounts.video}🎬 ${artifactCounts.text}📄</div>
+                <div style="color:#fff;font-weight:700;margin-top:0.3rem;">${artifactCounts.total} total · ${artifactCounts.image} image${artifactCounts.image===1?'':'s'} · ${artifactCounts.video} video${artifactCounts.video===1?'':'s'} · ${artifactCounts.text} doc${artifactCounts.text===1?'':'s'}</div>
               </div>
               <div style="border:1px solid #1e1e1e;background:#0a0a0a;padding:0.9rem 1rem;">
                 <div style="font-size:0.55rem;color:#666;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">Ticket price</div>
