@@ -72,6 +72,8 @@ const PROJECT_ALL_TABS = [
   { id: 'editor',      label: 'Editor',     type: 'tool' as const },
   { id: 'titles',      label: 'Titles',     type: 'tool' as const },
   { id: 'score',       label: 'Score',      type: 'tool' as const },
+  { id: 'preview',     label: 'Preview',    type: 'tool' as const },
+  { id: 'publish',     label: 'Publish',    type: 'tool' as const },
 ] as const
 
 /* ─── Component ─── */

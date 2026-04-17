@@ -3681,6 +3681,8 @@ const TOOL_LABELS: Record<string, string> = {
   editor: 'Movie Editor',
   titles: 'Title Designer',
   score: 'Score Composer',
+  preview: 'Preview',
+  publish: 'Publish',
 }
 
 function ToolView({
@@ -3699,6 +3701,8 @@ function ToolView({
       {tool === 'editor' && <MovieEditorView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'titles' && <TitleDesignerView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'score' && <ScoreComposerView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'preview' && <PreviewView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'publish' && <PublishView projectId={projectId} projectTitle={projectTitle} />}
     </div>
   )
 }
@@ -5543,6 +5547,535 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
           <div className="text-[#ccc] text-sm leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'var(--font-mono), monospace' }}>
             {scoreBrief}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Preview ──
+ *
+ * Watch screen for the current cut. Picks the best video artifact
+ * per tier and plays it in an inline player. A "Present fullscreen"
+ * button drops the whole thing into the browser's native fullscreen
+ * mode so a commissioner can show the film on a laptop for pitches.
+ *
+ * Pipeline mapping (in priority order for each tier):
+ *   feature : editor.picture_lock → editor.fine_cut → scene.<n>.video
+ *   short   : editor.picture_lock → editor.rough_cut → scene.<n>.video
+ *   trailer : editor.trailer_cut  (may be multiple clips — stitched in
+ *             sequence via a playlist cursor, same as MovieEditorView)
+ *   pitch   : no playable cut yet — shows a friendly explainer
+ */
+
+type PreviewClip = { id: number; url: string; step_id: string | null; role: string | null }
+
+function PreviewView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [tier, setTier] = useState<string>('pitch')
+  const [clips, setClips] = useState<PreviewClip[]>([])
+  const [activeIdx, setActiveIdx] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [autoplayErr, setAutoplayErr] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const offerP = bmovies.from('bct_offers').select('tier').eq('id', projectId).maybeSingle()
+      const artsP = bmovies.from('bct_artifacts')
+        .select('id, kind, url, step_id, role, created_at')
+        .eq('offer_id', projectId)
+        .eq('kind', 'video')
+        .is('superseded_by', null)
+        .order('created_at', { ascending: true })
+      const [offerRes, artsRes] = await Promise.all([offerP, artsP])
+      if (cancelled) return
+      const t = (offerRes.data as { tier?: string } | null)?.tier || 'pitch'
+      const arts = ((artsRes.data as any[]) || []) as PreviewClip[]
+
+      // Dedupe — legacy rows share mirror filenames.
+      const deduped = Array.from(new Map(arts.map((a) => [a.url, a])).values())
+
+      // Priority picker: find the single "hero cut" for short/feature,
+      // or every trailer clip for trailer.
+      const pick = (steps: string[]) => {
+        for (const step of steps) {
+          const match = deduped.filter((a) => (a.step_id || '') === step)
+          if (match.length > 0) return match
+        }
+        return []
+      }
+      let picked: PreviewClip[] = []
+      if (t === 'feature')      picked = pick(['editor.picture_lock', 'editor.fine_cut'])
+      else if (t === 'short')   picked = pick(['editor.picture_lock', 'editor.rough_cut'])
+      else if (t === 'trailer') picked = pick(['editor.trailer_cut'])
+
+      // Fallback: if no hero cut yet, play scene clips in order.
+      if (picked.length === 0) {
+        const scenes = deduped
+          .filter((a) => (a.step_id || '').startsWith('scene.'))
+          .sort((a, b) => {
+            const nA = Number((a.step_id || '').match(/scene\.(\d+)/)?.[1] ?? 0)
+            const nB = Number((b.step_id || '').match(/scene\.(\d+)/)?.[1] ?? 0)
+            return nA - nB
+          })
+        picked = scenes
+      }
+
+      setTier(t)
+      setClips(picked)
+      setActiveIdx(0)
+      setLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  function onClipEnd() {
+    if (activeIdx < clips.length - 1) setActiveIdx((i) => i + 1)
+  }
+
+  async function enterFullscreen() {
+    const el = wrapperRef.current
+    if (!el) return
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen()
+      else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen()
+      // Kick off playback once we're in fullscreen so the presenter
+      // doesn't have to click Play separately.
+      if (videoRef.current) {
+        try { await videoRef.current.play() } catch { setAutoplayErr(true) }
+      }
+    } catch (err) {
+      console.warn('[preview] fullscreen failed:', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+        <div className="h-10 bg-[#0a0a0a] border border-[#1a1a1a]" />
+      </div>
+    )
+  }
+
+  if (clips.length === 0) {
+    return (
+      <div>
+        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+          Preview
+        </div>
+        <h2 className="text-3xl font-black leading-none text-white mb-3" style={{ fontFamily: 'var(--font-bebas)' }}>
+          Nothing to <span className="text-[#E50914]">play</span> yet
+        </h2>
+        <div className="border border-dashed border-[#222] bg-[#050505] p-6 max-w-xl">
+          <p className="text-[#888] text-sm leading-relaxed mb-2">
+            {tier === 'pitch'
+              ? 'Pitches are text + a poster. Upgrade to a trailer to generate the first playable cut.'
+              : 'No video clips yet. The pipeline will drop them here as each scene finishes.'}
+          </p>
+          {tier === 'pitch' && (
+            <a
+              href={`/offer.html?id=${encodeURIComponent(projectId)}`}
+              className="inline-block mt-2 text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white"
+            >
+              Upgrade this pitch →
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1)
+
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            Preview · {tierLabel}
+          </div>
+          <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {projectTitle}
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={enterFullscreen}
+          className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white shrink-0"
+        >
+          ▢ Present fullscreen
+        </button>
+      </div>
+
+      <div
+        ref={wrapperRef}
+        className="relative border border-[#E50914] bg-black group"
+      >
+        <video
+          ref={videoRef}
+          key={clips[activeIdx]?.url}
+          src={clips[activeIdx]?.url}
+          controls
+          playsInline
+          onEnded={onClipEnd}
+          className="w-full aspect-video bg-black"
+        />
+        {autoplayErr && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
+            <div className="text-white text-sm">Click play — autoplay was blocked.</div>
+          </div>
+        )}
+      </div>
+
+      {clips.length > 1 && (
+        <div className="mt-3 flex gap-2 flex-wrap">
+          {clips.map((c, i) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setActiveIdx(i)}
+              className={`px-3 py-1.5 text-[0.55rem] font-mono uppercase tracking-wider border ${
+                i === activeIdx
+                  ? 'bg-[#E50914] border-[#E50914] text-white'
+                  : 'bg-transparent border-[#333] text-[#888] hover:border-[#E50914]'
+              }`}
+            >
+              Clip {i + 1} of {clips.length}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 text-[0.6rem] text-[#666] font-mono">
+        {clips.length} clip{clips.length === 1 ? '' : 's'} · tier: {tier}
+      </div>
+    </div>
+  )
+}
+
+/* ── Publish ──
+ *
+ * Lists a slice of the project's royalty shares on the public
+ * exchange. The commissioner still keeps 99% by default (1% was
+ * minted to the platform treasury at commission time); this tool
+ * peels off a tranche from the 99% and posts it as a bct_share_listings
+ * row with status='open' so /exchange and /offer surfaces can sell it.
+ *
+ * Defaults by tier (the "cost to upgrade" ladder in the brief):
+ *   pitch   →  10% @ $9.99   (already live from commission; shown
+ *                              for completeness but marked as posted)
+ *   trailer →  10% @ $99     (total list price, split across shares)
+ *   short   →  10% @ $999
+ *   feature →  10% @ $9,999  (marketing budget cut)
+ *
+ * Everything is user-discretionary above the minimum tranche size
+ * enforced by the API (see api/feature/list-shares.ts).
+ *
+ * Shares math: 1% of a film = 10,000,000 shares (1B total supply).
+ * price_per_share_cents = target_total_usd * 100 / shares_offered.
+ */
+
+type TierKey = 'pitch' | 'trailer' | 'short' | 'feature'
+
+const TIER_DEFAULTS: Record<TierKey, { totalUsd: number; percent: number; nextLabel: string }> = {
+  pitch:   { totalUsd: 9.99,   percent: 10, nextLabel: 'upgrade to Trailer' },
+  trailer: { totalUsd: 99,     percent: 10, nextLabel: 'upgrade to Short' },
+  short:   { totalUsd: 999,    percent: 10, nextLabel: 'upgrade to Feature' },
+  feature: { totalUsd: 9999,   percent: 10, nextLabel: 'marketing tranche' },
+}
+
+function PublishView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [tier, setTier] = useState<TierKey>('pitch')
+  const [status, setStatus] = useState<string>('draft')
+  const [ticker, setTicker] = useState<string>('')
+  const [existing, setExisting] = useState<{ id: number; price_per_share_cents: number; shares_offered: number; status: string }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const [percent, setPercent] = useState<number>(10)
+  const [totalUsd, setTotalUsd] = useState<number>(9.99)
+  const [floorUsd, setFloorUsd] = useState<string>('')   // optional; empty = no floor
+  const [accountId, setAccountId] = useState<string | null>(null)
+
+  const [submitting, setSubmitting] = useState(false)
+  const [submitErr, setSubmitErr] = useState<string | null>(null)
+  const [submitOk, setSubmitOk] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const offerP = bmovies
+        .from('bct_offers')
+        .select('tier, status, token_ticker')
+        .eq('id', projectId)
+        .maybeSingle()
+      const listP = bmovies
+        .from('bct_share_listings')
+        .select('id, price_per_share_cents, shares_offered, status')
+        .eq('offer_id', projectId)
+        .order('created_at', { ascending: false })
+      const sessionP = bmovies.auth.getSession()
+      const [offerRes, listRes, sessRes] = await Promise.all([offerP, listP, sessionP])
+      if (cancelled) return
+
+      const offer = (offerRes.data as { tier?: string; status?: string; token_ticker?: string } | null) || {}
+      const t = (['pitch', 'trailer', 'short', 'feature'].includes(offer.tier || '') ? (offer.tier as TierKey) : 'pitch')
+      setTier(t)
+      setStatus(offer.status || 'draft')
+      setTicker(offer.token_ticker || '')
+
+      const def = TIER_DEFAULTS[t]
+      setPercent(def.percent)
+      setTotalUsd(def.totalUsd)
+
+      setExisting((listRes.data as any[]) || [])
+
+      const user = sessRes.data.session?.user
+      if (user) {
+        const { data: acct } = await bmovies
+          .from('bct_accounts')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle()
+        if (!cancelled) setAccountId((acct as { id?: string } | null)?.id || null)
+      }
+      setLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  // Derived values for the summary panel.
+  const SHARES_PER_PERCENT = 10_000_000
+  const sharesOffered = Math.floor(percent * SHARES_PER_PERCENT)
+  const pricePerShareCents = sharesOffered > 0 ? (totalUsd * 100) / sharesOffered : 0
+  const floorCents = floorUsd.trim() ? Number(floorUsd.trim()) * 100 : null
+  const sharesValid = sharesOffered >= 100_000 && sharesOffered <= 99 * SHARES_PER_PERCENT
+  const priceValid = pricePerShareCents > 0 && pricePerShareCents <= 100_000  // $1,000/share ceiling
+
+  async function submit() {
+    if (!sharesValid || !priceValid) {
+      setSubmitErr('Shares or price out of range — minimum 0.01%, max 99%, max $1,000/share.')
+      return
+    }
+    setSubmitErr(null)
+    setSubmitOk(null)
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/feature/list-shares?action=create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: projectId,
+          sharesOffered,
+          pricePerShareCents: Math.round(pricePerShareCents * 100) / 100, // keep API happy (integer cents)
+          accountId,
+        }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(payload?.error || `HTTP ${res.status}`)
+      }
+      setSubmitOk(`Listing created · ${percent}% of ${ticker || 'this film'} now live on the exchange.`)
+      // Refresh the existing-listings strip.
+      const { data: refetched } = await bmovies
+        .from('bct_share_listings')
+        .select('id, price_per_share_cents, shares_offered, status')
+        .eq('offer_id', projectId)
+        .order('created_at', { ascending: false })
+      setExisting((refetched as any[]) || [])
+    } catch (err) {
+      setSubmitErr((err as Error).message || 'Failed to publish.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3 animate-pulse">
+        <div className="h-32 bg-[#0a0a0a] border border-[#1a1a1a]" />
+        <div className="h-64 bg-[#0a0a0a] border border-[#1a1a1a]" />
+      </div>
+    )
+  }
+
+  const def = TIER_DEFAULTS[tier]
+  const openListings = existing.filter((l) => l.status === 'open')
+
+  return (
+    <div>
+      <div className="mb-6">
+        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+          Publish · {tier}
+        </div>
+        <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+          Ship <span className="text-[#E50914]">{projectTitle}</span>
+        </h2>
+        <p className="text-[#888] text-sm mt-2 max-w-2xl">
+          Publishing pushes a slice of this {tier}&apos;s royalty shares to the exchange. Default
+          preset is <strong className="text-white">{def.percent}%</strong> for{' '}
+          <strong className="text-white">${def.totalUsd.toLocaleString()}</strong> total (the{' '}
+          {def.nextLabel} tier cost). Change the percent, price, or floor to suit your strategy —
+          you keep the remaining {99 - def.percent}% of the 99% that belongs to you.
+        </p>
+      </div>
+
+      {/* ─── Form ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+        <div className="border border-[#222] bg-[#0a0a0a] p-5 space-y-4">
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-1">
+              Percent of supply to release
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0.01} max={99} step={0.01}
+                value={percent}
+                onChange={(e) => setPercent(Number(e.target.value))}
+                className="flex-1"
+              />
+              <input
+                type="number"
+                min={0.01} max={99} step={0.01}
+                value={percent}
+                onChange={(e) => setPercent(Number(e.target.value))}
+                className="w-24 bg-[#050505] border border-[#222] text-white px-2 py-1.5 font-mono text-sm focus:outline-none focus:border-[#E50914]"
+              />
+              <span className="text-[#666] text-[0.65rem] font-mono">%</span>
+            </div>
+            <div className="mt-1 text-[0.6rem] text-[#555] font-mono">
+              = {sharesOffered.toLocaleString()} shares out of 1,000,000,000 total
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-1">
+              Total list price (USD)
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-[#666] text-sm">$</span>
+              <input
+                type="number"
+                min={0.01} step={0.01}
+                value={totalUsd}
+                onChange={(e) => setTotalUsd(Number(e.target.value))}
+                className="flex-1 bg-[#050505] border border-[#222] text-white px-3 py-1.5 font-mono focus:outline-none focus:border-[#E50914]"
+              />
+            </div>
+            <div className="mt-1 text-[0.6rem] text-[#555] font-mono">
+              = ${pricePerShareCents.toFixed(4)}¢ per share
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-1">
+              Floor price per share (USD, optional)
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-[#666] text-sm">$</span>
+              <input
+                type="number"
+                min={0} step={0.0001}
+                value={floorUsd}
+                onChange={(e) => setFloorUsd(e.target.value)}
+                placeholder="no floor"
+                className="flex-1 bg-[#050505] border border-[#222] text-white px-3 py-1.5 font-mono focus:outline-none focus:border-[#E50914]"
+              />
+            </div>
+            <div className="mt-1 text-[0.6rem] text-[#555] font-mono">
+              {floorCents === null ? 'Buyers can bid below list with no minimum.' : `Minimum accepted price: $${(floorCents / 100).toFixed(4)} per share.`}
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-[#222] flex items-center justify-between gap-3">
+            <div className="text-[0.6rem] text-[#666] font-mono">
+              {openListings.length > 0
+                ? `${openListings.length} open listing${openListings.length === 1 ? '' : 's'} already on the exchange.`
+                : 'No open listings on the exchange yet.'}
+            </div>
+            <button
+              type="button"
+              disabled={submitting || !sharesValid || !priceValid}
+              onClick={submit}
+              className="text-[0.7rem] font-bold uppercase tracking-wider px-5 py-2 bg-[#E50914] hover:bg-[#b00610] text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Publishing…' : 'Publish to exchange →'}
+            </button>
+          </div>
+
+          {submitErr && (
+            <div className="text-[#ff6b6b] text-xs border border-[#5a1a1a] bg-[#3a0e0e] p-3 font-mono">
+              {submitErr}
+            </div>
+          )}
+          {submitOk && (
+            <div className="text-[#6bff8a] text-xs border border-[#1a5a1a] bg-[#0e3a0e] p-3 font-mono">
+              {submitOk}{' '}
+              <a href={`/offer.html?id=${encodeURIComponent(projectId)}`} className="underline">
+                Open on exchange ↗
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Summary sidebar ─── */}
+        <div className="border border-[#222] bg-[#0a0a0a] p-5 space-y-3">
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold">
+            Tranche summary
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-[#888]">Tier</span><span className="text-white uppercase">{tier}</span></div>
+            <div className="flex justify-between"><span className="text-[#888]">Token</span><span className="text-white font-mono">{ticker ? `$${ticker}` : '—'}</span></div>
+            <div className="flex justify-between"><span className="text-[#888]">Release</span><span className="text-white">{percent}%</span></div>
+            <div className="flex justify-between"><span className="text-[#888]">Total</span><span className="text-white">${totalUsd.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-[#888]">Floor</span><span className="text-white">{floorCents === null ? '—' : `$${(floorCents / 100).toFixed(4)}`}</span></div>
+          </div>
+          <div className="pt-3 border-t border-[#222]">
+            <div className="text-[#666] text-[0.6rem] font-mono leading-relaxed">
+              After publish, this tranche appears on /offer.html?id={projectId.slice(0, 12)}…
+              and /exchange. Buyers pay Stripe; proceeds clear to your payout address after the
+              on-chain transfer step.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Existing listings ─── */}
+      {existing.length > 0 && (
+        <div className="mt-8">
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#888] font-bold mb-2">
+            Previous tranches
+          </div>
+          <div className="border border-[#222] bg-[#0a0a0a]">
+            <div className="grid grid-cols-4 gap-3 px-4 py-2 border-b border-[#1a1a1a] text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
+              <div>Status</div>
+              <div>Shares</div>
+              <div>Price/share</div>
+              <div>Total</div>
+            </div>
+            {existing.map((l) => (
+              <div key={l.id} className="grid grid-cols-4 gap-3 px-4 py-2 border-b border-[#111] last:border-b-0 text-xs font-mono">
+                <div className={l.status === 'open' ? 'text-[#6bff8a]' : 'text-[#888]'}>{l.status}</div>
+                <div className="text-white">{l.shares_offered.toLocaleString()}</div>
+                <div className="text-white">${(l.price_per_share_cents / 100).toFixed(4)}</div>
+                <div className="text-white">${((l.price_per_share_cents * l.shares_offered) / 100 / 100).toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {status === 'draft' && (
+        <div className="mt-6 text-[0.6rem] text-[#888] font-mono">
+          Offer status: <span className="text-[#888]">draft</span>. First publish will flip it to{' '}
+          <span className="text-[#6bff8a]">live</span>.
         </div>
       )}
     </div>
