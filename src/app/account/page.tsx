@@ -3901,6 +3901,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [tier, setTier] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -3995,8 +3996,14 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
         {frames.length} frame{frames.length === 1 ? '' : 's'}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {frames.map((frame) => (
-          <div key={frame.id} className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden">
+        {frames.map((frame, i) => (
+          <button
+            key={frame.id}
+            type="button"
+            onClick={() => setLightboxIndex(i)}
+            className="block text-left border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden"
+            aria-label={`Open frame ${i + 1} full-size`}
+          >
             <div className="aspect-video bg-[#050505]">
               <img
                 src={frame.url}
@@ -4010,7 +4017,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
                 {frame.step_id}
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
       <div className="mt-4">
@@ -4023,6 +4030,13 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
           Generate new frame
         </button>
       </div>
+      <ImageLightbox
+        items={frames}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndexChange={setLightboxIndex}
+        label={labelForStill}
+      />
     </div>
   )
 }
@@ -4035,6 +4049,7 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
   const [loading, setLoading] = useState(true)
   const [activeClip, setActiveClip] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -4291,12 +4306,11 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         {images.length > 0 ? (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
             {images.map((img, i) => (
-              <a
+              <button
                 key={img.id}
-                href={img.url}
-                target="_blank"
-                rel="noopener"
-                className="block border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden"
+                type="button"
+                onClick={() => setLightboxIndex(i)}
+                className="block border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden text-left"
                 aria-label={`Open still ${i + 1} full-size`}
               >
                 <div className="aspect-video bg-[#050505]">
@@ -4305,7 +4319,7 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
                 <div className="px-1.5 py-1 text-[0.5rem] text-[#888] font-mono truncate">
                   {labelForStill(img, i)}
                 </div>
-              </a>
+              </button>
             ))}
           </div>
         ) : (
@@ -4314,6 +4328,14 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
           </div>
         )}
       </section>
+
+      <ImageLightbox
+        items={images}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndexChange={setLightboxIndex}
+        label={labelForStill}
+      />
     </div>
   )
 }
@@ -4346,6 +4368,124 @@ function labelForStill(
   // Trailer/short legacy: storyboard.pack (duplicated) → F1, F2…
   if (s === 'storyboard.pack' || img.role === 'storyboard') return `F${i + 1}`
   return s || img.role || `still-${i + 1}`
+}
+
+/* ── Image lightbox ──
+ *
+ * Opens a still in-page rather than dumping the raw URL in a new tab.
+ * The `img.url` points at a mirrored storage URL served with
+ * inline-image content-type, which browsers will happily open full
+ * screen but with zero chrome, losing the "back to the editor" thread.
+ * The modal keeps users inside the editor, supports arrow-key
+ * navigation across a set of images, and closes on Escape / overlay
+ * click.
+ *
+ * Props:
+ *   items      — all images in the current set
+ *   index      — currently-shown index (null = closed)
+ *   onClose    — clear state / close modal
+ *   label      — pretty-print function for the caption
+ */
+function ImageLightbox<T extends { id: number; url: string; step_id: string | null; role: string | null }>({
+  items,
+  index,
+  onClose,
+  onIndexChange,
+  label,
+}: {
+  items: T[]
+  index: number | null
+  onClose: () => void
+  onIndexChange: (next: number) => void
+  label: (item: T, i: number) => string
+}) {
+  useEffect(() => {
+    if (index === null) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft' && index !== null && index > 0) onIndexChange(index - 1)
+      else if (e.key === 'ArrowRight' && index !== null && index < items.length - 1) onIndexChange(index + 1)
+    }
+    window.addEventListener('keydown', handleKey)
+    // Prevent body scroll while modal is open
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [index, items.length, onClose, onIndexChange])
+
+  if (index === null || !items[index]) return null
+  const item = items[index]
+  const hasPrev = index > 0
+  const hasNext = index < items.length - 1
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 md:p-8"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Still viewer"
+    >
+      {/* Close button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose() }}
+        aria-label="Close"
+        className="absolute top-3 right-3 md:top-5 md:right-5 w-10 h-10 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl font-mono"
+      >
+        ×
+      </button>
+
+      {/* Prev / Next */}
+      {hasPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onIndexChange(index - 1) }}
+          aria-label="Previous still"
+          className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl"
+        >
+          &#9664;
+        </button>
+      )}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onIndexChange(index + 1) }}
+          aria-label="Next still"
+          className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl"
+        >
+          &#9654;
+        </button>
+      )}
+
+      {/* Image + caption. Stopping propagation on the figure prevents
+          the overlay's onClick from firing when the user clicks the
+          actual image to examine a detail. */}
+      <figure
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-3"
+      >
+        <img
+          src={item.url}
+          alt={label(item, index)}
+          className="max-w-full max-h-[80vh] object-contain border border-[#222] bg-black"
+        />
+        <figcaption className="flex items-center gap-3 text-[0.6rem] font-mono text-[#888] uppercase tracking-wider">
+          <span className="text-[#E50914]">{label(item, index)}</span>
+          <span className="text-[#555]">{index + 1} / {items.length}</span>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-[#666] hover:text-[#E50914] underline decoration-dotted"
+          >
+            open original ↗
+          </a>
+        </figcaption>
+      </figure>
+    </div>
+  )
 }
 
 /* ── Title Designer ── */

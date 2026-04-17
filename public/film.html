@@ -699,16 +699,21 @@
               .map(a => [a.url, a])
           ).values()
         );
+        // Stash the gallery set on window so the lightbox opener can
+        // read it from the button's data-idx attribute. Simpler than
+        // round-tripping through data-url everywhere and means the
+        // prev/next navigation works across the full set.
+        window.__storyboardGallery = galleryImages.map(g => ({ url: g.url, step_id: g.step_id }));
         const storyboardGallerySection = galleryImages.length > 0
           ? `<div class="section">
               <h2>Storyboard · ${galleryImages.length} frames</h2>
-              <p style="font-size:0.8rem;color:#888;margin:0.4rem 0 1rem;">Concept frames by the studio's storyboard artist. Click any one to read the scene description.</p>
+              <p style="font-size:0.8rem;color:#888;margin:0.4rem 0 1rem;">Concept frames by the studio's storyboard artist. Click any one to open the lightbox.</p>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.6rem;">
                 ${galleryImages.map((img, i) => `
-                  <a href="${esc(img.url)}" target="_blank" rel="noopener" style="display:block;border:1px solid #1a1a1a;background:#050505;text-decoration:none;overflow:hidden;">
+                  <button type="button" onclick="openStillLightbox(${i})" style="display:block;border:1px solid #1a1a1a;background:#050505;text-align:left;cursor:pointer;overflow:hidden;padding:0;width:100%;font:inherit;color:inherit;" aria-label="Open frame ${i+1} full-size">
                     <img src="${esc(img.url)}" alt="Frame ${i+1}" loading="lazy" style="width:100%;aspect-ratio:16/10;object-fit:cover;display:block;" />
                     <div style="padding:0.5rem 0.7rem;font-family:monospace;font-size:0.6rem;color:#666;">Frame ${i+1}${img.step_id ? ' · ' + esc(img.step_id.replace('storyboard.','')) : ''}</div>
-                  </a>
+                  </button>
                 `).join('')}
               </div>
             </div>`
@@ -1193,6 +1198,79 @@
         document.getElementById('root').innerHTML = `<div class="state"><h2>Error</h2><p>${esc(err.message || String(err))}</p></div>`;
       });
     }
+
+    // ─── Stills lightbox ──────────────────────────────────────────
+    //
+    // Used by the storyboard gallery's onclick. Keeps the user inside
+    // the film page (previously an <a target="_blank"> dumped them
+    // into an image-only tab). Supports ←/→ navigation + Esc to close.
+    (function setupLightbox() {
+      let currentIdx = -1;
+      let overlay = null;
+
+      function getOverlay() {
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.style.cssText =
+          'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);' +
+          'display:none;align-items:center;justify-content:center;padding:1.5rem;';
+        overlay.innerHTML =
+          '<button class="lb-close" aria-label="Close" style="position:absolute;top:1rem;right:1rem;width:2.5rem;height:2.5rem;background:rgba(0,0,0,0.6);border:1px solid #333;color:#fff;font-size:1.3rem;cursor:pointer;font-family:monospace;">×</button>' +
+          '<button class="lb-prev" aria-label="Previous" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);width:3rem;height:3rem;background:rgba(0,0,0,0.6);border:1px solid #333;color:#fff;font-size:1.2rem;cursor:pointer;">◀</button>' +
+          '<button class="lb-next" aria-label="Next" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);width:3rem;height:3rem;background:rgba(0,0,0,0.6);border:1px solid #333;color:#fff;font-size:1.2rem;cursor:pointer;">▶</button>' +
+          '<figure class="lb-figure" style="max-width:92vw;max-height:88vh;margin:0;display:flex;flex-direction:column;align-items:center;gap:0.8rem;" onclick="event.stopPropagation();">' +
+            '<img class="lb-img" alt="" style="max-width:100%;max-height:80vh;object-fit:contain;border:1px solid #222;background:#000;" />' +
+            '<figcaption class="lb-caption" style="font-family:monospace;font-size:0.65rem;color:#888;letter-spacing:0.1em;text-transform:uppercase;"></figcaption>' +
+          '</figure>';
+        // Click overlay (outside the figure) to close.
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('.lb-close').addEventListener('click', close);
+        overlay.querySelector('.lb-prev').addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+        overlay.querySelector('.lb-next').addEventListener('click', (e) => { e.stopPropagation(); step(+1); });
+        document.body.appendChild(overlay);
+        return overlay;
+      }
+
+      function open(idx) {
+        const items = window.__storyboardGallery || [];
+        if (!items[idx]) return;
+        currentIdx = idx;
+        const o = getOverlay();
+        const item = items[idx];
+        o.querySelector('.lb-img').src = item.url;
+        o.querySelector('.lb-img').alt = `Frame ${idx + 1}`;
+        const label = 'Frame ' + (idx + 1) + ' of ' + items.length +
+          (item.step_id ? '  ·  ' + item.step_id.replace('storyboard.', '') : '');
+        o.querySelector('.lb-caption').textContent = label;
+        o.querySelector('.lb-prev').style.visibility = idx > 0 ? 'visible' : 'hidden';
+        o.querySelector('.lb-next').style.visibility = idx < items.length - 1 ? 'visible' : 'hidden';
+        o.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+
+      function close() {
+        if (overlay) overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        currentIdx = -1;
+      }
+
+      function step(delta) {
+        const items = window.__storyboardGallery || [];
+        const next = currentIdx + delta;
+        if (next >= 0 && next < items.length) open(next);
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (!overlay || overlay.style.display === 'none') return;
+        if (e.key === 'Escape') close();
+        else if (e.key === 'ArrowLeft') step(-1);
+        else if (e.key === 'ArrowRight') step(+1);
+      });
+
+      window.openStillLightbox = open;
+    })();
   </script>
   <script type="module" src="js/nav-session.js"></script>
 </body>
