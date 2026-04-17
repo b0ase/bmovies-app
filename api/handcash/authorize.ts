@@ -148,7 +148,7 @@ export default async function handler(
       permissions: 'PAY',
       redirectUrl: `${APP_ORIGIN}/api/handcash/callback`,
       state,
-    } as unknown as Parameters<typeof hc.getRedirectionUrl>[0]);
+    });
   } catch (err) {
     console.error('[handcash/authorize] SDK error:', err);
     res.status(500).json({ error: 'HandCash SDK failed', detail: err instanceof Error ? err.message : String(err) });

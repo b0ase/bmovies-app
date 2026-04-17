@@ -71,6 +71,10 @@ export default async function handler(
     txid?: string;
     chain?: string;
     fromAddress?: string;
+    // Cross-chain purchases (MetaMask / Phantom) pay on ETH/SOL but
+    // the 1sat BSV-21 royalty share needs to land somewhere on BSV.
+    // Required when type='shares' and chain in ('eth','sol').
+    bsvDeliveryAddress?: string;
     email?: string;
   };
   try {
@@ -126,6 +130,25 @@ export default async function handler(
   }
 
   if (body.type === 'shares') {
+    // Cross-chain purchases (ETH/SOL) require a BSV delivery address
+    // so the settlement worker knows where to send the 1sat BSV-21
+    // share. BSV-native payments (BRC-100 / HandCash) settle to the
+    // paying address automatically, so the field stays optional there.
+    const isCrossChain = body.chain === 'eth' || body.chain === 'sol';
+    if (isCrossChain && !body.bsvDeliveryAddress) {
+      res.status(400).json({ error: 'bsvDeliveryAddress required for cross-chain share purchases' });
+      return;
+    }
+    if (body.bsvDeliveryAddress && !/^[13][1-9A-HJ-NP-Za-km-z]{25,39}$/.test(body.bsvDeliveryAddress)) {
+      res.status(400).json({ error: 'bsvDeliveryAddress does not match BSV P2PKH format' });
+      return;
+    }
+
+    // Cross-chain rows start as settlement_status='pending'; a
+    // worker picks them up and transfers the 1sat BSV-21 share to
+    // bsv_delivery_address, then updates settlement_status='settled'.
+    // BSV-native rows are settled immediately (the payment tx itself
+    // is the settlement).
     const { error } = await supabase.from('bct_share_sales').insert({
       offer_id: body.offerId,
       buyer_account: accountId,
@@ -134,14 +157,24 @@ export default async function handler(
       percent_bought: 1,
       price_usd: body.priceUsd,
       payment_txid: body.txid,
+      payment_chain: body.chain || 'bsv',
+      bsv_delivery_address: body.bsvDeliveryAddress || null,
+      settlement_status: isCrossChain ? 'pending' : 'settled',
     });
     if (error) {
       console.error('[record-wallet-payment] share insert failed:', error);
-      res.status(500).json({ error: 'Insert failed' });
+      res.status(500).json({ error: 'Insert failed: ' + error.message });
       return;
     }
-    console.log(`[record-wallet-payment] share ${body.offerId} via ${body.provider} tx:${body.txid.slice(0, 12)}...`);
-    res.status(200).json({ success: true, type: 'shares' });
+    console.log(
+      `[record-wallet-payment] share ${body.offerId} via ${body.provider} (${body.chain}) tx:${body.txid.slice(0, 12)}... ` +
+      (isCrossChain ? `pending settle to ${body.bsvDeliveryAddress?.slice(0, 8)}…` : 'settled'),
+    );
+    res.status(200).json({
+      success: true,
+      type: 'shares',
+      settlementStatus: isCrossChain ? 'pending' : 'settled',
+    });
     return;
   }
 

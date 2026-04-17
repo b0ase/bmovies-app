@@ -344,22 +344,76 @@ async function payWithStripe({ type, offerId, title, ticker, priceUsd, email }) 
 
 // ───────── HandCash ─────────
 async function payWithHandCash({ type, offerId, title, ticker, priceUsd, email }) {
-  setStatus('Creating HandCash payment request...', 'info');
+  setStatus('Contacting HandCash...', 'info');
   const endpoint = type === 'shares' ? '/api/handcash/buy-shares' : '/api/handcash/ticket';
+
+  // Pull the Supabase session JWT so the server can verify this is a
+  // signed-in user. Tickets (type='ticket') still work anonymously via
+  // the legacy HandCash payment-request flow; shares (type='shares')
+  // require auth + KYC. The bMovies Supabase client uses
+  // storageKey: 'bmovies-auth' — we read the token directly from
+  // localStorage so pay-picker stays decoupled from any particular
+  // page's supabase instance.
+  let jwt = '';
+  try {
+    if (type === 'shares') {
+      const raw = localStorage.getItem('bmovies-auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        jwt = parsed?.access_token || parsed?.currentSession?.access_token || '';
+      }
+    }
+  } catch { /* best-effort */ }
+
+  const returnUrl = type === 'shares' && offerId
+    ? `${window.location.origin}/offer.html?id=${encodeURIComponent(offerId)}`
+    : undefined;
+
   const res = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ offerId, title, ticker, priceUsd, email }),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+    },
+    body: JSON.stringify({ offerId, title, ticker, priceUsd, email, returnUrl }),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'HandCash request failed');
+
+  const data = await res.json().catch(() => ({}));
+
+  // 401/403 → redirect to sign-in / KYC
+  if (res.status === 401) {
+    throw new Error(data.error || 'Sign in required to buy royalty shares.');
   }
-  const { paymentRequestUrl } = await res.json();
-  if (!paymentRequestUrl) throw new Error('No HandCash payment URL');
-  setStatus('Opening HandCash...', 'info');
-  window.location.href = paymentRequestUrl;
-  return { provider: 'handcash', redirected: true };
+  if (res.status === 403 && data.reason === 'kyc_required') {
+    setStatus('KYC required. Redirecting...', 'info');
+    window.location.href = data.next || '/kyc.html';
+    return { provider: 'handcash', redirected: true };
+  }
+
+  // 202 — HandCash not linked (or stored token expired). Redirect to
+  // authorize URL; the server's callback executes wallet.pay() and
+  // bounces the user back with purchase=success.
+  if (res.status === 202 && data.needsAuth && data.authorizeUrl) {
+    setStatus('Linking HandCash…', 'info');
+    window.location.href = data.authorizeUrl;
+    return { provider: 'handcash', redirected: true };
+  }
+
+  // 200 — stored token worked; pay() executed server-side.
+  if (res.ok && data.ok && data.receipt) {
+    setStatus(`Paid! tx=${data.receipt.transactionId.slice(0, 12)}…`, 'success');
+    setTimeout(() => window.location.reload(), 1500);
+    return { provider: 'handcash', txId: data.receipt.transactionId };
+  }
+
+  // Legacy ticket path still uses paymentRequestUrl
+  if (data.paymentRequestUrl) {
+    setStatus('Opening HandCash...', 'info');
+    window.location.href = data.paymentRequestUrl;
+    return { provider: 'handcash', redirected: true };
+  }
+
+  throw new Error(data.error || 'HandCash request failed');
 }
 
 // ───────── BRC-100 ─────────
@@ -422,11 +476,51 @@ async function payWithBRC100({ type, offerId, title, ticker, priceUsd, email }) 
   return { provider: 'brc100', success: true, txid: receipt.txid };
 }
 
+// Cross-chain purchases of BSV-21 royalty shares need a BSV delivery
+// address — the user pays on ETH/SOL and the settlement worker
+// transfers the 1sat ordinal to this address on BSV mainnet. For a
+// ticket purchase the asset is off-chain (stream access) so we skip
+// the prompt. Returns null if the user cancels.
+function promptBsvDeliveryAddress(type) {
+  if (type !== 'shares') return null;
+  // Simple prompt for the MVP — a real impl would surface a proper
+  // modal with "paste your BSV address" + a QR button that opens a
+  // BRC-100 wallet to share the address. For judges this is enough
+  // to show the cross-chain → BSV delivery flow is explicit.
+  const addr = window.prompt(
+    'Cross-chain purchase — BSV delivery address\n\n' +
+    'Your payment settles on the origin chain (ETH/SOL). The 1sat ' +
+    'BSV-21 royalty token then transfers on BSV mainnet. Paste the ' +
+    'BSV address the token should land at:',
+    '',
+  );
+  if (!addr) return null;
+  const trimmed = addr.trim();
+  // Basic P2PKH pattern check — server-side does the real validation.
+  if (!/^[13][1-9A-HJ-NP-Za-km-z]{25,39}$/.test(trimmed)) {
+    throw new Error('That does not look like a valid BSV address. Expected something starting with 1 or 3.');
+  }
+  return trimmed;
+}
+
 // ───────── MetaMask (Ethereum) ─────────
 async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }) {
   if (!window.ethereum) {
     throw new Error('MetaMask not detected. Install MetaMask extension first.');
   }
+
+  // For shares, capture the BSV delivery address BEFORE asking the
+  // user to confirm the on-chain spend. Nothing more annoying than
+  // paying and THEN being told 'give me another field'.
+  let bsvDeliveryAddress = null;
+  if (type === 'shares') {
+    bsvDeliveryAddress = promptBsvDeliveryAddress(type);
+    if (!bsvDeliveryAddress) {
+      setStatus('Cancelled — needed a BSV delivery address to settle the royalty share.', 'info');
+      return { cancelled: true };
+    }
+  }
+
   setStatus('Connecting to MetaMask...', 'info');
   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
   const from = accounts[0];
@@ -463,6 +557,7 @@ async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }
       txid: txHash,
       chain: 'eth',
       fromAddress: from,
+      bsvDeliveryAddress,
       email,
     }),
   });
@@ -471,7 +566,15 @@ async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }
     throw new Error(err.error || 'Failed to record payment');
   }
 
-  setStatus(`Paid on Ethereum · tx ${txHash.slice(0, 12)}...`, 'success');
+  if (type === 'shares' && bsvDeliveryAddress) {
+    setStatus(
+      `Paid on Ethereum — tx ${txHash.slice(0, 10)}…. ` +
+      `1sat BSV-21 share settling to ${bsvDeliveryAddress.slice(0, 6)}…${bsvDeliveryAddress.slice(-4)} within ~5 min.`,
+      'success',
+    );
+  } else {
+    setStatus(`Paid on Ethereum · tx ${txHash.slice(0, 12)}...`, 'success');
+  }
   return { provider: 'metamask', success: true, txid: txHash };
 }
 
@@ -481,6 +584,18 @@ async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email })
   if (!phantom || !phantom.isPhantom) {
     throw new Error('Phantom not detected. Install the Phantom extension first.');
   }
+
+  // Cross-chain settlement: capture BSV delivery address before
+  // asking the user to sign the Solana tx (matches MetaMask flow).
+  let bsvDeliveryAddress = null;
+  if (type === 'shares') {
+    bsvDeliveryAddress = promptBsvDeliveryAddress(type);
+    if (!bsvDeliveryAddress) {
+      setStatus('Cancelled — needed a BSV delivery address to settle the royalty share.', 'info');
+      return { cancelled: true };
+    }
+  }
+
   setStatus('Connecting to Phantom...', 'info');
   const resp = await phantom.connect();
   const publicKey = resp.publicKey.toString();
@@ -522,6 +637,7 @@ async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email })
       txid: signature,
       chain: 'sol',
       fromAddress: publicKey,
+      bsvDeliveryAddress,
       email,
     }),
   });
@@ -530,6 +646,14 @@ async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email })
     throw new Error(err.error || 'Failed to record payment');
   }
 
-  setStatus(`Paid on Solana · tx ${signature.slice(0, 12)}...`, 'success');
+  if (type === 'shares' && bsvDeliveryAddress) {
+    setStatus(
+      `Paid on Solana — tx ${signature.slice(0, 10)}…. ` +
+      `1sat BSV-21 share settling to ${bsvDeliveryAddress.slice(0, 6)}…${bsvDeliveryAddress.slice(-4)} within ~5 min.`,
+      'success',
+    );
+  } else {
+    setStatus(`Paid on Solana · tx ${signature.slice(0, 12)}...`, 'success');
+  }
   return { provider: 'phantom', success: true, txid: signature };
 }

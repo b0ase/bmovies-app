@@ -175,19 +175,38 @@ export default async function handler(
     //   bct_platform_investments: account_id, usd, tx_id, ...
     // Either table already has RLS for service_role writes.
     if (pending.intent === 'buy_shares' && offerId) {
+      // Real schema columns: offer_id, buyer_account, tranche,
+      // percent_bought, price_usd, payment_txid, settlement_provider,
+      // settlement_tx_id. Default the tranche to 1 when the client
+      // didn't supply one (we can enrich later by reading current
+      // tranche off bct_film_stats at purchase time).
       await supabase.from('bct_share_sales').insert({
         offer_id: offerId,
-        account_id: pending.account_id,
+        buyer_account: pending.account_id,
+        tranche: 1,
+        percent_bought: 1.00,
         price_usd: priceUsd,
-        tx_id: payResult.transactionId,
-        settlement: 'handcash',
+        payment_txid: payResult.transactionId,
+        settlement_provider: 'handcash',
+        settlement_tx_id: payResult.transactionId,
       } as Record<string, unknown>);
     } else if (pending.intent === 'buy_platform') {
+      // Platform-token purchases need tokens_purchased +
+      // price_per_token_cents. For MVP we derive from priceUsd at the
+      // caller's posted tranche price, but since that info isn't in
+      // pending, mark the investment pending with status='pending'
+      // and rely on a follow-up reconciliation step (not shipping
+      // platform-token HandCash purchase in this commit — the
+      // endpoint accepts the intent but this branch is stubbed).
+      console.warn('[handcash/callback] buy_platform not fully implemented — recording placeholder');
       await supabase.from('bct_platform_investments').insert({
         account_id: pending.account_id,
-        usd: priceUsd,
-        tx_id: payResult.transactionId,
-        settlement: 'handcash',
+        tokens_purchased: 1,
+        price_per_token_cents: priceUsd * 100,
+        total_paid_cents: Math.round(priceUsd * 100),
+        status: 'pending',
+        settled_txid: payResult.transactionId,
+        settlement_provider: 'handcash',
       } as Record<string, unknown>);
     }
 

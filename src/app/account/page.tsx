@@ -2471,11 +2471,33 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               <span className="text-[0.6rem] font-bold text-[#555]">MetaMask</span>
               <span className="text-[0.45rem] text-[#444]">Coming soon</span>
             </div>
-            <div className="flex flex-col items-center gap-1 p-2.5 border border-[#1a1a1a] bg-[#0a0a0a]">
-              <span className="text-[0.6rem] font-bold text-[#555]">HandCash</span>
-              <span className="text-[0.45rem] text-[#444]">Coming soon</span>
-            </div>
           </div>
+
+          {/* HandCash — live OAuth link, promoted out of the greyed-out grid. */}
+          <button
+            onClick={async () => {
+              try {
+                const { data: { session } } = await bmovies.auth.getSession()
+                const jwt = session?.access_token
+                if (!jwt) { alert('Sign in first.'); return }
+                const res = await fetch('/api/handcash/authorize', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+                  body: JSON.stringify({ intent: 'link_only', returnUrl: `${window.location.origin}/account?tab=wallet&handcash=linked` }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || 'Authorize failed')
+                window.location.href = data.authorizeUrl
+              } catch (err) {
+                alert('HandCash link failed: ' + (err instanceof Error ? err.message : String(err)))
+              }
+            }}
+            className="mt-2 w-full flex items-center justify-center gap-2 p-3 border border-[#38EF7D] bg-[#001208] hover:bg-[#002814] text-white transition-colors cursor-pointer"
+          >
+            <span style={{width:24,height:24,display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#38EF7D',color:'#000',fontWeight:900,fontSize:13,borderRadius:4}}>H</span>
+            <span className="text-[0.7rem] font-bold">Link HandCash</span>
+            <span className="text-[0.5rem] text-[#38EF7D]">OAuth · for $ share settlement</span>
+          </button>
           <p className="text-[0.55rem] text-[#555] mt-3 leading-relaxed">
             <a href="https://github.com/bsv-blockchain/bsv-desktop/releases/latest" target="_blank" rel="noopener" className="text-[#E50914]">Download BSV Desktop</a> — the primary BRC-100 wallet for bMovies.
           </p>
