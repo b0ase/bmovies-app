@@ -36,10 +36,16 @@ interface VercelResponse {
   end(): void;
 }
 
+// Cache-bust version. Bump this whenever a poster file changes to force
+// Twitter/Facebook/Slack/etc. to re-fetch. Social platforms key their
+// preview caches on the exact og:image URL — changing the query string
+// guarantees a fresh crawl.
+const POSTER_VER = 'v3';
+
 // Posters that ship with the site as static JPEGs. Keep aligned with
 // the POSTER_MAP in public/film.html + src/app/account/page.tsx. If
 // you add a new film poster to /public/img/films/, add the row here.
-const POSTER_MAP: Record<string, string> = {
+const POSTER_MAP_RAW: Record<string, string> = {
   'echoes of the last signal':           '/img/films/echoes-of-the-last-signal.jpg',
   'the fold':                            '/img/films/the-fold.jpg',
   'the weight of water':                 '/img/films/the-weight-of-water.jpg',
@@ -65,6 +71,10 @@ const POSTER_MAP: Record<string, string> = {
   'the last transmission':               '/img/films/the-last-transmission.jpg',
   'crypto whistleblow':                  '/img/films/crypto-whistleblow.jpg',
 };
+// Build the live map with the version suffix baked in once.
+const POSTER_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(POSTER_MAP_RAW).map(([k, v]) => [k, `${v}?${POSTER_VER}`]),
+);
 
 const SITE_ORIGIN = 'https://bmovies.online';
 const FALLBACK_OG_IMAGE = `${SITE_ORIGIN}/bmovies_og.jpg`;
@@ -261,8 +271,13 @@ function respond(
   res
     .status(200)
     .setHeader('content-type', 'text/html; charset=utf-8')
-    // Brief cache — social cards shouldn't go stale for too long, but
-    // re-fetching every time costs us a Supabase round-trip per tweet.
-    .setHeader('cache-control', 'public, s-maxage=300, stale-while-revalidate=60')
+    // No edge cache. Film metadata can change (poster swap, synopsis
+    // edit, status flip) and the 5min s-maxage we used to set meant
+    // stale social-card HTML stuck around after a poster change. The
+    // og:image URL already carries a ?v= cache-bust, so downstream
+    // social platforms re-fetch the image content automatically — we
+    // just need this HTML response itself to be fresh. One Supabase
+    // round-trip per crawler hit is an acceptable cost.
+    .setHeader('cache-control', 'no-store, must-revalidate')
     .send(html);
 }
