@@ -327,36 +327,89 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     produced.push(stepId);
   }
 
+  // Check for existing curated artifacts that should not be overwritten.
+  // Reshoot (/api/trailer/reshoot) seeds curated titles + VO script
+  // when the creative package carries them. If they're already present
+  // as non-superseded heads, leave them alone — the user chose those
+  // words. We still generate VO audio + music bed on top of them.
+  async function existingHead(stepId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('bct_artifacts')
+      .select('url')
+      .eq('offer_id', offerId)
+      .eq('step_id', stepId)
+      .is('superseded_by', null)
+      .limit(1);
+    return data?.[0]?.url ?? null;
+  }
+
   try {
-    // 1. Title cards
+    // 1. Title cards — reuse if curated
     let titlesJson: unknown = null;
-    try {
-      const raw = await xaiChat(xaiKey, TITLES_PROMPT, context, 900);
-      titlesJson = JSON.parse(stripFences(raw));
-      const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(titlesJson));
-      await persist('editor', 'text', dataUrl, 'grok-3-mini', 'editor.trailer_titles', 0.01);
-    } catch (err) {
-      console.error('[post-production] titles failed:', err);
-      skipped.push('editor.trailer_titles');
+    const existingTitlesUrl = await existingHead('editor.trailer_titles');
+    if (existingTitlesUrl) {
+      try {
+        if (existingTitlesUrl.startsWith('data:')) {
+          const decoded = decodeURIComponent(existingTitlesUrl.split(',')[1] || '');
+          titlesJson = JSON.parse(decoded);
+        } else {
+          const r = await fetch(existingTitlesUrl);
+          if (r.ok) titlesJson = await r.json();
+        }
+        produced.push('editor.trailer_titles (curated, kept)');
+      } catch {
+        titlesJson = null;
+      }
+    }
+    if (!titlesJson) {
+      try {
+        const raw = await xaiChat(xaiKey, TITLES_PROMPT, context, 900);
+        titlesJson = JSON.parse(stripFences(raw));
+        const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(titlesJson));
+        await persist('editor', 'text', dataUrl, 'grok-3-mini', 'editor.trailer_titles', 0.01);
+      } catch (err) {
+        console.error('[post-production] titles failed:', err);
+        skipped.push('editor.trailer_titles');
+      }
     }
 
-    // 2. VO script
+    // 2. VO script — reuse if curated
     let voScript = '';
-    try {
-      voScript = await xaiChat(xaiKey, VO_SCRIPT_PROMPT, context, 600);
-      if (voScript) {
-        const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(voScript);
-        await persist('vo', 'text', dataUrl, 'grok-3-mini', 'vo.trailer_script', 0.005);
-      } else {
+    const existingVoUrl = await existingHead('vo.trailer_script');
+    if (existingVoUrl) {
+      try {
+        if (existingVoUrl.startsWith('data:')) {
+          voScript = decodeURIComponent(existingVoUrl.split(',')[1] || '');
+        } else {
+          const r = await fetch(existingVoUrl);
+          if (r.ok) voScript = await r.text();
+        }
+        if (voScript) produced.push('vo.trailer_script (curated, kept)');
+      } catch { voScript = ''; }
+    }
+    if (!voScript) {
+      try {
+        voScript = await xaiChat(xaiKey, VO_SCRIPT_PROMPT, context, 600);
+        if (voScript) {
+          const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(voScript);
+          await persist('vo', 'text', dataUrl, 'grok-3-mini', 'vo.trailer_script', 0.005);
+        } else {
+          skipped.push('vo.trailer_script');
+        }
+      } catch (err) {
+        console.error('[post-production] VO script failed:', err);
         skipped.push('vo.trailer_script');
       }
-    } catch (err) {
-      console.error('[post-production] VO script failed:', err);
-      skipped.push('vo.trailer_script');
     }
 
     // 3. VO audio via ElevenLabs (gated on API key)
-    if (voScript && elevenKey) {
+    // Skip if we already have a non-superseded VO narration audio — no
+    // point burning ElevenLabs credits on a second render of the same
+    // script.
+    const existingVoAudio = await existingHead('vo.trailer_narration');
+    if (existingVoAudio) {
+      produced.push('vo.trailer_narration (kept)');
+    } else if (voScript && elevenKey) {
       const vo = await elevenLabsVO(elevenKey, elevenVoice, voScript);
       if (vo) {
         // Store in Supabase storage and reference by public URL.
@@ -386,7 +439,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     // 4. Music bed via Replicate MusicGen (gated on API token)
-    if (replicateToken) {
+    // Skip when we already have a non-superseded music bed — MusicGen
+    // is the most expensive single call in the pipeline.
+    const existingScore = await existingHead('composer.trailer_score');
+    if (existingScore) {
+      produced.push('composer.trailer_score (kept)');
+    } else if (replicateToken) {
       let musicPrompt = '';
       try {
         musicPrompt = await xaiChat(xaiKey, MUSIC_PROMPT_PROMPT, context, 200);
