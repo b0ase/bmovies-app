@@ -45,7 +45,7 @@
 
 // ─── 1. Canonical nav structure ───
 
-const LOGO_HTML = '<a href="index.html" class="logo">b<span>Movies</span></a>';
+const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 
 // Alphabetical left→right with About on the far left, evenly spread.
 // The page journey is carried by the logo → hero copy; the nav is just
@@ -56,23 +56,28 @@ const LOGO_HTML = '<a href="index.html" class="logo">b<span>Movies</span></a>';
 // job market are the defining features, not technical easter eggs.
 // Earlier versions had them as hidden "judges + developers" pages but
 // they deserve to be first-class.
+// All hrefs are ROOT-relative (leading "/") so the same nav works
+// whether this script runs on /index.html, /watch.html, or a nested
+// page like /legal/platform-token-prospectus.html. Relative paths
+// (just "about.html") 404'd inside /legal/ because the browser
+// resolved them against the legal/ directory.
 const NAV_LINKS = [
-  { href: 'about.html',       label: 'About' },
-  { href: 'commission.html',  label: 'Commission' },
-  { href: 'exchange.html',    label: 'Exchange' },
+  { href: '/about.html',       label: 'About' },
+  { href: '/commission.html',  label: 'Commission' },
+  { href: '/exchange.html',    label: 'Exchange' },
   // jobboard.html — surfaced on /judges.html tour, not in consumer nav.
-  // { href: 'jobboard.html',    label: 'Jobs' },
-  // { href: 'invest.html',   label: 'Invest' },  // $bMovies — temporarily
+  // { href: '/jobboard.html',    label: 'Jobs' },
+  // { href: '/invest.html',   label: 'Invest' },  // $bMovies — temporarily
   //   removed from nav until the platform-token mechanics (on-chain
   //   mint, tranche schedule, legal disclosures, non-custodial payout
   //   rail) are ready to ship. Page still exists at /invest.html for
   //   direct-link access; add back to NAV_LINKS when ready.
-  { href: 'productions.html', label: 'Live' },          // renamed from "Productions"
+  { href: '/productions.html', label: 'Live' },          // renamed from "Productions"
   // x402.html — surfaced on /judges.html tour, not in consumer nav.
-  // { href: 'x402.html',        label: 'Protocol' },
-  { href: 'studios.html',     label: 'Studios' },
-  { href: 'watch.html',       label: 'Watch' },
-  { href: 'judges.html',      label: 'Judges' },
+  // { href: '/x402.html',        label: 'Protocol' },
+  { href: '/studios.html',     label: 'Studios' },
+  { href: '/watch.html',       label: 'Watch' },
+  { href: '/judges.html',      label: 'Judges' },
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
   // so it was pulled to avoid two adjacent links pointing at the same URL.
@@ -121,7 +126,10 @@ function buildNavHtml() {
   const page = currentPageFile();
   const activeTarget = ACTIVE_ALIASES[page] || page;
   const linkTags = NAV_LINKS.map(l => {
-    const isActive = !l.external && l.href === activeTarget;
+    // href is root-relative ("/about.html"); compare on the filename
+    // portion only so the active-class match still works.
+    const hrefPage = l.href.replace(/^\//, '');
+    const isActive = !l.external && hrefPage === activeTarget;
     // External links (e.g. /app.bmovies.online/account) get a small
     // ↗ arrow suffix so users know they're leaving the public site.
     const label = l.external ? `${l.label} ↗` : l.label;
@@ -137,7 +145,7 @@ function buildNavHtml() {
   // which has the platform token page. Uses a simple coin SVG with the
   // bMovies red fill so it stands out from the monochrome social icons.
   const tokenIcon = `
-      <a class="nav-social nav-token" href="invest.html" aria-label="$bMovies token" style="color:#E50914;">
+      <a class="nav-social nav-token" href="/invest.html" aria-label="$bMovies token" style="color:#E50914;">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="13" font-weight="700" fill="currentColor">b</text></svg>
       </a>`;
   return `
