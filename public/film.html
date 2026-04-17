@@ -681,10 +681,23 @@
         //
         // Every image artifact on the offer except the hero poster,
         // laid out as a responsive grid. Clicking opens the full image.
-        const galleryImages = arts.filter(a =>
-          a.kind === 'image' &&
-          !(a.role === 'poster' && a === posterArt) &&
-          a.role !== 'poster'
+        //
+        // Dedupe by URL — legacy rows share mirror filenames due to the
+        // storyboard.pack step_id collision bug (multiple bct_artifacts
+        // rows pointed at the same mirrored .jpg). Fixed in the generator
+        // for new offers via unique storyboard.frame_<i> step_ids, but
+        // existing rows remain until a cleanup migration lands. Rendering
+        // through a url→artifact map collapses those to one tile each.
+        const galleryImages = Array.from(
+          new Map(
+            arts
+              .filter(a =>
+                a.kind === 'image' &&
+                !(a.role === 'poster' && a === posterArt) &&
+                a.role !== 'poster'
+              )
+              .map(a => [a.url, a])
+          ).values()
         );
         const storyboardGallerySection = galleryImages.length > 0
           ? `<div class="section">
@@ -966,7 +979,14 @@
       // Collect ALL video clips and storyboard frames (trailers have
       // multiple of each, not just one)
       const videoClips = arts.filter(a => a.kind === 'video');
-      const storyboardFrames = arts.filter(a => a.role === 'storyboard' && a.kind === 'image');
+      // Dedupe by URL — see storyboard gallery above for rationale.
+      const storyboardFrames = Array.from(
+        new Map(
+          arts
+            .filter(a => a.role === 'storyboard' && a.kind === 'image')
+            .map(a => [a.url, a])
+        ).values()
+      );
 
       // Store video URLs for the sequential player wired below
       window._trailerClips = videoClips.map(v => v.url);
