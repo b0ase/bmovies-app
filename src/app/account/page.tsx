@@ -186,6 +186,22 @@ function AccountContent() {
   const tab = searchParams.get('tab')            // project-level tab
   const tool = searchParams.get('tool')          // tool-level tab
 
+  // ─── Scroll reset on project/tab navigation ───
+  //
+  // Navigation between account levels (studio list → project → tool)
+  // happens through router.push with `scroll: false` — that keeps us
+  // from jumpy scroll-resets during same-tab state updates (poster
+  // thumbnails settling in, crew cards animating, etc.). But when the
+  // URL actually shifts to a different LEVEL of the hierarchy
+  // (projectId or tab/tool changing), the user has effectively
+  // navigated to a new page and expects to land at the top with the
+  // navbar visible. Scrolling only on those transitions gives us both
+  // behaviours without a flash.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [projectId, tab, tool, section])
+
   // ─── Auth bootstrap ───
   useEffect(() => {
     let cancelled = false
