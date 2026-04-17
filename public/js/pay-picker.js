@@ -219,6 +219,35 @@ export async function openPayPicker(opts) {
   setStatus('');
   disableOptions(false);
 
+  // Securities-class purchases (shares, platform tokens) must NOT be
+  // routed through fiat rails. Stripe's ToS §8.3 prohibits investment
+  // product settlement, and US securities law requires a broker-dealer
+  // or a Reg D/CF exemption for fiat-denominated investment contracts.
+  // Crypto-native settlement (BSV wallet or cross-chain via x402) keeps
+  // the transaction in the self-custodial / on-chain lane and off the
+  // fiat processors' radar. KYC is still enforced upstream.
+  const stripeBtn = document.querySelector('.pp-option[data-provider="stripe"]');
+  const stripeSection = stripeBtn ? stripeBtn.closest('.pp-section') : null;
+  if (type === 'shares') {
+    if (stripeSection) stripeSection.style.display = 'none';
+    // Inject/update a disclaimer line so the absent card option is
+    // explained rather than just missing.
+    let note = document.getElementById('pp-shares-note');
+    if (!note) {
+      note = document.createElement('div');
+      note.id = 'pp-shares-note';
+      note.style.cssText = 'padding:0.9rem 1.2rem;margin:0.6rem 1.2rem 0;border:1px solid #2a2a2a;background:#0f0f0f;color:#888;font-size:0.72rem;line-height:1.5;';
+      note.innerHTML = '<strong style="color:#fff;">Royalty shares settle on-chain.</strong> To stay compliant we don\'t accept credit cards for securities-class purchases — use a BSV wallet or cross-chain via x402 below.';
+      const header = document.querySelector('.pp-header');
+      if (header && header.parentNode) header.parentNode.insertBefore(note, header.nextSibling);
+    }
+    note.style.display = '';
+  } else {
+    if (stripeSection) stripeSection.style.display = '';
+    const note = document.getElementById('pp-shares-note');
+    if (note) note.style.display = 'none';
+  }
+
   const backdrop = document.getElementById('pp-backdrop');
   backdrop.classList.add('shown');
 
@@ -287,6 +316,12 @@ export async function openPayPicker(opts) {
 
 // ───────── Stripe ─────────
 async function payWithStripe({ type, offerId, title, ticker, priceUsd, email }) {
+  // Defense in depth: even if the UI didn't hide the Stripe button for
+  // a securities-class purchase, this handler refuses to route the call.
+  // Fiat rails are reserved for services (tickets, commissions).
+  if (type === 'shares') {
+    throw new Error('Royalty shares cannot be purchased with a credit card. Use a BSV wallet.');
+  }
   setStatus('Redirecting to secure checkout...', 'info');
   const endpoint = type === 'shares' ? '/api/buy-shares' : '/api/ticket';
   const body = type === 'shares'

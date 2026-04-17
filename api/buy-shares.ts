@@ -1,19 +1,26 @@
 /**
- * POST /api/buy-shares
+ * POST /api/buy-shares — DEPRECATED (410 Gone)
  *
- * Creates a Stripe Checkout Session for buying 1% of a film's
- * royalty tokens at the current bonding curve tranche price.
+ * This endpoint previously created a Stripe checkout session to buy
+ * 1% of a film's royalty token at the current tranche price.
  *
- * Request body:
- *   {
- *     offerId: string,   // bct_offers.id
- *     title: string,     // film title (for display)
- *     ticker: string,    // token ticker
- *     priceUsd: number,  // current tranche price for 1%
- *   }
+ * Reason for removal:
+ *   Fractional royalty-token purchases are investment contracts under
+ *   Howey (investment of money + common enterprise + expectation of
+ *   profit from others' efforts). Routing them through Stripe violates
+ *   Stripe's ToS §8.3 (securities / investment products prohibited)
+ *   AND requires a broker-dealer or Reg D / Reg CF exemption to be
+ *   lawful under US securities law. Neither is in place. Fiat-rail
+ *   settlement for securities-class purchases is permanently disabled.
  *
- * After successful payment, the Stripe webhook inserts a row
- * into bct_share_sales and recalculates the film's percent_sold.
+ * Replacement path:
+ *   Royalty shares settle on-chain. Callers should use the BSV wallet
+ *   flow (/api/handcash/buy-shares) or cross-chain x402 settlement via
+ *   a BRC-100 / MetaMask / Phantom wallet as surfaced by the
+ *   pay-picker UI. KYC gate remains enforced upstream.
+ *
+ * This stub remains so existing clients get a clean 410 + message
+ * rather than a silent Stripe charge.
  */
 
 interface VercelRequest {
@@ -40,79 +47,16 @@ export default async function handler(
 ): Promise<void> {
   setCors(res);
   if (req.method === 'OPTIONS') { res.status(204).json({}); return; }
-  if (req.method !== 'POST') { res.status(405).json({ error: 'Method Not Allowed' }); return; }
-
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
-    res.status(500).json({ error: 'STRIPE_SECRET_KEY is not configured' });
-    return;
-  }
-
-  let body: { offerId?: string; title?: string; ticker?: string; priceUsd?: number; email?: string };
-  try {
-    body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
-  } catch {
-    res.status(400).json({ error: 'Invalid JSON' });
-    return;
-  }
-
-  const offerId = body.offerId?.trim();
-  const title = body.title?.trim() || 'Untitled Film';
-  const ticker = body.ticker?.trim() || 'BMOVX';
-  const priceUsd = Number(body.priceUsd);
-
-  if (!offerId || !priceUsd || priceUsd < 10) {
-    res.status(400).json({ error: 'offerId and priceUsd (>= 10) are required' });
-    return;
-  }
-
-  const priceCents = Math.round(priceUsd * 100);
-  const origin = 'https://bmovies.online';
-
-  let Stripe: typeof import('stripe').default;
-  try {
-    const mod = await import('stripe');
-    Stripe = mod.default;
-  } catch {
-    res.status(500).json({ error: 'stripe package not installed' });
-    return;
-  }
-
-  const stripe = new Stripe(key, { apiVersion: '2026-03-25.dahlia' });
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `1% royalty share — "${title}"`,
-              description: `$${ticker} · 10,000,000 tokens (1% of 1B total supply). Ticket revenue flows to token holders proportionally.`,
-            },
-            unit_amount: priceCents,
-          },
-          quantity: 1,
-        },
-      ],
-      customer_email: body.email || undefined,
-      success_url: `${origin}/trade.html?purchase=success&offer=${encodeURIComponent(offerId)}`,
-      cancel_url: `${origin}/trade.html?purchase=cancelled`,
-      metadata: {
-        offerId,
-        title,
-        ticker,
-        percentBought: '1',
-        priceUsd: String(priceUsd),
-        type: 'share-purchase',
-      },
-    });
-
-    res.status(200).json({ url: session.url });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('Stripe share purchase error:', msg);
-    res.status(500).json({ error: msg });
-  }
+  res.status(410).json({
+    error: 'Royalty shares cannot be purchased with a credit card.',
+    reason: 'securities_on_fiat_rail_prohibited',
+    detail:
+      'Fractional royalty-token purchases are investment contracts. To stay ' +
+      'compliant with Stripe ToS §8.3 and US securities law, fiat-rail settlement ' +
+      'is disabled for this endpoint.',
+    alternatives: [
+      { label: 'HandCash wallet',     endpoint: '/api/handcash/buy-shares' },
+      { label: 'BRC-100 / BSV Desktop', endpoint: '/api/invest/bsv-settle' },
+    ],
+  });
 }
