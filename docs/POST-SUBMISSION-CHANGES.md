@@ -66,7 +66,7 @@ Each new commit gets one bullet:
 Order newest-first within each day. Add a new date heading when the date
 rolls over.
 
-- **`<pending>`** — `fix(post-submission): 5-item nav + genericize drifting agent counts`
+- **`fd75225`** — `fix(post-submission): 5-item nav + genericize drifting agent counts`
 
   **Nav rename and re-order.** `nav-session.js` `NAV_LINKS` cut from 7 items
   to 5, labelled as actions where the page is something-you-do and ordered
