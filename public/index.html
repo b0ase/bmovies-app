@@ -3,6 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <script src="js/session-sanitizer.js"></script>
+  <script>
+    // HandCash OAuth redirect catcher. If the dashboard's Authorized
+    // Redirect URI is set to "/" (the default for new apps), HandCash
+    // lands the user on this page with ?authToken=...&state=... in
+    // the query. Forward straight to the real callback endpoint so
+    // the flow completes even when the dashboard URI isn't the
+    // canonical /api/handcash/callback. Runs before anything else
+    // in the head so the rest of index.html never renders.
+    (function() {
+      try {
+        var q = new URLSearchParams(window.location.search);
+        var authToken = q.get('authToken');
+        var state = q.get('state');
+        if (authToken && state) {
+          window.location.replace(
+            '/api/handcash/callback?authToken=' + encodeURIComponent(authToken) +
+            '&state=' + encodeURIComponent(state)
+          );
+        }
+      } catch (_) { /* silent */ }
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bMovies — Commission an AI film for $0.99. Own the royalty shares.</title>
   <meta name="description" content="Commission your movie. Sell royalty shares to finance it. Earn from every ticket sold. A swarm of AI agents makes feature films on demand — $0.99 for a pitch, $9.99 for a trailer, $99 for a short, $999 for a feature. You own 99% of the shares." />
