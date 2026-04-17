@@ -69,6 +69,35 @@
       letter-spacing: 0.04em;
     }
 
+    /* Scrolling ticker — bMovies red on near-black, JetBrains Mono */
+    .ticker {
+      overflow: hidden;
+      white-space: nowrap;
+      margin: 2rem 0 0;
+      padding: 0.7rem 0;
+      border-top: 1px solid #1f1f1f;
+      border-bottom: 1px solid #1f1f1f;
+      background: #070707;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+    .ticker .track {
+      display: inline-block;
+      animation: ticker-scroll 38s linear infinite;
+      padding-left: 100%;
+    }
+    .ticker span { margin: 0 1.4rem; color: #888; }
+    .ticker span.hot { color: #E50914; font-weight: 700; }
+    .ticker span.win { color: #6bff8a; font-weight: 700; }
+    .ticker span.dim { color: #555; }
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-100%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ticker .track { animation: none; padding-left: 0; }
+    }
+
     /* Stat strip */
     .stat-strip {
       display: grid;
@@ -372,11 +401,26 @@
   <main class="wrap">
     <div class="hero">
       <div class="hero-eyebrow">Marketing campaign 02 · The degen cut</div>
-      <h1>Pump.fun <span>for movies.</span></h1>
+      <h1>Pump.fun <span>for movies.</span> 🎬</h1>
       <p class="sub">
         $0.99 launches a film. Not a meme coin — <b>a movie</b>. The audience pumps the winners up the tier ladder: trailer, short, feature. Every climb is a <b>real on-chain royalty share</b> on BSV mainnet. Every dump is public. Every graduation is a premiere.
       </p>
-      <div class="flair">99% TO THE CREATOR · 1% TO THE STUDIO · 0% TO A VC</div>
+      <div class="flair">🚀 99% TO THE CREATOR · 1% TO THE STUDIO · 0% TO A VC</div>
+
+      <div class="ticker" aria-hidden="true">
+        <div class="track">
+          <span class="win">$WEIRD +412% ▲</span>
+          <span class="dim">→ graduated to TRAILER 📣</span>
+          <span>$HANSARD pumped $9.99 → $99 tier 🚀</span>
+          <span class="win">$BOOB +188% ▲</span>
+          <span class="hot">$SLOP −74% ▼ didn't graduate</span>
+          <span>4,211 pitches launched this week</span>
+          <span class="win">$KWEG minted first feature 🎬</span>
+          <span>next graduation ceremony · SUN 21:00 UTC</span>
+          <span>999 sats to pitch · 1B shares per launch 💎</span>
+          <span class="dim">real films · real shares · real receipts</span>
+        </div>
+      </div>
     </div>
 
     <div class="stat-strip">
@@ -450,28 +494,28 @@
       <div class="rungs">
         <div class="rung">
           <div class="n">01</div>
-          <h3>Pitch</h3>
+          <h3>Pitch 🚀</h3>
           <div class="price">$0.99 · launch</div>
           <p>Logline, synopsis, key art. Minted as 1B royalty shares in ~90 seconds. You own 99%.</p>
           <div class="grad">graduates when the audience commissions a trailer</div>
         </div>
         <div class="rung">
           <div class="n">02</div>
-          <h3>Trailer</h3>
+          <h3>Trailer 📣</h3>
           <div class="price">$9.99 · pump #1</div>
           <p>~32s teaser. 6-frame storyboard, poster, treatment, AI video clip. Shareable. Embed-ready.</p>
           <div class="grad">graduates when someone commissions a short</div>
         </div>
         <div class="rung">
           <div class="n">03</div>
-          <h3>Short</h3>
+          <h3>Short 🎞</h3>
           <div class="price">$99 · pump #2</div>
           <p>~64s narrative. 12 frames. Voice-over, score, multi-scene edit. First tier with ticketed views.</p>
           <div class="grad">graduates when a feature is commissioned on top</div>
         </div>
         <div class="rung feature">
           <div class="n">04</div>
-          <h3>Feature</h3>
+          <h3>Feature 🎬</h3>
           <div class="price">$999 · graduated</div>
           <p>11-specialist crew. Director, writer, cinematographer, composer, editor, sound, producer — full narrative.</p>
           <div class="grad">graduated. premiere. screen it.</div>
@@ -488,14 +532,14 @@
                                     ▼
                            <span class="dim">1B royalty shares</span>       <span class="dim"># 99% creator · 1% studio</span>
                                     │
-<span class="hot">audience</span> ──($9.99 commission)──▶                  <span class="win">PUMP #1</span>   <span class="dim"># tier: trailer</span>
+<span class="hot">audience</span> ──($9.99 commission)──▶                  <span class="win">PUMP #1 🚀</span>   <span class="dim"># tier: trailer</span>
                                     │
-<span class="hot">audience</span> ──($99 commission)──▶                    <span class="win">PUMP #2</span>   <span class="dim"># tier: short</span>
+<span class="hot">audience</span> ──($99 commission)──▶                    <span class="win">PUMP #2 🚀🚀</span>   <span class="dim"># tier: short</span>
                                     │
-<span class="hot">audience</span> ──($999 commission)──▶                   <span class="win">PUMP #3</span>   <span class="dim"># tier: feature</span>
+<span class="hot">audience</span> ──($999 commission)──▶                   <span class="win">PUMP #3 🚀🚀🚀</span>   <span class="dim"># tier: feature</span>
                                     │
                                     ▼
-                              <span class="win">GRADUATION</span>         <span class="dim"># premiere drops</span>
+                            <span class="win">GRADUATION 🎬</span>        <span class="dim"># premiere drops</span>
                                     │
                                     ▼
                         <span class="win">holders earn per ticket / stream</span>    <span class="dim"># forever</span>
@@ -548,7 +592,7 @@
     </div>
 
     <div class="footer-links">
-      <a href="/marketing-ideas">← Marketing ideas</a>
+      <a href="/marketing-ideas.html">← Marketing ideas</a>
       <a href="boovies.html">bOOvies</a>
       <a href="ponzinomics.html">Ponzinomics</a>
       <a href="about.html">How bMovies works</a>

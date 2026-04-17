@@ -4,74 +4,94 @@
   <meta charset="UTF-8">
   <script src="js/session-sanitizer.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>bMovies — PUMPONOMICS™</title>
-  <meta name="description" content="The PUMPONOMICS field guide. Pump.fun for movies. $0.99 launches, graduation ceremonies, and the pump-and-screen cycle. Silly but shippable." />
-  <meta property="og:title" content="bMovies — PUMPONOMICS™">
-  <meta property="og:description" content="The field guide for degenerates with taste. Launch a film for $0.99, pump it up the ladder, graduate to a premiere.">
+  <title>bMovies — Pumponomics™</title>
+  <meta name="description" content="Pumponomics — the field guide to Pump.fun for Movies. $0.99 launches, graduation ceremonies, and the pump-and-screen cycle. Silly but shippable." />
+  <meta property="og:title" content="bMovies — Pumponomics™">
+  <meta property="og:description" content="The field guide for would-be movie moguls who like their Hollywood with a bonding curve attached.">
   <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg">
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/theme.css">
   <style>
-    :root {
-      --pump: #1FD882;
-      --pump-hot: #14B26B;
-      --gold: #FFD84D;
-      --dump: #FF4757;
-    }
     .wrap { max-width: 1400px; margin: 0 auto; padding: 3rem 3rem 5rem; }
 
+    /* Hero */
     .hero {
       text-align: center;
       padding: 2rem 0 1rem;
-      border-bottom: 1px solid #0f3026;
-      background:
-        radial-gradient(ellipse at top, rgba(31,216,130,0.1) 0%, transparent 60%);
+      border-bottom: 1px solid #1f1f1f;
     }
     .hero-eyebrow {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.66rem;
-      color: var(--pump);
-      letter-spacing: 0.22em;
+      font-size: 0.65rem;
+      color: #E50914;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       font-weight: 700;
     }
     .hero h1 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(2.8rem, 7.5vw, 5.6rem);
+      font-size: clamp(2.6rem, 7vw, 5.4rem);
       color: #fff;
       margin: 0.5rem 0 0.8rem;
       letter-spacing: 0.02em;
       line-height: 0.95;
     }
-    .hero h1 .g { color: var(--pump); }
+    .hero h1 span { color: #E50914; }
     .hero h1 sup {
-      font-size: 0.34em;
-      color: var(--pump);
+      font-size: 0.35em;
+      color: #E50914;
       vertical-align: super;
       letter-spacing: 0;
       font-family: 'Inter', sans-serif;
     }
     .hero .sub {
-      color: #b8b8b8;
-      max-width: 800px;
+      color: #aaa;
+      max-width: 780px;
       margin: 0 auto;
-      font-size: 1.04rem;
-      line-height: 1.65;
+      font-size: 1.02rem;
+      line-height: 1.6;
     }
     .hero .sub b { color: #fff; }
-    .hero .sub .g { color: var(--pump); font-weight: 700; }
     .hero .flair {
       display: inline-block;
-      margin-top: 1.3rem;
+      margin-top: 1.4rem;
       padding: 0.5rem 1rem;
-      border: 1px dashed #1f4a36;
-      color: var(--pump);
+      border: 1px dashed #332a1a;
+      color: #e09b09;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
       letter-spacing: 0.04em;
+    }
+
+    /* Scrolling ticker */
+    .ticker {
+      overflow: hidden;
+      white-space: nowrap;
+      margin: 2rem 0 0;
+      padding: 0.7rem 0;
+      border-top: 1px solid #1f1f1f;
+      border-bottom: 1px solid #1f1f1f;
+      background: #070707;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+    .ticker .track {
+      display: inline-block;
+      animation: ticker-scroll 38s linear infinite;
+      padding-left: 100%;
+    }
+    .ticker span { margin: 0 1.4rem; color: #888; }
+    .ticker span.hot { color: #E50914; font-weight: 700; }
+    .ticker span.win { color: #6bff8a; font-weight: 700; }
+    .ticker span.dim { color: #555; }
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-100%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ticker .track { animation: none; padding-left: 0; }
     }
 
     /* Stat strip */
@@ -86,9 +106,7 @@
       border: 1px solid #1f1f1f;
       background: #0a0a0a;
       padding: 1.4rem;
-      text-align: left;
     }
-    .stat.accent { border-color: #0f3026; background: linear-gradient(180deg, #061410 0%, #0a0a0a 100%); }
     .stat-label {
       font-size: 0.55rem;
       color: #888;
@@ -103,7 +121,7 @@
       margin-top: 0.4rem;
       letter-spacing: 0.02em;
     }
-    .stat.accent .stat-val { color: var(--pump); }
+    .stat.accent .stat-val { color: #E50914; }
     .stat-sub {
       font-size: 0.65rem;
       color: #888;
@@ -114,34 +132,31 @@
     /* Sections */
     .section { margin-top: 4rem; }
     .section-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.62rem;
-      color: var(--pump);
-      letter-spacing: 0.16em;
+      font-size: 0.6rem;
+      color: #E50914;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
       font-weight: 700;
     }
     h2 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.3rem;
+      font-size: 2.2rem;
       color: #fff;
       margin: 0.5rem 0 1.4rem;
       letter-spacing: 0.02em;
       line-height: 1.05;
     }
-    h2 span.g { color: var(--pump); }
-    h2 span.y { color: var(--gold); }
+    h2 span { color: #E50914; }
     .lede {
       color: #aaa;
-      font-size: 0.95rem;
-      line-height: 1.7;
-      max-width: 800px;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      max-width: 780px;
       margin: 0 0 1.5rem;
     }
     .lede b { color: #fff; }
-    .lede .g { color: var(--pump); font-weight: 700; }
 
-    /* Manifesto */
+    /* NO / YES manifesto */
     .manifesto {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -155,68 +170,90 @@
     }
     .mcard h3 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       color: #fff;
       margin: 0 0 0.8rem;
       letter-spacing: 0.03em;
     }
-    .mcard.no h3::before  { content: "NO — ";  color: var(--dump); }
-    .mcard.yes h3::before { content: "YES — "; color: var(--pump); }
-    .mcard p { color: #9a9a9a; font-size: 0.84rem; line-height: 1.65; margin: 0; }
+    .mcard.no h3::before  { content: "NO — ";  color: #ff4757; }
+    .mcard.yes h3::before { content: "YES — "; color: #6bff8a; }
+    .mcard p { color: #9a9a9a; font-size: 0.82rem; line-height: 1.65; margin: 0; }
     .mcard p + p { margin-top: 0.6rem; }
 
-    /* Loop diagram */
-    .loop {
-      border: 1px solid #0f3026;
-      background: #060c0a;
-      padding: 1.8rem 2rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: #b8b8b8;
-      line-height: 1.9;
-      white-space: pre;
-      overflow-x: auto;
-    }
-    .loop .g { color: var(--pump); font-weight: 700; }
-    .loop .y { color: var(--gold); font-weight: 700; }
-    .loop .r { color: var(--dump); font-weight: 700; }
-    .loop .d { color: #555; }
-
-    /* Ladder */
-    .ladder {
+    /* Roles / archetypes (same shape as ponzinomics .roles) */
+    .roles {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 0.9rem;
     }
-    @media (max-width: 1000px) { .ladder { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 560px) { .ladder { grid-template-columns: 1fr; } }
+    @media (max-width: 1000px) { .roles { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px)  { .roles { grid-template-columns: 1fr; } }
+    .role {
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.2rem;
+      position: relative;
+    }
+    .role .n {
+      position: absolute;
+      top: 0.6rem; right: 0.9rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #E50914;
+      opacity: 0.35;
+    }
+    .role h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      color: #fff;
+      letter-spacing: 0.03em;
+      margin: 0 0 0.3rem;
+    }
+    .role .tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #E50914;
+      border: 1px solid #2a1414;
+      padding: 0.15rem 0.45rem;
+      margin-bottom: 0.7rem;
+    }
+    .role p { color: #9a9a9a; font-size: 0.78rem; line-height: 1.6; margin: 0 0 0.5rem; }
+
+    /* Rungs — the ladder */
+    .rungs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.9rem;
+    }
+    @media (max-width: 1000px) { .rungs { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px)  { .rungs { grid-template-columns: 1fr; } }
     .rung {
       position: relative;
       border: 1px solid #1f1f1f;
       background: #0a0a0a;
       padding: 1.2rem;
-      min-height: 220px;
     }
+    .rung.feature { border-color: #E50914; background: linear-gradient(180deg, #120000 0%, #0a0a0a 100%); }
     .rung .n {
       position: absolute;
-      top: 0.6rem;
-      right: 0.9rem;
+      top: 0.6rem; right: 0.9rem;
       font-family: 'Bebas Neue', sans-serif;
       font-size: 2rem;
-      color: var(--pump);
+      color: #E50914;
       opacity: 0.35;
     }
     .rung h3 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       color: #fff;
-      margin: 0 0 0.3rem;
       letter-spacing: 0.03em;
+      margin: 0 0 0.25rem;
     }
     .rung .price {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.78rem;
-      color: var(--pump);
+      color: #E50914;
       margin-bottom: 0.8rem;
       font-weight: 700;
     }
@@ -224,139 +261,105 @@
     .rung .grad {
       margin-top: 0.7rem;
       padding-top: 0.6rem;
-      border-top: 1px dashed #14321e;
+      border-top: 1px dashed #1a1a1a;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.66rem;
-      color: var(--gold);
-    }
-    .rung.feature {
-      border-color: var(--pump);
-      background: linear-gradient(180deg, #061410 0%, #0a0a0a 100%);
+      color: #888;
     }
 
-    /* Graduation ceremony panel */
-    .grad-panel {
-      border: 1px solid #1f4a36;
-      background: linear-gradient(180deg, #061410 0%, #040d08 100%);
-      padding: 2rem 2.2rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .grad-panel::before {
-      content: "🎬";
-      position: absolute;
-      top: 1rem; right: 1.2rem;
-      font-size: 2.6rem;
-      opacity: 0.2;
-    }
-    .grad-panel h3 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.8rem;
-      color: var(--pump);
-      letter-spacing: 0.02em;
-      margin-bottom: 0.8rem;
-    }
-    .grad-panel p { color: #c8c8c8; font-size: 0.92rem; line-height: 1.65; margin-bottom: 0.7rem; }
-    .grad-panel p b { color: #fff; }
-    .grad-panel p:last-child { margin-bottom: 0; }
-
-    /* Persona cards */
-    .personas {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.9rem;
-    }
-    @media (max-width: 1000px) { .personas { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 560px) { .personas { grid-template-columns: 1fr; } }
-    .persona {
+    /* Flow / loop diagram (monochrome) */
+    .flow {
       border: 1px solid #1f1f1f;
       background: #0a0a0a;
-      padding: 1.2rem;
-    }
-    .persona .emo { font-size: 1.8rem; margin-bottom: 0.5rem; display: block; }
-    .persona h3 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.25rem;
-      color: #fff;
-      letter-spacing: 0.03em;
-      margin: 0 0 0.3rem;
-    }
-    .persona .tag {
-      display: inline-block;
+      padding: 1.8rem 2rem;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.6rem;
-      color: var(--pump);
-      border: 1px solid #14321e;
-      padding: 0.15rem 0.45rem;
-      margin-bottom: 0.7rem;
-      letter-spacing: 0.05em;
+      font-size: 0.78rem;
+      color: #9a9a9a;
+      line-height: 1.85;
+      white-space: pre;
+      overflow-x: auto;
     }
-    .persona p { color: #9a9a9a; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+    .flow .hot { color: #E50914; }
+    .flow .win { color: #6bff8a; }
+    .flow .dim { color: #555; }
+
+    /* Note panel (Pt like ponzinomics green-bordered panels) */
+    .note {
+      margin-top: 1.2rem;
+      padding: 1.2rem 1.4rem;
+      border-left: 2px solid #E50914;
+      background: #0a0a0a;
+    }
+    .note .label {
+      font-size: 0.55rem;
+      color: #E50914;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .note p { color: #b8b8b8; font-size: 0.85rem; line-height: 1.65; margin: 0; }
+    .note p b { color: #fff; }
 
     /* CTA */
     .cta {
       margin-top: 3rem;
-      border: 2px solid var(--pump);
-      background:
-        radial-gradient(ellipse at top, rgba(31,216,130,0.12) 0%, transparent 60%),
-        #060c0a;
+      border: 2px solid #E50914;
+      background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
       padding: 2.6rem;
       text-align: center;
     }
     .cta h2 { margin: 0 0 0.5rem; font-size: 2.6rem; }
     .cta p {
-      color: #c8c8c8;
-      font-size: 0.95rem;
+      color: #aaa;
+      font-size: 0.9rem;
       max-width: 640px;
       margin: 0 auto 1.6rem;
       line-height: 1.65;
     }
     .cta-row {
       display: flex;
-      gap: 0.9rem;
+      gap: 1rem;
       justify-content: center;
       flex-wrap: wrap;
     }
     .cta-btn {
       display: inline-block;
       padding: 1rem 1.8rem;
-      background: var(--pump);
-      color: #002012;
+      background: #E50914;
+      color: #fff;
       text-decoration: none;
       font-family: 'Bebas Neue', sans-serif;
       font-size: 1.25rem;
       letter-spacing: 0.06em;
-      border: 2px solid var(--pump);
     }
-    .cta-btn:hover { background: var(--pump-hot); border-color: var(--pump-hot); }
-    .cta-btn.gold { background: var(--gold); border-color: var(--gold); color: #2a1f00; }
-    .cta-btn.gold:hover { background: #F5C72B; border-color: #F5C72B; }
-    .cta-btn.ghost { background: transparent; color: var(--pump); }
-    .cta-btn.ghost:hover { background: rgba(31,216,130,0.08); }
+    .cta-btn:hover { background: #c4070f; }
+    .cta-btn.ghost { background: transparent; border: 1px solid #E50914; }
+    .cta-btn.ghost:hover { background: #120000; }
 
-    /* Honesty */
+    /* Risk */
     .risk {
       border: 1px solid #332a1a;
-      background: rgba(255,216,77,0.03);
+      background: rgba(229, 155, 9, 0.04);
       padding: 1.4rem 1.6rem;
-      margin-top: 2.5rem;
     }
     .risk h3 {
-      font-size: 0.66rem;
-      color: var(--gold);
+      font-size: 0.62rem;
+      color: #e09b09;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       font-weight: 700;
       margin: 0 0 0.7rem;
     }
     .risk p {
-      color: #9a8a5a;
+      color: #9a8a6a;
       font-size: 0.8rem;
       line-height: 1.6;
       margin: 0 0 0.5rem;
     }
     .risk p:last-child { margin-bottom: 0; }
-    .risk b { color: var(--gold); }
+    .risk b { color: #e09b09; }
+    .risk a { color: #e09b09; }
 
     .footer-links {
       margin-top: 3rem;
@@ -365,16 +368,16 @@
       display: flex;
       gap: 1.2rem;
       flex-wrap: wrap;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
     }
     .footer-links a {
       color: #888;
       text-decoration: none;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       font-weight: 700;
     }
-    .footer-links a:hover { color: var(--pump); }
+    .footer-links a:hover { color: #E50914; }
   </style>
 </head>
 <body>
@@ -384,23 +387,38 @@
 
     <div class="hero">
       <div class="hero-eyebrow">Field Guide · Edition 01 · Pump.fun for Movies</div>
-      <h1>Pump<span class="g">onomics</span><sup>™</sup><br>for degenerates <span class="g">with taste.</span></h1>
+      <h1>Pump<span>onomics</span><sup>™</sup> 🚀<br>for <span>degenerates</span> with taste.</h1>
       <p class="sub">
-        A shorter, sillier field guide for anyone who wants to <b>launch a movie like it's a meme coin</b>. Pitch a film for <span class="g">$0.99</span>. Audience pumps the winners up the ladder: trailer, short, feature. Every rung is a real commission. Every <b>graduation</b> is a premiere. Every royalty share is on-chain BSV.
+        A shorter, sillier field guide for anyone who wants to <b>launch a movie like it's a meme coin</b>. Pitch a film for <b>$0.99</b>. The audience pumps the winners up the ladder — trailer, short, feature. Every rung is a real commission. Every <b>graduation</b> is a premiere. Every royalty share is on-chain BSV.
       </p>
-      <div class="flair">🚀 LAUNCH · PUMP · GRADUATE · SCREEN · REPEAT</div>
+      <div class="flair">⚠ SELF-AWARE SPECULATIVE INSTRUMENT · 🚀 BONDING-CURVE ENERGY · 🎬 REAL FILMS UNDERNEATH</div>
+
+      <div class="ticker" aria-hidden="true">
+        <div class="track">
+          <span class="win">$WEIRD +412% ▲</span>
+          <span class="dim">→ graduated to TRAILER 📣</span>
+          <span>$HANSARD pumped $9.99 → $99 tier 🚀</span>
+          <span class="win">$BOOB +188% ▲</span>
+          <span class="hot">$SLOP −74% ▼ didn't graduate</span>
+          <span>4,211 pitches launched this week</span>
+          <span class="win">$KWEG minted first feature 🎬</span>
+          <span>next graduation ceremony · SUN 21:00 UTC</span>
+          <span>999 sats to pitch · 1B shares per launch 💎</span>
+          <span class="dim">real films · real shares · real receipts</span>
+        </div>
+      </div>
     </div>
 
     <div class="stat-strip">
       <div class="stat accent">
         <div class="stat-label">Launch price</div>
         <div class="stat-val">$0.99</div>
-        <div class="stat-sub">one pitch · treatment delivered in ~90s</div>
+        <div class="stat-sub">one pitch · treatment in ~90s</div>
       </div>
       <div class="stat">
         <div class="stat-label">Shares per launch</div>
         <div class="stat-val">1B</div>
-        <div class="stat-sub">BSV-21 royalty shares · fixed at mint</div>
+        <div class="stat-sub">BSV-21 · fixed at mint</div>
       </div>
       <div class="stat">
         <div class="stat-label">Graduation tiers</div>
@@ -410,172 +428,167 @@
       <div class="stat accent">
         <div class="stat-label">Creator keeps</div>
         <div class="stat-val">99%</div>
-        <div class="stat-sub">1% studio · 0% VC · 0% agent</div>
+        <div class="stat-sub">1% studio · 0% agents · 0% VC</div>
       </div>
     </div>
 
-    <!-- ─── Chapter 1 ─── -->
     <div class="section">
-      <div class="section-label">Chapter 01 · Let's get the vibe straight</div>
-      <h2>Is this a <span class="g">meme coin?</span></h2>
+      <div class="section-label">Chapter 1 · Let's get the vibe straight</div>
+      <h2>Is this a <span>meme coin?</span></h2>
       <p class="lede">
-        We've been asked. The honest answer is: <b>no, but it rhymes</b>. The things you trade on bMovies are royalty shares in <span class="g">actual films</span>, not fractions of a dog. But the launch mechanic — cheap, permissionless, audience-curated — is absolutely the Pump.fun move. Here's the split.
+        We've been asked. The honest answer is <b>no, but it rhymes</b>. The things you trade on bMovies are royalty shares in actual films — not fractions of a dog. But the launch mechanic — cheap, permissionless, audience-curated — is absolutely the Pump.fun move. Here's the split.
       </p>
       <div class="manifesto">
         <div class="mcard no">
           <h3>not a meme coin</h3>
           <p>Every royalty share maps to a real film with a real production pipeline, a real treatment, a real poster, and a real revenue stream from real viewers paying $2.99 for tickets. The "coin" has a movie attached.</p>
-          <p>When a holder earns, it's because <b>somebody pressed play</b>. Not because the graph went up. Payouts are per stream, per ticket, forever. If the film flops, the share earns nothing — but the share isn't invented, it's a fractional claim on something that exists.</p>
+          <p>When a holder earns, it's because <b>somebody pressed play</b>. Not because a graph went up. Payouts are per stream, per ticket, forever. If the film flops, the share earns nothing — but the share isn't invented. It's a fractional claim on something that exists.</p>
         </div>
         <div class="mcard yes">
-          <h3>absolutely vibes like one</h3>
-          <p>Launch price is dirt cheap. Anybody can pitch. The market decides which films graduate by commissioning the next tier. The bonding curve is a <b>ladder of real productions</b>, not a liquidity pool — but the energy is the same: rapid iteration, loud memes, a graduation ceremony when you win.</p>
+          <h3>vibes like one</h3>
+          <p>Launch price is dirt cheap. Anybody can pitch. The market decides which films graduate by commissioning the next tier. The bonding curve is a <b>ladder of real productions</b>, not a liquidity pool — but the energy is the same: rapid iteration, loud memes, a graduation moment when you win.</p>
           <p>We're pointing a firehose of Pump.fun-style degen attention at the one industry that's always needed it: <b>film finance</b>. The people who speedran coin culture just got handed a poster generator.</p>
         </div>
       </div>
     </div>
 
-    <!-- ─── Chapter 2 ─── -->
     <div class="section">
-      <div class="section-label">Chapter 02 · The graduation ladder</div>
-      <h2>Four rungs. <span class="g">Each one a pump.</span></h2>
-      <p class="lede">Every project climbs the same staircase. You stop at whichever rung the audience stops pumping. You earn on every rung that ships.</p>
-      <div class="ladder">
+      <div class="section-label">Chapter 2 · The graduation ladder</div>
+      <h2>Four rungs. <span>Each one a pump.</span></h2>
+      <p class="lede">Every project climbs the same staircase. You stop at whichever rung the audience stops pumping. You earn on every rung that ships. Budgets 10× per rung. Audiences 10× per rung.</p>
+      <div class="rungs">
         <div class="rung">
           <div class="n">01</div>
-          <h3>PITCH 🚀</h3>
-          <div class="price">$0.99 · the launch</div>
+          <h3>Pitch 🚀</h3>
+          <div class="price">$0.99 · launch</div>
           <p>Logline, synopsis, key art. 1B royalty shares minted in ~90s. You own 99%.</p>
-          <div class="grad">→ graduates when the audience commissions a trailer</div>
+          <div class="grad">graduates when an audience commissions a trailer</div>
         </div>
         <div class="rung">
           <div class="n">02</div>
-          <h3>TRAILER 📣</h3>
+          <h3>Trailer 📣</h3>
           <div class="price">$9.99 · pump #1</div>
           <p>~32s teaser. 6-frame storyboard, poster, treatment, AI video clip. Shareable.</p>
-          <div class="grad">→ graduates when someone greenlights a short</div>
+          <div class="grad">graduates when someone greenlights a short</div>
         </div>
         <div class="rung">
           <div class="n">03</div>
-          <h3>SHORT 🎞</h3>
+          <h3>Short 🎞</h3>
           <div class="price">$99 · pump #2</div>
-          <p>~64s narrative. 12 frames. Voiceover, score, multi-scene edit. First ticketed tier.</p>
-          <div class="grad">→ graduates when a feature is commissioned on top</div>
+          <p>~64s narrative. 12 frames. Voice-over, score, multi-scene edit. First ticketed tier.</p>
+          <div class="grad">graduates when a feature is commissioned on top</div>
         </div>
         <div class="rung feature">
           <div class="n">04</div>
-          <h3>FEATURE 🎬</h3>
-          <div class="price">$999 · moon</div>
-          <p>11 specialists. Director, writer, cinematographer, composer, editor, sound, producer. Full narrative.</p>
-          <div class="grad">→ graduated. Premiere. Screen it.</div>
+          <h3>Feature 🎬</h3>
+          <div class="price">$999 · graduated</div>
+          <p>11 specialists. Director, writer, cinematographer, composer, editor, sound, producer — full narrative.</p>
+          <div class="grad">graduated. premiere. screen it.</div>
         </div>
       </div>
     </div>
 
-    <!-- ─── Chapter 3 ─── -->
     <div class="section">
-      <div class="section-label">Chapter 03 · The pump-and-screen cycle</div>
-      <h2>Launch. Pump. Graduate. <span class="g">Screen.</span> Repeat.</h2>
-      <p class="lede">The whole thing fits on a phone screen. Real sats. Real shares. Real films. Everything below is a live BSV mainnet operation — no escrow, no promises, no "T+2 settlement". Just <span class="g">receipts</span>.</p>
-      <div class="loop"><span class="g">degen</span> ──($0.99)──▶ <span class="d">launches a pitch</span>         <span class="d"># $WEIRD minted · 1B shares</span>
-                                    │
-                                    ▼
-                           <span class="d">99% creator · 1% studio</span>
-                                    │
-<span class="g">audience</span> ──($9.99 commission)──▶                   <span class="y">PUMP #1 🚀</span>   <span class="d"># tier: trailer</span>
-                                    │
-<span class="g">audience</span> ──($99 commission)──▶                     <span class="y">PUMP #2 🚀🚀</span>  <span class="d"># tier: short</span>
-                                    │
-<span class="g">audience</span> ──($999 commission)──▶                    <span class="y">PUMP #3 🚀🚀🚀</span> <span class="d"># tier: feature</span>
-                                    │
-                                    ▼
-                             <span class="g">GRADUATION 🎬</span>       <span class="d"># premiere drops</span>
-                                    │
-                                    ▼
-                         <span class="g">holders earn per ticket / stream</span>    <span class="d"># forever</span>
+      <div class="section-label">Chapter 3 · The pump-and-screen cycle</div>
+      <h2>Launch. Pump. <span>Graduate.</span> Screen. Repeat.</h2>
+      <p class="lede">The whole thing fits on a phone screen. Real sats. Real shares. Real films. Everything below is a live BSV mainnet operation — no escrow, no promises, no "T+2 settlement". Just receipts.</p>
+      <div class="flow"><span class="hot">degen</span> ──($0.99)──▶ <span class="dim">launches a pitch</span>        <span class="dim"># $WEIRD minted · 1B shares</span>
+                                  │
+                                  ▼
+                         <span class="dim">99% creator · 1% studio</span>
+                                  │
+<span class="hot">audience</span> ──($9.99 commission)──▶               <span class="win">PUMP #1 🚀</span>   <span class="dim"># tier: trailer</span>
+                                  │
+<span class="hot">audience</span> ──($99 commission)──▶                 <span class="win">PUMP #2 🚀🚀</span>   <span class="dim"># tier: short</span>
+                                  │
+<span class="hot">audience</span> ──($999 commission)──▶                <span class="win">PUMP #3 🚀🚀🚀</span>   <span class="dim"># tier: feature</span>
+                                  │
+                                  ▼
+                          <span class="win">GRADUATION 🎬</span>         <span class="dim"># premiere drops</span>
+                                  │
+                                  ▼
+                     <span class="win">holders earn per ticket / stream</span>    <span class="dim"># forever</span>
 
-<span class="r">films that don't pump</span>  ·  <span class="d">stay at the last tier they hit. nobody loses the art, only the next-rung upside.</span></div>
+<span class="dim">films that don't pump stay at their last tier. nobody loses the art — only the next-rung upside.</span></div>
     </div>
 
-    <!-- ─── Chapter 4 ─── -->
     <div class="section">
-      <div class="section-label">Chapter 04 · The graduation ceremony</div>
-      <div class="grad-panel">
-        <h3>We actually have a graduation ceremony.</h3>
-        <p>Every film that climbs the full ladder to <b>feature</b> drops on <b>Sunday at 21:00 UTC</b>. The marketplace gets a graduation banner, the holders get a notification, and the premiere goes live with the full credit roll. If you bought in at the pitch rung for $0.99, <b>your name is in that roll</b>.</p>
+      <div class="section-label">Chapter 4 · The graduation ceremony</div>
+      <h2>Yes, there is an <span>actual</span> graduation.</h2>
+      <p class="lede">
+        Every film that climbs the full ladder to <b>feature</b> drops on <b>Sunday at 21:00 UTC</b>. Graduation banner on the marketplace. Notification to the holders. Premiere goes live with the full credit roll. If you bought in at the pitch rung for $0.99, <b>your name is in that roll.</b>
+      </p>
+      <div class="note">
+        <div class="label">Why it matters</div>
         <p>It's mostly a marketing moment — but it's also where royalty payouts flip on. The screening is the event that turns a "pumped" share into a yielding one. <b>Pump is the bell. Screen is the payout.</b></p>
       </div>
     </div>
 
-    <!-- ─── Chapter 5 ─── -->
     <div class="section">
-      <div class="section-label">Chapter 05 · Pick your archetype</div>
-      <h2>Which <span class="g">degen</span> are you?</h2>
-      <p class="lede">Four clean archetypes. None of them mutually exclusive. Pick one to start and rotate when you get bored.</p>
-      <div class="personas">
-        <div class="persona">
-          <span class="emo">🎤</span>
+      <div class="section-label">Chapter 5 · Pick your archetype</div>
+      <h2>Which <span>degen</span> are you?</h2>
+      <p class="lede">Four clean archetypes. None of them mutually exclusive. Pick one to start and rotate when you get bored. Each one makes and loses money a slightly different way.</p>
+      <div class="roles">
+        <div class="role">
+          <div class="n">01</div>
           <div class="tag">THE LAUNCHER</div>
           <h3>Idea guy</h3>
-          <p>You pitch. A lot. Most don't pump. The one that does pays for the other 99. You're the Pump.fun coin-maker, but the coin is a screenplay.</p>
+          <p>You pitch. A lot. Most don't pump. The one that does pays for the other 99. You're the Pump.fun coin-maker, but the "coin" is a screenplay.</p>
         </div>
-        <div class="persona">
-          <span class="emo">🚀</span>
+        <div class="role">
+          <div class="n">02</div>
           <div class="tag">THE PUMPER</div>
           <h3>Tier-climber</h3>
-          <p>You hunt pitches at the bottom of the ladder and commission the trailer before the rest of the crowd gets there. Upside baked in, if you've got taste.</p>
+          <p>You hunt pitches at the bottom of the ladder and commission the trailer before the crowd gets there. Upside baked in, if you've got taste.</p>
         </div>
-        <div class="persona">
-          <span class="emo">💎</span>
+        <div class="role">
+          <div class="n">03</div>
           <div class="tag">THE HOLDER</div>
           <h3>Diamond hands</h3>
           <p>You like the film. You hold the shares. You don't sell on the pump — you sit through the premiere and collect ticket royalties forever. Classic.</p>
         </div>
-        <div class="persona">
-          <span class="emo">🎬</span>
+        <div class="role">
+          <div class="n">04</div>
           <div class="tag">THE GRADUATE</div>
           <h3>Mogul-in-training</h3>
-          <p>You ladder a single project from $0.99 pitch to $999 feature, funding each rung with the last. By Monday morning, you're a studio owner with a cinema release.</p>
+          <p>You ladder one project from $0.99 pitch to $999 feature, funding each rung with the last. By Monday morning, you're a studio owner with a cinema release.</p>
         </div>
       </div>
     </div>
 
-    <!-- ─── Chapter 6 ─── -->
     <div class="section">
-      <div class="section-label">Chapter 06 · What shares actually pay</div>
-      <h2>Real receipts, not <span class="g">candle charts.</span></h2>
+      <div class="section-label">Chapter 6 · What the shares actually pay</div>
+      <h2>Real receipts, not <span>candle charts.</span></h2>
       <p class="lede">
-        The share's value isn't its tick — it's the stream of ticket royalties underneath. Every ticket ($2.99) flows straight to holders pro-rata. Every view on a pay-per-stream page does too. <b>bMovies takes 1%.</b>  That's it. No platform fee on trades. No "protocol revenue split". Just a 1% slice on day one that stays 1% on day one thousand.
+        The share's value isn't its tick — it's the stream of ticket royalties underneath. Every ticket ($2.99) flows pro-rata to holders. Every pay-per-stream view does too. <b>bMovies takes 1%.</b> That's it. No platform fee on trades. No "protocol revenue split". Just a 1% slice on day one that stays 1% on day one thousand.
       </p>
       <p class="lede">
-        The chart can pump or dump all it wants — underneath is a film with a revenue line. <span class="g">You can screenshot the candles. You can also just press play.</span>
+        The chart can pump or dump all it wants — underneath is a film with a revenue line. <b>You can screenshot the candles. You can also just press play.</b>
       </p>
     </div>
 
-    <!-- ─── Honesty ─── -->
     <div class="risk">
-      <h3>⚠ Silly brochure, serious risk disclosure</h3>
-      <p><b>Royalty shares are speculative.</b> If a film doesn't sell tickets, the share earns nothing. If a film never graduates past the pitch tier, the treatment still exists but nobody's watching. Early holders can be left holding supply when a project stalls — that's exactly what happens in Pump.fun too, we've just swapped a bonding curve for a tier ladder.</p>
-      <p><b>This isn't financial advice.</b> It's a <a href="ponzinomics.html" style="color:var(--gold);">Ponzinomics</a> pastiche with the volume turned up. The underlying platform is real, the BSV rail is real, the 99%/1% split is real, and the films are real. The rocket emojis are artistic licence.</p>
+      <h3>Silly brochure, serious risk disclosure</h3>
+      <p><b>Royalty shares are speculative.</b> If a film doesn't sell tickets, the share earns nothing. If a film never graduates past the pitch tier, the treatment still exists but nobody's watching. Early holders can be left holding supply when a project stalls — that's exactly what happens in Pump.fun too. We've just swapped a bonding curve for a tier ladder.</p>
+      <p><b>This isn't financial advice.</b> It's a <a href="ponzinomics.html">Ponzinomics</a> pastiche with the volume turned up. The underlying platform is real. The BSV rail is real. The 99%/1% split is real. The films are real.</p>
     </div>
 
-    <!-- ─── CTA ─── -->
     <div class="cta">
       <div class="section-label">Ready to launch?</div>
-      <h2>$0.99 to <span class="g">launch.</span> The rest is <span class="g">momentum.</span></h2>
+      <h2>$0.99 to launch. <span>The rest is momentum.</span></h2>
       <p>
         Pitch a film. See the treatment land in your account in ~90 seconds. If the audience pumps it, the next rung funds itself. If it doesn't, you launch another one tomorrow. Either way, <b>you keep 99% of the shares</b>.
       </p>
       <div class="cta-row">
         <a class="cta-btn" href="commission.html">Launch a pitch →</a>
-        <a class="cta-btn gold" href="pumponomics-print.html" target="_blank">PUMPONOMICS PDF ↗</a>
-        <a class="cta-btn ghost" href="/pump-fun-for-movies">← Back to the campaign</a>
+        <a class="cta-btn ghost" href="pumponomics-print.html" target="_blank">Print edition (PDF)</a>
+        <a class="cta-btn ghost" href="/pump-fun-for-movies.html">Back to the campaign</a>
       </div>
     </div>
 
     <div class="footer-links">
-      <a href="/marketing-ideas">← Marketing ideas</a>
-      <a href="/pump-fun-for-movies">Pump.fun for Movies</a>
+      <a href="/marketing-ideas.html">← Marketing ideas</a>
+      <a href="/pump-fun-for-movies.html">Pump.fun for Movies</a>
       <a href="ponzinomics.html">Ponzinomics (the grown-up version)</a>
       <a href="about.html">How bMovies works</a>
       <a href="/">Home</a>

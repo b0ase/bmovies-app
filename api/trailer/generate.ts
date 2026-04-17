@@ -212,7 +212,7 @@ export default async function handler(
   let totalCost = 0;
   const artifacts: Array<{ role: string; kind: string; url: string; model: string; costUsd: number }> = [];
 
-  async function attach(role: string, kind: string, url: string, model: string, prompt: string, costUsd: number) {
+  async function attach(role: string, kind: string, url: string, model: string, prompt: string, costUsd: number, stepId?: string) {
     totalCost += costUsd;
     artifacts.push({ role, kind, url, model, costUsd });
     await supabase.from('bct_artifacts').insert({
@@ -223,6 +223,7 @@ export default async function handler(
       prompt: prompt.slice(0, 500),
       payment_txid: `trailer-${Date.now()}-${role}`,
       role,
+      step_id: stepId ?? null,
     });
   }
 
@@ -233,13 +234,18 @@ export default async function handler(
     // 1. Treatment
     const treatment = await xaiChat(xaiKey, TREATMENT_PROMPT, context, 2000);
     const treatmentDataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(treatment);
-    await attach('writer', 'text', treatmentDataUrl, 'grok-3-mini', offer.title, 0.01);
+    // Tag step_ids so commission-success.html + /production can map
+    // artifacts to their expected deliverable slots (writer.synopsis,
+    // storyboard.poster, editor.trailer_cut, etc.). Without these the
+    // UI falls through to generic 'role + kind' matching and gets the
+    // progress count wrong.
+    await attach('writer', 'text', treatmentDataUrl, 'grok-3-mini', offer.title, 0.01, 'writer.synopsis');
 
     // 2. Poster (Grok Imagine Image Pro)
     const posterPrompt = `Cinematic movie poster for the film "${offer.title}". ${offer.synopsis} Portrait orientation, bold title typography, dramatic lighting, atmospheric color palette. Movie poster aesthetic.`;
     try {
       const poster = await xaiImage(xaiKey, posterPrompt, 'grok-imagine-image-pro');
-      await attach('poster', 'image', poster.url, 'grok-imagine-image-pro', posterPrompt, poster.costUsd);
+      await attach('poster', 'image', poster.url, 'grok-imagine-image-pro', posterPrompt, poster.costUsd, 'storyboard.poster');
     } catch (err) {
       console.error('[trailer] poster failed:', err);
     }
@@ -257,7 +263,7 @@ export default async function handler(
       const prompt = storyboardPrompts[i];
       try {
         const img = await xaiImage(xaiKey, prompt, 'grok-imagine-image');
-        await attach(`storyboard`, 'image', img.url, 'grok-imagine-image', prompt, img.costUsd);
+        await attach(`storyboard`, 'image', img.url, 'grok-imagine-image', prompt, img.costUsd, 'storyboard.pack');
       } catch (err) {
         console.error(`[trailer] storyboard frame ${i} failed:`, err);
       }
@@ -278,7 +284,7 @@ export default async function handler(
       const prompt = videoPrompts[i];
       try {
         const vid = await xaiVideo(xaiKey, prompt);
-        await attach('trailer-clip', 'video', vid.url, 'grok-imagine-video', prompt, vid.costUsd);
+        await attach('trailer-clip', 'video', vid.url, 'grok-imagine-video', prompt, vid.costUsd, 'editor.trailer_cut');
 
         // Save the first clip as the "hero" trailer video on the offer
         if (i === 0) {
