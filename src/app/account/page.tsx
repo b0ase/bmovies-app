@@ -1221,6 +1221,31 @@ interface WalletData {
     settled_txid: string | null
     created_at: string
   }[]
+  royalties: {
+    totalAccruedUsd: number
+    totalDrawnUsd: number
+    availableUsd: number
+    positions: {
+      offerId: string
+      title: string
+      tokenTicker: string
+      tier: string
+      sharePercent: number
+      source: 'commission' | 'investor'
+      ticketCount: number
+      ticketRevenueUsd: number
+      accruedUsd: number
+    }[]
+    history: {
+      id: number
+      amountUsd: number
+      mneeAddress: string
+      status: string
+      settleTxid: string | null
+      requestedAt: string
+      settledAt: string | null
+    }[]
+  }
 }
 
 function WalletView({ user, accountId, films }: { user: User; accountId: string | null; films: Film[] }) {
@@ -1240,7 +1265,10 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
     async function loadWalletData() {
       setWalletLoading(true)
       try {
-        const [holdingsRes, studiosRes, agentsRes, txRes, configRes, kycRes] = await Promise.all([
+        const [
+          holdingsRes, studiosRes, agentsRes, txRes, configRes, kycRes,
+          myOffersRes, shareSalesRes, withdrawalsRes,
+        ] = await Promise.all([
           bmovies
             .from('bct_platform_holdings')
             .select('tokens_held')
@@ -1271,6 +1299,26 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             .select('status')
             .eq('account_id', accountId)
             .maybeSingle(),
+          // Offers commissioned by this account — each gives the user a
+          // royalty position equal to commissioner_percent of ticket sales.
+          bmovies
+            .from('bct_offers')
+            .select('id, title, tier, token_ticker, commissioner_percent')
+            .eq('account_id', accountId),
+          // Secondary-market share purchases — each row is a tranche of
+          // percent_bought for a specific offer, paid price_usd.
+          bmovies
+            .from('bct_share_sales')
+            .select('offer_id, tranche, percent_bought')
+            .eq('buyer_account', accountId),
+          // Prior withdrawals — pending + sent reduce available balance;
+          // all statuses populate the "history" row list.
+          bmovies
+            .from('bct_royalty_withdrawals')
+            .select('id, amount_usd, mnee_address, status, settle_txid, requested_at, settled_at, offer_id')
+            .eq('account_id', accountId)
+            .order('requested_at', { ascending: false })
+            .limit(25),
         ])
 
         if (cancelled) return
@@ -1289,6 +1337,117 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           ? (typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice)))
           : 0.1
 
+        // ── Royalty calculation ─────────────────────────────────
+        // Two position sources:
+        //   1) Commissioned offers  → 99% (or commissioner_percent)
+        //   2) Share purchases       → sum(percent_bought) over tranches
+        // Accrued per position = ticket revenue for that offer × share %
+        type OfferMeta = { id: string; title: string; tier: string; token_ticker: string; commissioner_percent: number }
+        type ShareSale = { offer_id: string; tranche: number; percent_bought: number }
+        const myOffers = (myOffersRes.data || []) as OfferMeta[]
+        const shareSales = (shareSalesRes.data || []) as ShareSale[]
+
+        // Collect every offer_id the user has ANY position in.
+        const positionOfferIds = new Set<string>()
+        for (const o of myOffers) positionOfferIds.add(o.id)
+        for (const s of shareSales) positionOfferIds.add(s.offer_id)
+
+        // Fetch ticket revenue + offer metadata for positions that
+        // aren't already in myOffers (pure investor positions).
+        const missingIds = Array.from(positionOfferIds).filter(
+          (id) => !myOffers.some((o) => o.id === id),
+        )
+        let extraOfferMeta: OfferMeta[] = []
+        let ticketRows: { offer_id: string; price_usd: number }[] = []
+        if (positionOfferIds.size > 0) {
+          const [tixRes, metaRes] = await Promise.all([
+            bmovies
+              .from('bct_ticket_sales')
+              .select('offer_id, price_usd')
+              .in('offer_id', Array.from(positionOfferIds)),
+            missingIds.length > 0
+              ? bmovies
+                  .from('bct_offers')
+                  .select('id, title, tier, token_ticker, commissioner_percent')
+                  .in('id', missingIds)
+              : Promise.resolve({ data: [] as OfferMeta[] }),
+          ])
+          ticketRows = (tixRes.data || []) as typeof ticketRows
+          extraOfferMeta = (metaRes.data || []) as OfferMeta[]
+        }
+
+        const revByOffer = new Map<string, { count: number; usd: number }>()
+        for (const t of ticketRows) {
+          const prev = revByOffer.get(t.offer_id) ?? { count: 0, usd: 0 }
+          revByOffer.set(t.offer_id, {
+            count: prev.count + 1,
+            usd: prev.usd + Number(t.price_usd ?? 0),
+          })
+        }
+        const offerMetaById = new Map<string, OfferMeta>()
+        for (const o of [...myOffers, ...extraOfferMeta]) offerMetaById.set(o.id, o)
+
+        // Aggregate share_sales by offer_id.
+        const investorPctByOffer = new Map<string, number>()
+        for (const s of shareSales) {
+          const prev = investorPctByOffer.get(s.offer_id) ?? 0
+          investorPctByOffer.set(s.offer_id, prev + Number(s.percent_bought ?? 0))
+        }
+
+        const positions: WalletData['royalties']['positions'] = []
+        for (const id of positionOfferIds) {
+          const meta = offerMetaById.get(id)
+          if (!meta) continue
+          const rev = revByOffer.get(id) ?? { count: 0, usd: 0 }
+          const isCommissioner = myOffers.some((o) => o.id === id)
+          const investorPct = investorPctByOffer.get(id) ?? 0
+
+          if (isCommissioner) {
+            const pct = Number(meta.commissioner_percent ?? 99)
+            positions.push({
+              offerId: id,
+              title: meta.title,
+              tokenTicker: meta.token_ticker,
+              tier: meta.tier,
+              sharePercent: pct,
+              source: 'commission',
+              ticketCount: rev.count,
+              ticketRevenueUsd: rev.usd,
+              accruedUsd: rev.usd * (pct / 100),
+            })
+          }
+          if (investorPct > 0) {
+            positions.push({
+              offerId: id,
+              title: meta.title,
+              tokenTicker: meta.token_ticker,
+              tier: meta.tier,
+              sharePercent: investorPct,
+              source: 'investor',
+              ticketCount: rev.count,
+              ticketRevenueUsd: rev.usd,
+              accruedUsd: rev.usd * (investorPct / 100),
+            })
+          }
+        }
+
+        const totalAccruedUsd = positions.reduce((s, p) => s + p.accruedUsd, 0)
+
+        type WithdrawalRow = {
+          id: number
+          amount_usd: number
+          mnee_address: string
+          status: string
+          settle_txid: string | null
+          requested_at: string
+          settled_at: string | null
+        }
+        const withdrawals = (withdrawalsRes.data || []) as WithdrawalRow[]
+        const drawnUsd = withdrawals
+          .filter((w) => w.status === 'pending' || w.status === 'sent')
+          .reduce((s, w) => s + Number(w.amount_usd ?? 0), 0)
+        const availableUsd = Math.max(0, Math.round((totalAccruedUsd - drawnUsd) * 100) / 100)
+
         setWalletData({
           kycVerified: kycRes.data?.status === 'verified',
           platformTokens: (holdingsRes.data?.tokens_held as number) ?? 0,
@@ -1299,6 +1458,21 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           studios: studiosWithCounts,
           agents: agents.map(({ owner_account_id: _, ...a }) => a),
           transactions: (txRes.data || []) as WalletData['transactions'],
+          royalties: {
+            totalAccruedUsd,
+            totalDrawnUsd: drawnUsd,
+            availableUsd,
+            positions: positions.sort((a, b) => b.accruedUsd - a.accruedUsd),
+            history: withdrawals.map((w) => ({
+              id: w.id,
+              amountUsd: Number(w.amount_usd),
+              mneeAddress: w.mnee_address,
+              status: w.status,
+              settleTxid: w.settle_txid,
+              requestedAt: w.requested_at,
+              settledAt: w.settled_at,
+            })),
+          },
         })
       } catch (err) {
         console.error('[wallet-tab] load error:', err)
@@ -1312,6 +1486,13 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           studios: [],
           agents: [],
           transactions: [],
+          royalties: {
+            totalAccruedUsd: 0,
+            totalDrawnUsd: 0,
+            availableUsd: 0,
+            positions: [],
+            history: [],
+          },
         })
       } finally {
         if (!cancelled) setWalletLoading(false)
@@ -1408,21 +1589,37 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               try {
                 const { connectBsvDesktop } = await import('@/lib/brc100')
                 const status = await connectBsvDesktop()
-                if (status.connected) {
-                  // Connected — reload to show wallet state
-
+                if (status.connected && status.address) {
+                  // Persist the connection on the Supabase user so the
+                  // wallet UI survives refresh and the rest of the app
+                  // (captable, marketplace, withdraw) can key off it.
+                  const { error: updErr } = await bmovies.auth.updateUser({
+                    data: {
+                      brc100_address: status.address,
+                      brc100_provider: status.provider ?? 'metanet',
+                      brc100_pubkey: status.publicKey ?? null,
+                      brc100_connected_at: new Date().toISOString(),
+                    },
+                  })
+                  if (updErr) {
+                    console.warn('[wallet] connected but failed to persist:', updErr)
+                  }
                   window.location.reload()
                 } else {
                   const msg = status.error || 'BSV Desktop not detected.'
-                  if (confirm(msg + '\n\nBSV Desktop must be running and unlocked on your machine.\n\nDownload it now?')) {
-                    window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
-                  }
+                  // Show the ACTUAL failure reason, not a generic message.
+                  alert(
+                    'BSV Desktop connect failed:\n\n' + msg +
+                    '\n\nChecks:\n' +
+                    '  • BSV Desktop is running and unlocked\n' +
+                    '  • It\'s listening on http://127.0.0.1:3321\n' +
+                    '  • No browser extension is blocking localhost',
+                  )
                 }
               } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err)
                 console.error('[wallet] BSV Desktop connect error:', err)
-                if (confirm('Could not connect to BSV Desktop.\n\nMake sure the app is running and unlocked, then try again.\n\nDownload BSV Desktop?')) {
-                  window.open('https://github.com/bsv-blockchain/bsv-desktop/releases/latest', '_blank')
-                }
+                alert('BSV Desktop connect threw:\n\n' + msg)
               }
             }}
             className="w-full flex items-center gap-4 p-4 border border-[#E50914] bg-[#111] hover:bg-[#1a0003] transition-colors cursor-pointer mb-3 text-left"
@@ -1493,6 +1690,13 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           />
         </div>
       )}
+
+      {/* Royalties — what the wallet is actually for */}
+      <RoyaltiesSection
+        walletLoading={walletLoading}
+        royalties={walletData?.royalties}
+        kycVerified={Boolean(walletData?.kycVerified)}
+      />
 
       {/* Holdings list */}
       <div className="mb-8">
@@ -3474,4 +3678,365 @@ function statusColor(status: string): { bg: string; text: string } {
     default:
       return { bg: '#1a1a1a', text: '#666' }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  ROYALTIES SECTION — the money view
+ *  ═══════════════════════════════════════════════════════════════════════
+ *
+ *  Shows every royalty-bearing position the user holds (commissioned
+ *  films at 99%, plus any share_sales tranches they've bought), the
+ *  accrued $ per position, the total available balance, and a
+ *  "Withdraw in $MNEE" action that records a payout request.
+ */
+
+function fmtUsd(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '$0.00'
+  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function RoyaltiesSection({
+  walletLoading,
+  royalties,
+  kycVerified,
+}: {
+  walletLoading: boolean
+  royalties: WalletData['royalties'] | undefined
+  kycVerified: boolean
+}) {
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+
+  return (
+    <div className="mb-10">
+      <div className="flex items-end justify-between mb-4">
+        <h2 className="text-2xl font-black leading-none" style={{ fontFamily: 'var(--font-bebas)' }}>
+          Royalties
+        </h2>
+        <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold">
+          Paid in <span className="text-[#6bff8a]">$MNEE</span>
+        </div>
+      </div>
+
+      {walletLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-pulse mb-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="h-2 w-16 bg-[#1a1a1a] mb-3" />
+              <div className="h-7 w-24 bg-[#151515]" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Summary row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+                Accrued total
+              </div>
+              <div className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+                {fmtUsd(royalties?.totalAccruedUsd ?? 0)}
+              </div>
+            </div>
+            <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+                Already drawn
+              </div>
+              <div className="text-3xl font-black leading-none text-[#888]" style={{ fontFamily: 'var(--font-bebas)' }}>
+                {fmtUsd(royalties?.totalDrawnUsd ?? 0)}
+              </div>
+            </div>
+            <div className={`border p-5 ${(royalties?.availableUsd ?? 0) > 0 ? 'border-[#6bff8a] bg-[#02120a]' : 'border-[#1a1a1a] bg-[#0a0a0a]'}`}>
+              <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+                Available to withdraw
+              </div>
+              <div
+                className={`text-3xl font-black leading-none ${(royalties?.availableUsd ?? 0) > 0 ? 'text-[#6bff8a]' : 'text-[#444]'}`}
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                {fmtUsd(royalties?.availableUsd ?? 0)}
+              </div>
+              <button
+                onClick={() => {
+                  if (!kycVerified) {
+                    alert('KYC verification required before withdrawing royalties.')
+                    return
+                  }
+                  if ((royalties?.availableUsd ?? 0) <= 0) {
+                    alert('No royalties available to withdraw yet. Royalties accrue from ticket sales on your films.')
+                    return
+                  }
+                  setWithdrawOpen(true)
+                }}
+                className={`mt-3 text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 ${
+                  (royalties?.availableUsd ?? 0) > 0 && kycVerified
+                    ? 'bg-[#6bff8a] text-black hover:bg-[#90ffa8]'
+                    : 'bg-[#1a1a1a] text-[#555] cursor-not-allowed'
+                }`}
+                disabled={(royalties?.availableUsd ?? 0) <= 0 || !kycVerified}
+              >
+                Withdraw in $MNEE →
+              </button>
+            </div>
+          </div>
+
+          {/* Positions table */}
+          {(royalties?.positions.length ?? 0) === 0 ? (
+            <div className="border border-dashed border-[#222] bg-[#050505] p-6 text-center">
+              <div className="text-[#666] text-sm mb-2">
+                No royalty positions yet
+              </div>
+              <div className="text-[#444] text-xs mb-3">
+                Commission a film or buy shares on the marketplace to start earning.
+              </div>
+              <div className="flex gap-2 justify-center flex-wrap">
+                <a
+                  href="/commission.html"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
+                >
+                  Commission a film
+                </a>
+                <a
+                  href="/marketplace.html"
+                  className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#E50914] text-[#E50914] hover:bg-[#1a0003]"
+                >
+                  Buy shares
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-[#1a1a1a] text-[0.55rem] uppercase tracking-[0.14em] text-[#666] font-bold">
+                <div>Film</div>
+                <div className="text-right">Share</div>
+                <div className="text-right">Tickets</div>
+                <div className="text-right">Accrued</div>
+                <div></div>
+              </div>
+              {royalties!.positions.map((p, i) => (
+                <div
+                  key={`${p.offerId}-${p.source}-${i}`}
+                  className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3 border-b border-[#111] last:border-b-0 items-center"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-white font-black text-sm" style={{ fontFamily: 'var(--font-bebas)' }}>
+                        ${p.tokenTicker}
+                      </span>
+                      <span className="text-[0.55rem] uppercase tracking-wider font-bold text-[#888]">
+                        {p.tier}
+                      </span>
+                      <span className={`text-[0.55rem] uppercase tracking-wider font-bold px-1.5 py-0.5 ${
+                        p.source === 'commission' ? 'bg-[#1a0003] text-[#E50914]' : 'bg-[#0a1a3a] text-[#66aaff]'
+                      }`}>
+                        {p.source === 'commission' ? 'Commissioner' : 'Investor'}
+                      </span>
+                    </div>
+                    <div className="text-[#888] text-xs truncate">&quot;{p.title}&quot;</div>
+                  </div>
+                  <div className="text-right text-white text-sm font-bold tabular-nums">
+                    {p.sharePercent.toFixed(2)}%
+                  </div>
+                  <div className="text-right text-[#888] text-xs tabular-nums">
+                    {p.ticketCount} / {fmtUsd(p.ticketRevenueUsd)}
+                  </div>
+                  <div className={`text-right text-sm font-bold tabular-nums ${p.accruedUsd > 0 ? 'text-[#6bff8a]' : 'text-[#555]'}`}>
+                    {fmtUsd(p.accruedUsd)}
+                  </div>
+                  <div className="flex gap-2">
+                    <a
+                      href={`/captable.html?id=${encodeURIComponent(p.offerId)}`}
+                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                    >
+                      List
+                    </a>
+                    <a
+                      href={`/marketplace.html?offer=${encodeURIComponent(p.offerId)}`}
+                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#666] hover:text-white"
+                    >
+                      Trade
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Withdrawal history */}
+          {(royalties?.history.length ?? 0) > 0 && (
+            <div className="mt-6">
+              <h3 className="text-[0.65rem] uppercase tracking-[0.18em] text-[#888] font-bold mb-2">
+                Withdrawal history
+              </h3>
+              <div className="border border-[#1a1a1a] bg-[#0a0a0a]">
+                {royalties!.history.map((h) => (
+                  <div
+                    key={h.id}
+                    className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3 px-4 py-2 border-b border-[#111] last:border-b-0 items-center text-xs"
+                  >
+                    <div className="text-[#888] tabular-nums">
+                      {new Date(h.requestedAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-white font-bold tabular-nums">{fmtUsd(h.amountUsd)}</div>
+                    <div className="text-[#666] font-mono text-[0.65rem] truncate" title={h.mneeAddress}>
+                      {h.mneeAddress.slice(0, 10)}…{h.mneeAddress.slice(-4)}
+                    </div>
+                    <div className="text-right">
+                      {h.status === 'sent' ? (
+                        <span className="text-[0.55rem] uppercase font-bold text-[#6bff8a]">Sent</span>
+                      ) : h.status === 'pending' ? (
+                        <span className="text-[0.55rem] uppercase font-bold text-[#ffd700]">Pending</span>
+                      ) : h.status === 'failed' ? (
+                        <span className="text-[0.55rem] uppercase font-bold text-[#ff6b7a]">Failed</span>
+                      ) : (
+                        <span className="text-[0.55rem] uppercase font-bold text-[#666]">{h.status}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {withdrawOpen && (
+        <WithdrawModal
+          availableUsd={royalties?.availableUsd ?? 0}
+          onClose={() => setWithdrawOpen(false)}
+          onSubmitted={() => {
+            setWithdrawOpen(false)
+            window.location.reload()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function WithdrawModal({
+  availableUsd,
+  onClose,
+  onSubmitted,
+}: {
+  availableUsd: number
+  onClose: () => void
+  onSubmitted: () => void
+}) {
+  const [amount, setAmount] = useState(availableUsd.toFixed(2))
+  const [address, setAddress] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setError(null)
+    const amountNum = Number(amount)
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      setError('Enter a valid amount')
+      return
+    }
+    if (amountNum > availableUsd) {
+      setError(`Amount exceeds available balance (${fmtUsd(availableUsd)})`)
+      return
+    }
+    if (!/^[13][1-9A-HJ-NP-Za-km-z]{25,39}$/.test(address.trim())) {
+      setError('Enter a valid BSV/MNEE address')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const { data: session } = await bmovies.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) {
+        setError('Not signed in')
+        setSubmitting(false)
+        return
+      }
+      const res = await fetch('/api/royalty/withdraw', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amountUsd: amountNum, mneeAddress: address.trim() }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        setError(body?.error || `HTTP ${res.status}`)
+        setSubmitting(false)
+        return
+      }
+      onSubmitted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0a0a0a] border border-[#6bff8a] max-w-md w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-xl font-black text-white mb-1" style={{ fontFamily: 'var(--font-bebas)' }}>
+          Withdraw in $MNEE
+        </h3>
+        <p className="text-xs text-[#888] mb-4">
+          $MNEE is a USD-pegged stablecoin on BSV. Enter your MNEE receiving address and the amount.
+          Available: <span className="text-[#6bff8a] font-bold">{fmtUsd(availableUsd)}</span>
+        </p>
+
+        <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+          Amount (USD)
+        </label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full bg-[#111] border border-[#222] text-white px-3 py-2 mb-4 font-mono focus:outline-none focus:border-[#6bff8a]"
+        />
+
+        <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+          MNEE receiving address
+        </label>
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="1..."
+          className="w-full bg-[#111] border border-[#222] text-white px-3 py-2 mb-4 font-mono text-xs focus:outline-none focus:border-[#6bff8a]"
+        />
+
+        {error && (
+          <div className="mb-4 p-2 border border-[#5a1a1a] bg-[#3a0e0e] text-[#ff6b7a] text-xs">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 border border-[#333] text-[#888] hover:bg-[#151515]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#6bff8a] hover:bg-[#90ffa8] text-black disabled:opacity-50"
+          >
+            {submitting ? 'Requesting…' : 'Request withdrawal →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
