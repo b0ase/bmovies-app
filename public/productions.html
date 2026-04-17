@@ -434,7 +434,11 @@
       //   3. role='storyboard' artifact with a non-ephemeral URL
       //   4. any other image / video, non-ephemeral
       //   5. ephemeral (xAI temp) poster — last resort, may be dead
-      const posterMap = POSTER_MAP[(title || '').toLowerCase()];
+      // Normalize title so cosmetic edits (eg trailing "!") don't
+      // drop the static JPG override. Falls back to the raw lowercased
+      // key for older entries that may have embedded punctuation.
+      const posterKey = (title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+      const posterMap = POSTER_MAP[posterKey] || POSTER_MAP[(title || '').toLowerCase()];
       if (posterMap) return { url: posterMap, kind: 'image', model: 'poster', payment_txid: null };
       const liveArts = arts.filter((a) => !isEphemeralUrl(a.url));
       const posterArt = liveArts.find((a) => a.role === 'poster' && a.kind === 'image');

@@ -991,7 +991,16 @@
       const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
       const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
       const writer = rawArts.find(a => a.role === 'writer' && a.kind === 'text');
-      const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
+      // Normalize the title for POSTER_MAP lookup — strip trailing
+       // punctuation (!?.) and collapse whitespace so a cosmetic edit
+       // (eg adding "!" to the title) doesn't silently drop the
+       // commissioner-curated static JPG override. The map keys are
+       // stored bare: "that weirdo isn't satoshi".
+      const posterKey = (offer.title || '')
+        .toLowerCase()
+        .replace(/[!?.]+$/, '')
+        .trim();
+      const posterUrl = POSTER_MAP[posterKey] || POSTER_MAP[(offer.title || '').toLowerCase()];
       // Priority: POSTER_MAP override (commissioner-curated static JPG,
       // always permanent) → non-ephemeral poster artifact → non-ephemeral
       // storyboard frame. POSTER_MAP wins because anything in the DB
