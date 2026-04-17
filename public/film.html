@@ -1163,9 +1163,23 @@
             </div>`
           : '';
 
+        // Hero backdrop: if the offer has video clips, use the first
+        // one as a muted looping background behind the copy so the
+        // page feels cinematic even before the user scrolls to the
+        // trailer. Static poster still renders underneath as an
+        // instant-paint fallback until the video's first frame arrives.
+        const heroVideoClips = arts.filter(a => a.kind === 'video');
+        const heroBgVideoUrl = heroVideoClips[0]?.url || '';
+        // Store all hero clip URLs on window so wireHeroBackground
+        // below can crossfade through them.
+        window._heroBgClips = heroVideoClips.map(v => v.url);
+
         root.innerHTML = `
           <div class="film-hero">
             <div class="bg" style="${heroImage ? `background-image:url('${esc(heroImage)}')` : ''}"></div>
+            ${heroBgVideoUrl
+              ? `<video class="bg-video" id="hero-bg-video" muted loop playsinline autoplay preload="metadata" src="${esc(heroBgVideoUrl)}"></video>`
+              : ''}
             <div class="vignette"></div>
             <div class="content">
               <div class="poster">
@@ -1357,15 +1371,31 @@
               ${videoClips.length > 1 ? `<p class="trailer-sub">Plays through every clip back-to-back. Tap a thumbnail to jump to a specific shot.</p>` : ''}
             </div>
             <div class="trailer-player">
-              <video controls autoplay muted playsinline
+              <!-- No autoplay: the PLAY gate below takes the user's
+                   gesture and starts video + music + VO in lockstep,
+                   which is the only way to get audio through browser
+                   autoplay policies reliably. preload=metadata paints
+                   the first frame so the gate doesn't sit on black. -->
+              <video muted playsinline
                 id="main-video"
+                preload="metadata"
                 src="${esc(videoClips[0].url)}"></video>
               <div class="trailer-overlay" id="trailer-overlay">
                 <div class="tint"></div>
               </div>
-              <button type="button" class="trailer-sound-toggle" id="trailer-sound-toggle" aria-label="Toggle trailer audio">
-                <span id="trailer-sound-icon">🔇</span>
-                <span id="trailer-sound-label">Sound off</span>
+              <!-- PLAY / REPLAY gate -->
+              <div class="trailer-play-gate" id="trailer-play-gate" role="button" tabindex="0" aria-label="Play trailer">
+                <button type="button" class="play-button" id="trailer-play-button">
+                  <span class="glyph">▶</span>
+                  <span id="trailer-play-label">Play trailer</span>
+                </button>
+                <div class="hint" id="trailer-play-hint">
+                  ~32s · sound on · plays once
+                </div>
+              </div>
+              <button type="button" class="trailer-sound-toggle" id="trailer-sound-toggle" aria-label="Toggle trailer audio" style="display:none;">
+                <span id="trailer-sound-icon">🔊</span>
+                <span id="trailer-sound-label">Sound on</span>
               </button>
               ${videoClips.length > 1 ? `
                 <div id="main-video-counter" class="trailer-counter">
@@ -1445,11 +1475,13 @@
       target.innerHTML = html;
       target.style.display = 'block';
 
-      // Wire sequential video playback — plays through all clips in order,
-      // fading between them, and loops back to clip 1 after the last.
+      // Wire sequential video playback — plays through all clips in
+      // order, fading between them, and STOPS after the final clip
+      // (the PLAY gate then reappears as a REPLAY button so the user
+      // can watch again deliberately).
       (function wireSequentialPlayer() {
         const clips = window._trailerClips || [];
-        if (clips.length < 2) return; // single clip already plays fine
+        if (clips.length < 2) return;  // single clip plays fine on its own
         const player = document.getElementById('main-video');
         const idxEl = document.getElementById('main-video-idx');
         const thumbContainer = document.getElementById('main-video-thumbs');
@@ -1458,32 +1490,36 @@
 
         function highlightThumb(idx) {
           if (!thumbContainer) return;
-          // Styling lives in CSS on the .trailer-thumb.active class.
           thumbContainer.querySelectorAll('button[data-clip-idx]').forEach((btn, j) => {
             btn.classList.toggle('active', j === idx);
           });
         }
 
-        function loadClip(idx) {
+        function loadClip(idx, { autoplay = true } = {}) {
           current = idx;
-          // Fade out
           player.style.opacity = '0';
           setTimeout(() => {
             player.src = clips[idx];
-            player.play().catch(() => {});
+            if (autoplay) player.play().catch(() => {});
             if (idxEl) idxEl.textContent = String(idx + 1);
             highlightThumb(idx);
-            // Fade in
             player.style.opacity = '1';
           }, 300);
         }
 
         player.addEventListener('ended', () => {
-          const next = (current + 1) % clips.length;
-          loadClip(next);
+          if (current < clips.length - 1) {
+            loadClip(current + 1);
+          } else {
+            // Final clip finished. Stop playback, show the REPLAY gate,
+            // and let wireCompositor's "onTrailerStop" hook pause music
+            // and VO so the page goes clean-silent instead of holding
+            // on a paused-with-music state.
+            player.pause();
+            window._onTrailerStop?.();
+          }
         });
 
-        // Manual thumb clicks
         if (thumbContainer) {
           thumbContainer.querySelectorAll('button[data-clip-idx]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1492,6 +1528,10 @@
             });
           });
         }
+
+        // Expose loadClip so the compositor can reset to clip 0 when
+        // the PLAY gate is pressed (or the user hits REPLAY).
+        window._trailerLoadClip = loadClip;
       })();
 
       // ─── Post-production compositor ───
@@ -1631,38 +1671,75 @@
         }
         updateSoundButton();
 
-        // Try autoplay-with-sound on first video play event. If the
-        // browser allows it (because the user clicked through from
-        // elsewhere, giving us engagement credit) we just… start.
-        // If rejected, the prompt pill stays big and centred until
-        // the user clicks it.
-        let autoplayAttempted = false;
-        async function attemptAutoplay() {
-          if (autoplayAttempted || !hasAudioTracks) return;
-          autoplayAttempted = true;
+        // ─── PLAY gate ───
+        //
+        // The big red PLAY button is now the single entry point for
+        // the trailer: clicking it starts video + music + VO in one
+        // gesture, which is the only way to get audio through browser
+        // autoplay policies reliably. Nothing plays before this click.
+        const playGate = document.getElementById('trailer-play-gate');
+        const playBtn  = document.getElementById('trailer-play-button');
+        const playLabel = document.getElementById('trailer-play-label');
+        const playHint  = document.getElementById('trailer-play-hint');
+
+        async function startTrailer() {
+          // Rewind everything to the start. When called from the REPLAY
+          // button (after a full playthrough) the video is paused on the
+          // last clip; reset to clip 0 so the next run plays from the top.
           try {
-            const plays = [];
-            if (musicEl.src) { musicEl.muted = false; musicEl.volume = 0.35; plays.push(musicEl.play()); }
-            if (voEl.src)    { voEl.muted    = false; voEl.volume    = 1.0;  plays.push(voEl.play()); }
-            await Promise.all(plays);
-            soundOn = true;
-            updateSoundButton();
-          } catch {
-            // Autoplay rejected — reset tracks to silent and keep the
-            // prompt pill visible. The click handler below will do the
-            // second attempt with full user engagement.
-            soundOn = false;
-            if (musicEl) { musicEl.muted = true; musicEl.volume = 0; musicEl.pause(); }
-            if (voEl)    { voEl.muted    = true; voEl.volume    = 0; voEl.pause(); }
-            updateSoundButton();
+            if (window._trailerLoadClip) {
+              window._trailerLoadClip(0, { autoplay: false });
+            } else {
+              player.src = clips[0] || player.src;
+            }
+            player.currentTime = 0;
+            if (musicEl && musicEl.src) {
+              musicEl.muted = false;
+              musicEl.volume = 0.35;
+              musicEl.currentTime = 0;
+            }
+            if (voEl && voEl.src) {
+              voEl.muted = false;
+              voEl.volume = 1.0;
+              voEl.currentTime = 0;
+            }
+            // Dismiss the gate BEFORE .play() calls resolve — the click
+            // event is still in-flight so autoplay-with-sound is allowed.
+            playGate?.classList.add('hidden');
+            soundOn = hasAudioTracks;
+            const plays = [ player.play() ];
+            if (musicEl?.src) plays.push(musicEl.play());
+            if (voEl?.src)    plays.push(voEl.play());
+            await Promise.allSettled(plays);
+          } catch (err) {
+            console.warn('[compositor] start trailer failed:', err);
           }
         }
-        player.addEventListener('play', attemptAutoplay);
-        // Also try on first document interaction — covers the case
-        // where the video was already playing when the compositor
-        // mounted.
-        document.addEventListener('click', attemptAutoplay, { once: true, capture: true });
 
+        // When the trailer finishes its final clip, wireSequentialPlayer
+        // pauses the video and calls this hook. We pause music + VO so
+        // the page falls silent, then repaint the gate as a REPLAY
+        // button so the viewer can rerun it.
+        window._onTrailerStop = () => {
+          soundOn = false;
+          if (musicEl) musicEl.pause();
+          if (voEl)    voEl.pause();
+          if (playLabel) playLabel.textContent = 'Replay';
+          if (playHint)  playHint.textContent  = 'plays once · click to watch again';
+          if (playGate)  playGate.classList.remove('hidden');
+        };
+
+        playGate?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          startTrailer();
+        });
+        playGate?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startTrailer(); }
+        });
+
+        // The sound pill is a secondary control — hidden by default in
+        // the new PLAY-gate flow, but left wired up so power users (or
+        // ambient-video contexts) can still toggle.
         soundBtn?.addEventListener('click', (e) => {
           e.stopPropagation();
           soundOn = !soundOn;
@@ -1712,20 +1789,38 @@
           if (soundOn) syncSound();
         });
 
-        // When the trailer loops back to clip 1 (after all clips played),
-        // restart the music bed but NOT the VO narration. Voiceover is
-        // a one-shot script — starting it on every loop makes the
-        // narrator repeat themselves over the returning music. The
-        // music bed is built to loop; the VO is not.
-        player.addEventListener('ended', () => {
+        // (No loop handler here — the sequential player stops after
+        // clip 4 and calls window._onTrailerStop, which pauses music
+        // + VO and shows the REPLAY gate above. Music and VO do not
+        // loop with the video any more.)
+      })();
+
+      // ─── Hero background crossfade ───
+      //
+      // If the offer has video artifacts, the hero renders a single
+      // <video class="bg-video"> behind the copy. This block swaps the
+      // src every ~7s so the backdrop cycles through the whole trailer
+      // reel rather than freezing on clip 1. Crossfade happens via
+      // CSS opacity transition + a brief paired-element swap to avoid
+      // the flicker you get when you reassign a playing <video>.src.
+      (function wireHeroBackground() {
+        const clips = window._heroBgClips || [];
+        if (clips.length < 2) return;
+        const el = document.getElementById('hero-bg-video');
+        if (!el) return;
+        el.classList.add('active');
+        let i = 0;
+        // Hold each clip for ~7s of visible playback; the clip itself
+        // is ~8s so we swap shortly before it naturally ends.
+        setInterval(() => {
+          i = (i + 1) % clips.length;
+          el.style.opacity = '0';
           setTimeout(() => {
-            const idx = currentClipIndex();
-            if (idx === 0 && musicEl) {
-              musicEl.currentTime = 0;
-              if (soundOn) musicEl.play().catch(() => {});
-            }
-          }, 350);
-        });
+            el.src = clips[i];
+            el.play().catch(() => {});
+            el.style.opacity = '';
+          }, 450);
+        }, 7000);
       })();
 
       // Wire storyboard modal
