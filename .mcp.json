@@ -1,30 +1,11 @@
 {
   "mcpServers": {
-    "npgx": {
+    "bmovies": {
       "command": "npx",
-      "args": ["tsx", "mcp/npgx-server.ts"],
-      "cwd": "/Volumes/2026/Projects/npgx",
+      "args": ["tsx", "mcp/bmovies-server.ts"],
+      "cwd": "/Volumes/2026/Projects/bmovies-app",
       "env": {
-        "NPGX_BASE_URL": "http://localhost:3000"
-      }
-    },
-    "music-gen": {
-      "command": "node",
-      "args": ["/Volumes/2026/Projects/mcp-music-server/dist/index.js"],
-      "env": {
-        "WAVESPEED_API_KEY": "${WAVESPEED_API_KEY}",
-        "REPLICATE_API_TOKEN": "${REPLICATE_API_TOKEN}",
-        "AIML_API_KEY": "${AIML_API_KEY}"
-      }
-    },
-    "openclaw": {
-      "command": "npx",
-      "args": ["tsx", "mcp/openclaw-agent.ts"],
-      "cwd": "/Volumes/2026/Projects/npgx",
-      "env": {
-        "NPGX_BASE_URL": "http://localhost:3000",
-        "CLAWMINER_URL": "http://127.0.0.1:8402",
-        "CLAWDEX_URL": "https://claw-dex.com"
+        "BMOVIES_BASE_URL": "http://localhost:3100"
       }
     }
   }

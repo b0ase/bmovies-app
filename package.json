@@ -8,7 +8,12 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "next lint",
-    "kill-port": "lsof -ti:3100 | xargs kill -9 2>/dev/null || true"
+    "kill-port": "lsof -ti:3100 | xargs kill -9 2>/dev/null || true",
+    "cli": "tsx bin/bmovies.ts",
+    "mcp": "tsx mcp/bmovies-server.ts"
+  },
+  "bin": {
+    "bmovies": "./bin/bmovies"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

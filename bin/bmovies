@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# bMovies CLI shim — forwards to bin/bmovies.ts via tsx.
+# Works from any working directory; resolves the TS entrypoint
+# relative to this shell script's own location.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec npx tsx "$DIR/bmovies.ts" "$@"
