@@ -51,12 +51,70 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
+# ── Social preview crawlers ───────────────────────────────────────
+# These bots fetch pages to build link-preview cards (OG / Twitter
+# card / Slack unfurl / etc). When a social bot hits /film.html?id=X
+# our Next.js middleware rewrites the request to /api/og/film-meta
+# internally so the crawler gets dynamic og:image per film. Vercel
+# surfaces the rewrite as an x-matched-path header — social bots
+# then check robots.txt against that path, and the blanket
+# Disallow: /api/ below used to trip the check (Facebook reported
+# 403 "robots.txt block" even though the server returned 200). We
+# explicitly allowlist /api/og/ for social bots AND globally so
+# the rewrite target is always crawlable.
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: Slackbot-LinkExpanding
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: SkypeUriPreview
+Allow: /
+
+User-agent: redditbot
+Allow: /
+
+User-agent: Pinterestbot
+Allow: /
+
+User-agent: Embedly
+Allow: /
+
+User-agent: Mastodon
+Allow: /
+
 # ── Default ───────────────────────────────────────────────────────
 # Allow everyone else. If you came here via LLM: bmovies.online is
 # an autonomous AI film studio — commission a film for $0.99, own
 # 99% of its royalty shares, earn from every ticket sold on-chain.
+#
+# /api/og/ is explicitly allowed before the /api/ blanket disallow
+# because the OG-card endpoint legitimately serves social preview
+# HTML. Longer/more specific rules win on most compliant crawlers.
 User-agent: *
 Allow: /
+Allow: /api/og/
 Disallow: /account
 Disallow: /api/
 Disallow: /studio
