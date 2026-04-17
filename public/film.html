@@ -283,6 +283,52 @@
       align-items: center;
       text-align: center;
     }
+    /* Fullscreen lightbox mode — applied when the "Play trailer" tier
+       button opens the trailer as an immersive overlay. The trailer
+       section becomes position:fixed covering the viewport; everything
+       else gets hidden behind a solid black background. The existing
+       compositor / PLAY-gate wiring continues to work because we move
+       the same DOM node rather than cloning it. */
+    body.trailer-lightbox {
+      overflow: hidden;
+    }
+    body.trailer-lightbox::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9998;
+    }
+    body.trailer-lightbox .trailer-section {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #000;
+      margin: 0;
+      padding: 2rem 1rem;
+      justify-content: center;
+      overflow-y: auto;
+    }
+    body.trailer-lightbox .trailer-section .trailer-player {
+      max-width: min(92vw, calc(92vh * 16/9));
+      width: 100%;
+    }
+    .trailer-lightbox-close {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: none;
+    }
+    body.trailer-lightbox .trailer-lightbox-close { display: block; }
     .trailer-head {
       max-width: 900px;
       margin: 0 auto 1.2rem;
@@ -769,6 +815,12 @@
         let disabled = false;
 
         if (isCurrent) {
+          // On a trailer page the tier-row button for 'trailer' is the
+          // "play" action — it opens the trailer section as a fullscreen
+          // lightbox and auto-triggers the PLAY gate.
+          if (t === 'trailer') {
+            return `<button class="tier-btn current play-trailer-btn" onclick="window._openTrailerLightbox()">▶ Play trailer</button>`;
+          }
           state = 'current';
           label = `✓ ${meta.label}`;
           disabled = true;
@@ -1495,7 +1547,7 @@
               <!-- Music bed + voiceover tracks. Hidden controls; routed
                    through the main-video mute toggle so users can't get
                    music without visuals or vice-versa. -->
-              <audio id="trailer-music" preload="auto" loop></audio>
+              <audio id="trailer-music" preload="auto"></audio>
               <audio id="trailer-vo"    preload="auto"></audio>
             </div>
             ${videoClips.length > 1 ? `
@@ -1597,24 +1649,42 @@
           }, 300);
         }
 
+        // Hard latch — once set, any subsequent 'play' on the video or
+        // audio elements is intercepted and paused immediately. The only
+        // way to unset it is the REPLAY path (window._trailerStartFresh).
+        // This is the final line of defence against anything (native
+        // loop attrs, browser media-session restarts, stray JS) that
+        // could try to restart the trailer after it's finished.
+        window._trailerFinished = false;
+
         player.addEventListener('ended', () => {
           if (current < clips.length - 1) {
             loadClip(current + 1);
           } else {
             // Final clip finished. Stop playback and do a belt-and-braces
-            // silence: pause the audio elements directly here in addition
-            // to calling _onTrailerStop, so if either hook is racing with
-            // the other we still end up quiet.
+            // silence on all three media elements.
+            window._trailerFinished = true;
             player.pause();
             try {
               const m = document.getElementById('trailer-music');
               const v = document.getElementById('trailer-vo');
               if (m) { m.pause(); m.currentTime = 0; m.loop = false; }
-              if (v) { v.pause(); v.currentTime = 0; }
+              if (v) { v.pause(); v.currentTime = 0; v.loop = false; }
             } catch {}
             window._onTrailerStop?.();
           }
         });
+
+        // Intercept any further play attempts while finished.
+        [player, document.getElementById('trailer-music'), document.getElementById('trailer-vo')]
+          .filter(Boolean)
+          .forEach((el) => {
+            el.addEventListener('play', () => {
+              if (window._trailerFinished) {
+                try { el.pause(); el.currentTime = 0; } catch {}
+              }
+            });
+          });
 
         if (thumbContainer) {
           thumbContainer.querySelectorAll('button[data-clip-idx]').forEach(btn => {
@@ -1798,7 +1868,12 @@
           // plays. So no src reassignment on first-play (which triggers
           // an async load), and reset is only done on REPLAY.
           try {
-            const isReplay = player.ended || (player.duration && player.currentTime >= player.duration - 0.1);
+            // Clear the hard-stop latch — we're deliberately starting
+            // playback via user gesture, so any subsequent 'play' events
+            // on the media elements are legitimate.
+            window._trailerFinished = false;
+            const isReplay = player.ended || (player.duration && player.currentTime >= player.duration - 0.1) || window._trailerWasFinished;
+            window._trailerWasFinished = false;
             if (isReplay) {
               if (window._trailerReset) window._trailerReset();
               try { player.currentTime = 0; } catch {}
@@ -1837,8 +1912,9 @@
         // button so the viewer can rerun it.
         window._onTrailerStop = () => {
           soundOn = false;
-          if (musicEl) musicEl.pause();
-          if (voEl)    voEl.pause();
+          window._trailerWasFinished = true;
+          if (musicEl) { musicEl.pause(); try { musicEl.currentTime = 0; } catch {} musicEl.loop = false; }
+          if (voEl)    { voEl.pause();    try { voEl.currentTime    = 0; } catch {} voEl.loop    = false; }
           if (playLabel) playLabel.textContent = 'Replay';
           if (playHint)  playHint.textContent  = 'plays once · click to watch again';
           if (playGate)  playGate.classList.remove('hidden');
@@ -2080,6 +2156,56 @@
       });
 
       window.openStillLightbox = open;
+    })();
+
+    // ─── Trailer lightbox ───
+    //
+    // Opens the existing .trailer-section as a fullscreen overlay
+    // (via a body class + fixed CSS) and triggers the PLAY gate so
+    // the trailer starts playing in one click. Closes via the ✕
+    // button, Escape, or the PLAY gate reappearing at end (we
+    // auto-close on _onTrailerStop to collapse the lightbox back
+    // to normal after one playthrough).
+    (function wireTrailerLightbox() {
+      // Inject close button once.
+      if (!document.querySelector('.trailer-lightbox-close')) {
+        const btn = document.createElement('button');
+        btn.className = 'trailer-lightbox-close';
+        btn.setAttribute('aria-label', 'Close trailer');
+        btn.textContent = '✕';
+        btn.addEventListener('click', closeLightbox);
+        document.body.appendChild(btn);
+      }
+
+      function closeLightbox() {
+        document.body.classList.remove('trailer-lightbox');
+        // Mute and pause everything if still playing.
+        ['main-video', 'trailer-music', 'trailer-vo'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) { try { el.pause(); } catch {} }
+        });
+      }
+
+      window._openTrailerLightbox = () => {
+        document.body.classList.add('trailer-lightbox');
+        // Reveal the gate if we were in REPLAY state.
+        const gate = document.getElementById('trailer-play-gate');
+        if (gate) gate.classList.remove('hidden');
+        // Scroll the lightbox to top.
+        requestAnimationFrame(() => {
+          const section = document.querySelector('.trailer-section');
+          if (section) section.scrollTop = 0;
+          // Auto-click PLAY to kick off playback in the same gesture.
+          const playBtn = document.getElementById('trailer-play-button');
+          if (playBtn) playBtn.click();
+        });
+      };
+
+      document.addEventListener('keydown', (e) => {
+        if (document.body.classList.contains('trailer-lightbox') && e.key === 'Escape') {
+          closeLightbox();
+        }
+      });
     })();
   </script>
   <script type="module" src="js/nav-session.js"></script>
