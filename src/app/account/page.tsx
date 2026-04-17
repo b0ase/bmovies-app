@@ -332,7 +332,12 @@ function AccountContent() {
     if (['script', 'storyboard', 'editor', 'titles', 'score'].includes(tool)) {
       return (
         <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-8">
-          <ToolView tool={tool} projectId={projectId} projectTitle={activeFilm?.title || 'Untitled'} />
+          <ToolView
+            tool={tool}
+            projectId={projectId}
+            projectTitle={activeFilm?.title || 'Untitled'}
+            projectTier={activeFilm?.tier}
+          />
         </div>
       )
     }
@@ -1922,11 +1927,31 @@ function ProjectDocumentsView({ film }: { film: Film }) {
         }
       })
 
+      // Dedupe flat rows by step_id — the `superseded_by` filter above
+      // should normally guarantee one head version per step, but a few
+      // legacy rows slipped through without the backref populated and
+      // showed up as duplicate "Logline" (etc) rows. Keep the newest
+      // per step_id when duplicates still exist.
+      const restDeduped: ArtifactRow[] = (() => {
+        const seen = new Map<string, ArtifactRow>()
+        const keyless: ArtifactRow[] = []
+        for (const r of rest) {
+          const k = r.step_id
+          if (!k) { keyless.push(r); continue }
+          const existing = seen.get(k)
+          if (!existing) { seen.set(k, r); continue }
+          const rTs = r.created_at ? Date.parse(r.created_at) : 0
+          const eTs = existing.created_at ? Date.parse(existing.created_at) : 0
+          if (rTs > eTs) seen.set(k, r)
+        }
+        return [...seen.values(), ...keyless]
+      })()
+
       // Assemble the merged list. Text sidecars (cast_list / lookbook)
       // stay as regular text rows in `rest` so they remain directly
       // accessible — the packs are an additional way to view the
       // portraits, not a replacement for the source text.
-      const merged: ArtifactRow[] = [...rest]
+      const merged: ArtifactRow[] = [...restDeduped]
       if (storyChildren.length > 0) {
         merged.push({
           id: -1,
@@ -1980,6 +2005,9 @@ function ProjectDocumentsView({ film }: { film: Film }) {
       'writer.treatment':      'Treatment',
       'writer.beat_sheet':     'Beat sheet',
       'writer.screenplay':     'Screenplay',
+      'writer.opening_scene':  'Opening scene',
+      'writer.dialogue':       'Dialogue',
+      'writer.scene_list':     'Scene list',
       'director.vision':       "Director's vision",
       'casting.cast_list':     'Cast list',
       'production.lookbook':   'Lookbook',
@@ -2033,7 +2061,7 @@ function ProjectDocumentsView({ film }: { film: Film }) {
           </h2>
           <p className="text-[#888] text-xs mt-1">
             Every artifact the swarm has produced for &quot;{film.title}&quot;, current head version only.
-            Click any row to download.
+            Click any row to view; packs open as a grid with a nested viewer per frame.
           </p>
         </div>
       </div>
@@ -2095,14 +2123,20 @@ function ProjectDocumentsView({ film }: { film: Film }) {
                   >
                     View
                   </button>
-                  <a
-                    href={d.url}
-                    download={dlName(d)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
-                  >
-                    {isDataUrl ? 'Save' : 'Download'} ↓
-                  </a>
+                  {frameCount === 0 && (
+                    // Packs have N children; a single-file download
+                    // would only save the first frame and mislead the
+                    // user. Individual frames are downloadable from
+                    // the nested modal.
+                    <a
+                      href={d.url}
+                      download={dlName(d)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                    >
+                      {isDataUrl ? 'Save' : 'Download'} ↓
+                    </a>
+                  )}
                 </div>
               </div>
             )
@@ -3689,16 +3723,18 @@ function ToolView({
   tool,
   projectId,
   projectTitle,
+  projectTier,
 }: {
   tool: string
   projectId: string
   projectTitle: string
+  projectTier?: string
 }) {
   return (
     <div>
       {tool === 'script' && <ScriptEditorView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'storyboard' && <StoryboardView projectId={projectId} projectTitle={projectTitle} />}
-      {tool === 'editor' && <MovieEditorView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'editor' && <MovieEditorView projectId={projectId} projectTitle={projectTitle} projectTier={projectTier} />}
       {tool === 'titles' && <TitleDesignerView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'score' && <ScoreComposerView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'preview' && <PreviewView projectId={projectId} projectTitle={projectTitle} />}
@@ -4412,15 +4448,58 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
   )
 }
 
-/* ── Movie Editor ── */
+/* ── Movie Editor ──
+ *
+ * Three sub-tabs: Trailer / Short / Feature. Each tab buckets the
+ * offer's video artifacts by their step_id pattern:
+ *
+ *   Trailer : role='trailer-clip' OR step_id='editor.trailer_cut'
+ *   Short   : step_id LIKE 'short.%' OR role='short-clip'
+ *   Feature : step_id matches /^scene\.\d+\.video$/
+ *
+ * Tabs with zero clips are greyed out. Default tab is the project's
+ * own tier when it has clips, otherwise the highest tier with clips.
+ *
+ * The stills/storyboard bin was removed — the editor is for cuttable
+ * video only. Storyboard frames live on the Storyboard tab; posters
+ * and title cards on the Titles tab. Title-card videos (Grok-
+ * generated) also appear in the V2 titles track here so they can be
+ * dropped into the cut.
+ */
 
-function MovieEditorView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const [clips, setClips] = useState<{ id: number; kind: string; url: string; step_id: string | null; role: string | null }[]>([])
-  const [images, setImages] = useState<{ id: number; url: string; step_id: string | null; role: string | null }[]>([])
+type EditorClip = { id: number; kind: string; url: string; step_id: string | null; role: string | null }
+
+type EditorTier = 'trailer' | 'short' | 'feature'
+
+function isTrailerClip(c: EditorClip): boolean {
+  return c.role === 'trailer-clip' || c.step_id === 'editor.trailer_cut'
+}
+function isShortClip(c: EditorClip): boolean {
+  const s = c.step_id || ''
+  return s.startsWith('short.') || c.role === 'short-clip'
+}
+function isFeatureClip(c: EditorClip): boolean {
+  return /^scene\.\d+\.video$/.test(c.step_id || '')
+}
+function isTitleClip(c: EditorClip): boolean {
+  const s = c.step_id || ''
+  return s.startsWith('title.') || c.role === 'title' || c.role === 'title-end'
+}
+
+function MovieEditorView({
+  projectId,
+  projectTier,
+}: {
+  projectId: string
+  projectTitle: string
+  projectTier?: string
+}) {
+  const [allClips, setAllClips] = useState<EditorClip[]>([])
   const [loading, setLoading] = useState(true)
+  const [tier, setTier] = useState<EditorTier>('trailer')
   const [activeClip, setActiveClip] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [tierInitialized, setTierInitialized] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -4431,30 +4510,14 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         .from('bct_artifacts')
         .select('id, kind, url, step_id, role')
         .eq('offer_id', projectId)
-        .in('kind', ['video', 'image'])
+        .eq('kind', 'video')
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
       if (!cancelled) {
-        const all = (data as any[]) || []
-        // Dedupe by URL — legacy rows share mirror filenames due to the
-        // storyboard.pack step_id collision bug. Same file should only
-        // appear once in the bin.
-        const dedupe = <T extends { url: string }>(xs: T[]) =>
-          Array.from(new Map(xs.map((x) => [x.url, x])).values())
-        setClips(dedupe(all.filter((a) => a.kind === 'video')))
-        // Stills = storyboard images only. Posters (role='poster' / step_id
-        // 'storyboard.poster') belong on the Titles tab, not in the editor
-        // bin — the bin is for things you'd cut into the timeline.
-        setImages(
-          dedupe(
-            all.filter(
-              (a) =>
-                a.kind === 'image' &&
-                a.role !== 'poster' &&
-                (a.step_id || '') !== 'storyboard.poster',
-            ),
-          ),
+        const all = Array.from(
+          new Map(((data as EditorClip[]) || []).map((x) => [x.url, x])).values(),
         )
+        setAllClips(all)
         setLoading(false)
       }
     }
@@ -4462,20 +4525,54 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
     return () => { cancelled = true }
   }, [projectId])
 
-  // Auto-advance to next clip when current one ends
+  const trailerAll = allClips.filter(isTrailerClip)
+  const shortAll = allClips.filter(isShortClip)
+  const featureAll = allClips.filter(isFeatureClip)
+  const titleAllVideo = allClips.filter(isTitleClip)
+
+  useEffect(() => {
+    if (loading || tierInitialized) return
+    const pt = (projectTier || '').toLowerCase()
+    const pick: EditorTier =
+      pt === 'feature' && featureAll.length ? 'feature' :
+      pt === 'short' && shortAll.length ? 'short' :
+      pt === 'trailer' && trailerAll.length ? 'trailer' :
+      featureAll.length ? 'feature' :
+      shortAll.length ? 'short' :
+      'trailer'
+    setTier(pick)
+    setTierInitialized(true)
+  }, [loading, tierInitialized, projectTier, featureAll.length, shortAll.length, trailerAll.length])
+
+  const clips =
+    tier === 'feature' ? featureAll :
+    tier === 'short' ? shortAll :
+    trailerAll
+  // Title cards ship with the trailer deliverable bundle, so they
+  // appear on the Trailer tab's V2 track. When short/feature
+  // pipelines grow their own title cards, tag them
+  // step_id='short.title.*' or 'feature.title.*'.
+  const titleClips =
+    tier === 'trailer'
+      ? titleAllVideo.filter((c) => (c.step_id || '').startsWith('title.'))
+      : titleAllVideo.filter((c) => (c.step_id || '').startsWith(`${tier}.title.`))
+
   function handleClipEnd() {
-    if (activeClip < clips.length - 1) {
-      setActiveClip(prev => prev + 1)
-    } else {
-      setIsPlaying(false)
-    }
+    if (activeClip < clips.length - 1) setActiveClip((prev) => prev + 1)
+    else setIsPlaying(false)
   }
 
-  // Play all clips in sequence
   function playAll() {
     setActiveClip(0)
     setIsPlaying(true)
     setTimeout(() => videoRef.current?.play(), 100)
+  }
+
+  function switchTier(next: EditorTier) {
+    if (next === tier) return
+    setTier(next)
+    setActiveClip(0)
+    setIsPlaying(false)
   }
 
   if (loading) {
@@ -4487,13 +4584,54 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
     )
   }
 
+  const tierSpecs: { id: EditorTier; label: string; count: number }[] = [
+    { id: 'trailer', label: 'Trailer', count: trailerAll.length },
+    { id: 'short', label: 'Short', count: shortAll.length },
+    { id: 'feature', label: 'Feature', count: featureAll.length },
+  ]
+
   return (
     <div className="space-y-4">
+      {/* Tier tabs */}
+      <div role="tablist" aria-label="Cut tier" className="flex gap-1 border-b border-[#1a1a1a]">
+        {tierSpecs.map((t) => {
+          const disabled = t.count === 0
+          const active = t.id === tier
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-disabled={disabled}
+              disabled={disabled}
+              onClick={() => !disabled && switchTier(t.id)}
+              className={`px-4 py-2 text-[0.6rem] font-bold uppercase tracking-[0.16em] border-b-2 transition-colors ${
+                active
+                  ? 'border-[#E50914] text-[#E50914]'
+                  : disabled
+                    ? 'border-transparent text-[#333] cursor-not-allowed'
+                    : 'border-transparent text-[#888] hover:text-white'
+              }`}
+            >
+              {t.label}
+              <span
+                className={`ml-2 text-[0.55rem] ${
+                  disabled ? 'text-[#222]' : active ? 'text-[#E50914]' : 'text-[#555]'
+                }`}
+              >
+                {t.count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Monitor — main video player */}
       <div className="border border-[#E50914] bg-black">
         <div className="flex items-center justify-between px-3 py-1.5 bg-[#0a0a0a] border-b border-[#222]">
           <span className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold">
-            Monitor
+            Monitor &middot; {tier}
           </span>
           <span className="text-[0.5rem] text-[#666] font-mono">
             {clips.length > 0 ? `Clip ${activeClip + 1} of ${clips.length}` : 'No clips'}
@@ -4514,7 +4652,7 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
           <div className="aspect-video bg-[#050505] flex items-center justify-center">
             <div className="text-center">
               <div className="text-[#333] text-4xl mb-2">&#9654;</div>
-              <div className="text-[#555] text-xs">No video clips yet</div>
+              <div className="text-[#555] text-xs">No {tier} clips yet</div>
             </div>
           </div>
         )}
@@ -4544,7 +4682,7 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
           &#9654;&#9654;
         </button>
         <span className="ml-auto text-[0.55rem] text-[#666] font-mono">
-          {clips.length} clips &middot; {images.length} stills
+          {clips.length} clips &middot; {titleClips.length} titles
         </span>
       </div>
 
@@ -4553,8 +4691,8 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         <div className="px-3 py-1.5 border-b border-[#1a1a1a] flex items-center justify-between">
           <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">Timeline</span>
         </div>
-        {/* Video track */}
         <div className="px-3 py-2">
+          {/* V1 — main clips */}
           <div className="flex items-center gap-1 mb-1">
             <span className="text-[0.45rem] font-mono text-[#555] w-5 shrink-0">V1</span>
             <div className="flex gap-0.5 flex-1 overflow-x-auto">
@@ -4578,26 +4716,36 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
               )}
             </div>
           </div>
-          {/* Image / stills track */}
+          {/* V2 — title cards (Grok-generated motion titles) */}
           <div className="flex items-center gap-1">
             <span className="text-[0.45rem] font-mono text-[#555] w-5 shrink-0">V2</span>
             <div className="flex gap-0.5 flex-1 overflow-x-auto">
-              {images.length > 0 ? images.map((img) => (
+              {titleClips.length > 0 ? titleClips.map((clip) => (
                 <div
-                  key={img.id}
-                  className="h-10 min-w-[40px] flex-1 bg-[#0a1a0a] border border-[#1a2a1a] overflow-hidden"
+                  key={clip.id}
+                  className="h-10 min-w-[60px] flex-1 bg-[#1a0f2a] border border-[#2a1a4a] overflow-hidden relative"
+                  title={clip.step_id || clip.role || 'title'}
                 >
-                  <img src={img.url} alt="" className="w-full h-full object-cover opacity-60" loading="lazy" />
+                  <video
+                    src={`${clip.url}#t=0.1`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover opacity-70"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center text-[0.45rem] font-mono text-white tracking-widest uppercase pointer-events-none">
+                    Title
+                  </div>
                 </div>
               )) : (
                 <div className="h-10 flex-1 bg-[#0a0a0a] border border-[#1a1a1a] border-dashed flex items-center justify-center text-[0.5rem] text-[#333]">
-                  Empty track
+                  Titles track (empty)
                 </div>
               )}
             </div>
           </div>
           {/* Audio tracks */}
-          {['A1', 'A2'].map(track => (
+          {['A1', 'A2'].map((track) => (
             <div key={track} className="flex items-center gap-1 mt-1">
               <span className="text-[0.45rem] font-mono text-[#555] w-5 shrink-0">{track}</span>
               <div className="h-6 flex-1 bg-[#0a0a0a] border border-[#1a1a1a] border-dashed flex items-center justify-center text-[0.5rem] text-[#333]">
@@ -4608,11 +4756,11 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         </div>
       </div>
 
-      {/* Clips section — videos only, with lazy-loaded first-frame thumbnails */}
+      {/* Clips bin — videos only */}
       <section>
         <div className="flex items-center justify-between mb-2">
           <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">
-            Clips &middot; {clips.length}
+            {tier.charAt(0).toUpperCase() + tier.slice(1)} clips &middot; {clips.length}
           </div>
           <div className="text-[0.5rem] text-[#555] font-mono uppercase tracking-wider">
             click to load into monitor
@@ -4632,9 +4780,6 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
                 aria-label={`Load clip ${i + 1} into monitor`}
               >
                 <div className="aspect-video bg-[#050505] relative">
-                  {/* preload="metadata" pulls the first frame — cheap and lazy,
-                      browsers decode one video frame instead of the whole file.
-                      #t=0.1 nudges Safari past a black first frame. */}
                   <video
                     src={`${clip.url}#t=0.1`}
                     preload="metadata"
@@ -4642,7 +4787,6 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
                     playsInline
                     className="w-full h-full object-cover"
                   />
-                  {/* Overlay marker — subtle bMovies red chevron */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-8 h-8 rounded-full bg-black/60 border border-[#E50914]/60 flex items-center justify-center text-[#E50914] text-sm">
                       &#9654;
@@ -4658,55 +4802,42 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
           </div>
         ) : (
           <div className="border border-dashed border-[#1a1a1a] bg-[#050505] p-6 text-center">
-            <div className="text-[#444] text-xs font-mono">No clips in bin yet.</div>
+            <div className="text-[#444] text-xs font-mono">No {tier} clips yet.</div>
           </div>
         )}
       </section>
 
-      {/* Stills section — storyboard images only. Posters live on the
-          Titles tab, not here — the bin is for cuttable material. */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">
-            Stills &middot; {images.length}
+      {/* Titles bin — Grok-generated title cards (videos) */}
+      {titleClips.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">
+              Title cards &middot; {titleClips.length}
+            </div>
+            <div className="text-[0.5rem] text-[#555] font-mono uppercase tracking-wider">
+              from titles designer
+            </div>
           </div>
-          <div className="text-[0.5rem] text-[#555] font-mono uppercase tracking-wider">
-            storyboard frames
-          </div>
-        </div>
-        {images.length > 0 ? (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            {images.map((img, i) => (
-              <button
-                key={img.id}
-                type="button"
-                onClick={() => setLightboxIndex(i)}
-                className="block border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden text-left"
-                aria-label={`Open still ${i + 1} full-size`}
-              >
-                <div className="aspect-video bg-[#050505]">
-                  <img src={img.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+            {titleClips.map((clip) => (
+              <div key={clip.id} className="border border-[#2a1a4a] bg-[#0a0510] overflow-hidden">
+                <div className="aspect-video bg-[#050505] relative">
+                  <video
+                    src={`${clip.url}#t=0.1`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div className="px-1.5 py-1 text-[0.5rem] text-[#888] font-mono truncate">
-                  {labelForStill(img, i)}
+                <div className="px-1.5 py-1 text-[0.5rem] text-[#aa88ff] font-mono truncate uppercase tracking-wider">
+                  {clip.step_id || clip.role || 'title'}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
-        ) : (
-          <div className="border border-dashed border-[#1a1a1a] bg-[#050505] p-6 text-center">
-            <div className="text-[#444] text-xs font-mono">No stills yet.</div>
-          </div>
-        )}
-      </section>
-
-      <ImageLightbox
-        items={images}
-        index={lightboxIndex}
-        onClose={() => setLightboxIndex(null)}
-        onIndexChange={setLightboxIndex}
-        label={labelForStill}
-      />
+        </section>
+      )}
     </div>
   )
 }
@@ -5224,23 +5355,26 @@ function DocumentViewer({
 /* ── Title Designer ── */
 
 function TitleDesignerView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const [titleCards, setTitleCards] = useState<{ id: number; url: string; step_id: string | null }[]>([])
+  const [titleCards, setTitleCards] = useState<{ id: number; kind: string; url: string; step_id: string | null; role: string | null }[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Load every title artifact — Grok-generated motion titles (video)
+  // and any image title cards. Both step_id='title.*' and role='title'
+  // are matched so legacy and new rows surface together.
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
       const { data } = await bmovies
         .from('bct_artifacts')
-        .select('id, url, step_id')
+        .select('id, kind, url, step_id, role')
         .eq('offer_id', projectId)
-        .eq('kind', 'image')
-        .like('step_id', 'title%')
+        .in('kind', ['image', 'video'])
+        .or('step_id.like.title%,role.eq.title,role.eq.title-end')
         .is('superseded_by', null)
         .order('created_at', { ascending: false })
       if (!cancelled) {
-        setTitleCards((data as any[]) || [])
+        setTitleCards((data as typeof titleCards) || [])
         setLoading(false)
       }
     }
@@ -5248,24 +5382,65 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
     return () => { cancelled = true }
   }, [projectId])
 
+  const videoTitles = titleCards.filter((t) => t.kind === 'video')
+  const imageTitles = titleCards.filter((t) => t.kind === 'image')
+
   return (
     <div className="space-y-6">
       {/* ── Inline 3D Title Designer (ported from NPGX) ────────────── */}
       <Inline3DTitleDesigner projectTitle={projectTitle} />
 
-      {/* ── Existing title-card gallery ────────────────────────────── */}
+      {/* ── Grok-generated motion title cards ──────────────────────── */}
       <div>
-        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
-          AI-generated title cards for this project
+        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-3">
+          Motion title cards · Grok Imagine Video
         </div>
         {loading ? (
           <div className="grid grid-cols-2 gap-3 animate-pulse">
             <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
             <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
           </div>
-        ) : titleCards.length > 0 ? (
+        ) : videoTitles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {videoTitles.map((tc) => (
+              <div key={tc.id} className="border border-[#2a1a4a] bg-[#0a0510] overflow-hidden hover:border-[#E50914] transition-colors">
+                <div className="aspect-video bg-black">
+                  <video
+                    src={tc.url}
+                    controls
+                    preload="metadata"
+                    className="w-full h-full object-cover bg-black"
+                  />
+                </div>
+                <div className="px-2 py-1.5 text-[0.5rem] text-[#aa88ff] font-mono uppercase tracking-wider flex items-center justify-between">
+                  <span>{tc.step_id || tc.role || 'title'}</span>
+                  <a
+                    href={tc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#666] hover:text-[#E50914] underline decoration-dotted"
+                  >
+                    open ↗
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-[#666] text-sm">
+            No Grok-generated title cards yet — these are auto-produced during the trailer pipeline.
+          </div>
+        )}
+      </div>
+
+      {/* ── Still title cards (images) ─────────────────────────────── */}
+      <div>
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
+          Still title cards
+        </div>
+        {!loading && imageTitles.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {titleCards.map((tc) => (
+            {imageTitles.map((tc) => (
               <div key={tc.id} className="border border-[#222] bg-[#0a0a0a] overflow-hidden hover:border-[#E50914] transition-colors">
                 <div className="aspect-video bg-[#050505]">
                   <img src={tc.url} alt="Title card" className="w-full h-full object-cover" loading="lazy" />
@@ -5274,7 +5449,7 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
             ))}
           </div>
         ) : (
-          <div className="text-[#666] text-sm">No AI-generated cards yet — the designer above is the quickest way to create one.</div>
+          !loading && <div className="text-[#666] text-sm">No still title cards yet — the 3D designer above is the quickest way to create one.</div>
         )}
         <div className="flex gap-2 mt-3">
           <button
