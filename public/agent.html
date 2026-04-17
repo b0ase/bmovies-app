@@ -320,6 +320,21 @@
     const params = new URLSearchParams(window.location.search);
     const agentId = params.get('id');
 
+    // Build a headshot URL from the /img/studios/agents/ filename convention
+    // when the DB column is NULL. Matches the resolver used by film.html and
+    // studio.html — keeps the display consistent across every surface that
+    // shows an agent tile. File naming quirk: sound_designer role maps to
+    // 'sound-design' (not 'sound-designer') because the files were generated
+    // as "Sound Design".
+    function agentHeadshotPath(a) {
+      if (a && a.headshot_url) return a.headshot_url;
+      if (!a || !a.studio || !a.name) return '';
+      let role = (a.role || '').toLowerCase().replace(/_/g, '-');
+      if (role === 'sound-designer') role = 'sound-design';
+      const name = a.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      return `/img/studios/agents/${a.studio}--${role}${name}.jpg`;
+    }
+
     async function load() {
       const root = document.getElementById('root');
 
@@ -395,10 +410,12 @@
 
         <div class="agent-hero">
           <div class="agent-avatar">
-            ${agent.headshot_url
-              ? `<img src="${esc(agent.headshot_url)}" alt="${esc(agent.name)}" onerror="this.outerHTML='<div class=fallback>bM</div>'" />`
-              : `<div class="fallback">${esc(agent.name.charAt(0))}</div>`
-            }
+            ${(() => {
+              const src = agentHeadshotPath(agent);
+              return src
+                ? `<img src="${esc(src)}" alt="${esc(agent.name)}" onerror="this.outerHTML='<div class=fallback>${esc(agent.name.charAt(0))}</div>'" />`
+                : `<div class="fallback">${esc(agent.name.charAt(0))}</div>`;
+            })()}
           </div>
           <div class="agent-info">
             <span class="role-badge ${roleClass}">${esc(roleName)}</span>
