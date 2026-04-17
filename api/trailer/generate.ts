@@ -36,9 +36,12 @@ function setCors(res: VercelResponse): void {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-// Allow longer execution for the full pipeline
+// Allow longer execution for the full pipeline. The Style Bible step
+// added ~20s; 4 × Grok Imagine Video clips are the real bottleneck
+// at ~40s each. 300s was tight; 800s gives ~2× headroom and matches
+// api/trailer/reshoot.ts so both paths time out in the same places.
 export const config = {
-  maxDuration: 300, // 5 minutes
+  maxDuration: 800,
 };
 
 const XAI_BASE = 'https://api.x.ai/v1';
