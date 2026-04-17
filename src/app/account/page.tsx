@@ -799,16 +799,18 @@ function ProjectOverviewView({ film }: { film: Film }) {
   return (
     <div>
       <div className="flex flex-col md:flex-row gap-8 mb-8">
-        {/* Poster */}
+        {/* Poster — sized bigger on desktop (384px / 24rem) so the
+            one-sheet art reads properly; keep the old 16rem on mobile
+            so the info column still has room on small screens. */}
         <div className="shrink-0">
           {posterUrl ? (
-            <div className="w-64 border border-[#222] bg-[#050505] overflow-hidden">
+            <div className="w-64 md:w-96 border border-[#222] bg-[#050505] overflow-hidden">
               <img src={posterUrl} alt={film.title} className="w-full" />
             </div>
           ) : (
-            <div className="w-64 aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] border border-[#222] flex items-center justify-center">
+            <div className="w-64 md:w-96 aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] border border-[#222] flex items-center justify-center">
               <div
-                className="text-[#666] text-5xl font-black"
+                className="text-[#666] text-5xl md:text-7xl font-black"
                 style={{ fontFamily: 'var(--font-bebas)' }}
               >
                 b<span className="text-[#E50914]">M</span>
