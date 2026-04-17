@@ -5461,6 +5461,240 @@ function labelForStill(
   return s || img.role || `still-${i + 1}`
 }
 
+/** Pretty-print an audio artifact row for the music player. */
+function labelForAudio(
+  a: { step_id: string | null; role: string | null },
+  i: number,
+): string {
+  const s = a.step_id || ''
+  const r = a.role || ''
+  if (s === 'composer.theme' || r === 'composer-theme') return 'Main theme'
+  if (s === 'composer.themes') return 'Score brief'
+  const cue = s.match(/^composer\.cue\.(\d+)$/) || s.match(/^composer\.(\d+)$/)
+  if (cue) return `Cue ${cue[1]}`
+  if (s.startsWith('composer.')) return s.slice('composer.'.length).replace(/_/g, ' ')
+  if (r === 'sound-design' || s.startsWith('sound.')) return `SFX ${i + 1}`
+  return s || r || `Track ${i + 1}`
+}
+
+function formatAudioTime(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+/** Lightweight multi-track music player — one shared <audio> drives
+ *  everything; transport, seekable progress, volume, and a clickable
+ *  playlist sit on top. Auto-advances at track end. Renders a proper
+ *  empty state when no audio is committed yet so the tab doesn't
+ *  look broken before the composer has run. */
+type AudioTrack = { id: number; url: string; step_id: string | null; role: string | null }
+
+function MusicPlayer({ tracks }: { tracks: AudioTrack[] }) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0.9
+    const raw = Number(window.localStorage.getItem('bmovies_music_vol'))
+    return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : 0.9
+  })
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    if (activeIdx >= tracks.length) setActiveIdx(0)
+  }, [tracks.length, activeIdx])
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('bmovies_music_vol', String(volume))
+    }
+  }, [volume])
+
+  const activeTrack = tracks[activeIdx]
+  const hasTracks = tracks.length > 0
+  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0
+
+  function playPause() {
+    const el = audioRef.current
+    if (!el || !activeTrack) return
+    if (el.paused) el.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+    else { el.pause(); setIsPlaying(false) }
+  }
+
+  function jumpTo(idx: number, autoplay = true) {
+    if (idx < 0 || idx >= tracks.length) return
+    setActiveIdx(idx)
+    setIsPlaying(autoplay)
+    setCurrentTime(0)
+    // Let React commit the new src before calling .play().
+    setTimeout(() => {
+      if (!audioRef.current) return
+      if (autoplay) audioRef.current.play().catch(() => setIsPlaying(false))
+    }, 0)
+  }
+
+  function next() { jumpTo(Math.min(tracks.length - 1, activeIdx + 1)) }
+  function prev() { jumpTo(Math.max(0, activeIdx - 1)) }
+
+  function onSeek(e: React.ChangeEvent<HTMLInputElement>) {
+    const el = audioRef.current
+    if (!el) return
+    const t = Number(e.target.value)
+    el.currentTime = t
+    setCurrentTime(t)
+  }
+
+  return (
+    <div className="border border-[#E50914] bg-black">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#0a0a0a] border-b border-[#222]">
+        <span className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold">Music player</span>
+        <span className="text-[0.5rem] text-[#666] font-mono">
+          {hasTracks ? `Track ${activeIdx + 1} of ${tracks.length}` : 'No tracks yet'}
+        </span>
+      </div>
+
+      <div className="p-4 md:p-5 space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[0.5rem] uppercase tracking-[0.2em] text-[#666] font-bold mb-1">Now playing</div>
+            <div className="text-white text-lg md:text-xl font-black leading-tight truncate" style={{ fontFamily: 'var(--font-bebas)' }}>
+              {hasTracks ? labelForAudio(activeTrack, activeIdx) : 'No score committed'}
+            </div>
+          </div>
+          <div className="text-[#888] text-[0.65rem] font-mono shrink-0">
+            {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
+          </div>
+        </div>
+
+        {/* Seek bar: coloured fill + transparent native range on top. */}
+        <div className="relative h-2 bg-[#1a0a0a] rounded-sm overflow-hidden">
+          <div className="absolute inset-y-0 left-0 bg-[#E50914]" style={{ width: `${progressPct}%` }} />
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={currentTime}
+            disabled={!hasTracks || duration <= 0}
+            onChange={onSeek}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            aria-label="Seek"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={prev}
+            disabled={!hasTracks || activeIdx === 0}
+            className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-sm disabled:opacity-30"
+            aria-label="Previous track"
+          >
+            &#9664;&#9664;
+          </button>
+          <button
+            type="button"
+            onClick={playPause}
+            disabled={!hasTracks}
+            className="px-5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider disabled:opacity-30"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? '❚❚ Pause' : '▶ Play'}
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            disabled={!hasTracks || activeIdx >= tracks.length - 1}
+            className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-sm disabled:opacity-30"
+            aria-label="Next track"
+          >
+            &#9654;&#9654;
+          </button>
+          <div className="ml-auto flex items-center gap-2 min-w-[140px]">
+            <span className="text-[0.55rem] font-mono text-[#666] uppercase tracking-wider">Vol</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              className="flex-1 accent-[#E50914]"
+              aria-label="Volume"
+            />
+          </div>
+        </div>
+
+        <audio
+          ref={audioRef}
+          src={activeTrack?.url}
+          preload="metadata"
+          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => {
+            if (activeIdx < tracks.length - 1) jumpTo(activeIdx + 1)
+            else setIsPlaying(false)
+          }}
+          className="hidden"
+        />
+      </div>
+
+      <div className="border-t border-[#1a1a1a]">
+        <div className="px-3 py-1.5 border-b border-[#1a1a1a] flex items-center justify-between">
+          <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">Playlist</span>
+          <span className="text-[0.5rem] text-[#555] font-mono">
+            {tracks.length} track{tracks.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        {hasTracks ? (
+          <ul className="divide-y divide-[#111] max-h-80 overflow-y-auto">
+            {tracks.map((t, i) => {
+              const active = i === activeIdx
+              return (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={() => jumpTo(i)}
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-left transition-colors ${
+                      active ? 'bg-[#120003] text-white' : 'bg-[#050505] hover:bg-[#0f0f0f] text-[#bbb]'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3 min-w-0">
+                      <span className={`w-6 text-[0.55rem] font-mono ${active ? 'text-[#E50914]' : 'text-[#555]'}`}>
+                        {active ? '▶' : String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="truncate text-xs font-mono">{labelForAudio(t, i)}</span>
+                    </span>
+                    <a
+                      href={t.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[0.5rem] font-bold uppercase tracking-wider text-[#666] hover:text-[#E50914]"
+                    >
+                      download ↓
+                    </a>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <div className="p-6 text-center text-[#444] text-xs font-mono">
+            No tracks yet. Commission a theme with the Music Studio below.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ── Image lightbox ──
  *
  * Opens a still in-page rather than dumping the raw URL in a new tab.
@@ -5943,36 +6177,109 @@ function DocumentViewer({
 
 /* ── Title Designer ── */
 
+const TITLE_CARD_PRICE_USD = 0.99
+
+// Shape of the pay-picker result we care about. The full module
+// lives at /js/pay-picker.js on the brochure side and is loaded at
+// runtime (client-only) to avoid pulling vanilla-JS modules into the
+// Next.js bundle.
+type PayPickerResult = {
+  success?: boolean
+  cancelled?: boolean
+  provider?: string
+  txid?: string
+  sessionId?: string
+}
+
+type PayPickerModule = {
+  openPayPicker: (opts: {
+    type: 'titles'
+    title: string
+    offerId: string
+    priceUsd: number
+    ticker?: string
+    email?: string
+  }) => Promise<PayPickerResult>
+}
+
 function TitleDesignerView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [titleCards, setTitleCards] = useState<{ id: number; kind: string; url: string; step_id: string | null; role: string | null }[]>([])
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState<null | 'main' | 'end'>(null)
+  const [status, setStatus] = useState<string>('')
 
-  // Load every title artifact — Grok-generated motion titles (video)
-  // and any image title cards. Both step_id='title.*' and role='title'
-  // are matched so legacy and new rows surface together.
+  const load = useCallback(async () => {
+    const { data } = await bmovies
+      .from('bct_artifacts')
+      .select('id, kind, url, step_id, role')
+      .eq('offer_id', projectId)
+      .in('kind', ['image', 'video'])
+      .or('step_id.like.title%,role.eq.title,role.eq.title-end')
+      .is('superseded_by', null)
+      .order('created_at', { ascending: false })
+    setTitleCards((data as typeof titleCards) || [])
+    setLoading(false)
+  }, [projectId])
+
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      setLoading(true)
-      const { data } = await bmovies
-        .from('bct_artifacts')
-        .select('id, kind, url, step_id, role')
-        .eq('offer_id', projectId)
-        .in('kind', ['image', 'video'])
-        .or('step_id.like.title%,role.eq.title,role.eq.title-end')
-        .is('superseded_by', null)
-        .order('created_at', { ascending: false })
-      if (!cancelled) {
-        setTitleCards((data as typeof titleCards) || [])
-        setLoading(false)
-      }
-    }
-    load()
+    setLoading(true)
+    load().catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [projectId])
+  }, [load])
 
   const videoTitles = titleCards.filter((t) => t.kind === 'video')
   const imageTitles = titleCards.filter((t) => t.kind === 'image')
+
+  // Pay → generate. Opens the shared pay-picker modal (BSV wallets,
+  // Stripe, MetaMask/USDC), collects a real payment receipt, then
+  // calls /api/titles/generate-one to run Grok with the proof
+  // attached. No fake-enthusiastic chat agent, no account gating.
+  async function generate(variant: 'main' | 'end') {
+    setStatus('')
+    setGenerating(variant)
+    try {
+      // Dynamic runtime-only import — the pay-picker module is a
+      // vanilla-JS file served from the brochure's /public and is
+      // not part of the Next.js module graph. webpackIgnore keeps
+      // the bundler's hands off the path.
+      const payPickerUrl = '/js/pay-picker.js'
+      const mod = (await import(/* webpackIgnore: true */ /* @vite-ignore */ payPickerUrl)) as unknown as PayPickerModule
+      const pay = await mod.openPayPicker({
+        type: 'titles',
+        title: projectTitle,
+        offerId: projectId,
+        priceUsd: TITLE_CARD_PRICE_USD,
+      })
+      if (!pay || pay.cancelled) { setGenerating(null); return }
+      if (!pay.success) { setStatus('Payment did not complete.'); setGenerating(null); return }
+
+      setStatus('Payment confirmed. Generating title card with Grok — this takes ~30s…')
+      const res = await fetch('/api/titles/generate-one', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: projectId,
+          variant,
+          payment: {
+            provider: pay.provider || 'unknown',
+            txid: pay.txid,
+            sessionId: pay.sessionId,
+            priceUsd: TITLE_CARD_PRICE_USD,
+          },
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) { setStatus(`Generation failed: ${j.error || res.statusText}`); setGenerating(null); return }
+      setStatus('Title card generated. Reloading gallery…')
+      await load()
+      setStatus('')
+    } catch (err) {
+      setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setGenerating(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -5985,7 +6292,41 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
           Title cards for <span className="text-[#E50914]">{projectTitle}</span>
         </h2>
         <div className="text-[#888] text-xs mt-1">
-          Real motion graphics generated by Grok Imagine Video during the trailer pipeline. Drop straight into the editor&apos;s V2 track.
+          Real motion graphics. Grok Imagine Video generates the title reveal — you pay once, you get the mp4.
+        </div>
+      </div>
+
+      {/* Pay-and-generate panel — honest priced action, not an AI chat popup. */}
+      <div className="border border-[#2a1a4a] bg-[#0a0510] p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#aa88ff] font-bold mb-1">
+            Generate a title card
+          </div>
+          <div className="text-white text-lg font-black leading-tight" style={{ fontFamily: 'var(--font-bebas)' }}>
+            ${TITLE_CARD_PRICE_USD.toFixed(2)} · 8-second animated reveal
+          </div>
+          <div className="text-[#888] text-xs mt-1">
+            Pay with BSV (HandCash / BRC-100), Stripe, or cross-chain USDC. Grok runs as soon as the tx confirms.
+          </div>
+          {status && <div className="text-[#aa88ff] text-xs mt-2 font-mono">{status}</div>}
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="button"
+            disabled={generating !== null}
+            onClick={() => generate('main')}
+            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {generating === 'main' ? 'Working…' : `Generate main reveal · $${TITLE_CARD_PRICE_USD.toFixed(2)}`}
+          </button>
+          <button
+            type="button"
+            disabled={generating !== null}
+            onClick={() => generate('end')}
+            className="px-4 py-2 bg-transparent border border-[#E50914] hover:bg-[#1a0003] text-[#E50914] text-[0.65rem] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {generating === 'end' ? 'Working…' : `End card · $${TITLE_CARD_PRICE_USD.toFixed(2)}`}
+          </button>
         </div>
       </div>
 
@@ -6027,17 +6368,17 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
           </div>
         ) : (
           <div className="text-[#666] text-sm">
-            No Grok-generated title cards yet — these are auto-produced during the trailer pipeline.
+            No Grok-generated title cards yet — pay above to have one rendered, or they&apos;ll be produced during the trailer pipeline.
           </div>
         )}
       </div>
 
       {/* ── Still title cards (images) ─────────────────────────────── */}
-      <div>
-        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
-          Still title cards
-        </div>
-        {!loading && imageTitles.length > 0 ? (
+      {imageTitles.length > 0 && (
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
+            Still title cards
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {imageTitles.map((tc) => (
               <div key={tc.id} className="border border-[#222] bg-[#0a0a0a] overflow-hidden hover:border-[#E50914] transition-colors">
@@ -6047,22 +6388,8 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
               </div>
             ))}
           </div>
-        ) : (
-          !loading && <div className="text-[#666] text-sm">No still title cards yet — the 3D designer above is the quickest way to create one.</div>
-        )}
-        <div className="flex gap-2 mt-3">
-          <button
-            onClick={() => {
-              (window as unknown as { bmoviesChat?: { open: (s: string) => void } }).bmoviesChat?.open(
-                `Design a cinematic title card for "${projectTitle}". Use the film's genre and tone.`,
-              )
-            }}
-            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
-          >
-            Ask AI to generate a card
-          </button>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -6200,8 +6527,13 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
   const [slideIdx, setSlideIdx] = useState(0)
   const [loading, setLoading] = useState(true)
   const [autoplayErr, setAutoplayErr] = useState(false)
+  const [buffering, setBuffering] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  // All clips render as stacked <video> elements. Swapping which one
+  // is visible (instead of tearing down + rebuilding the element via
+  // React's `key`) means the next clip stays pre-buffered and there's
+  // no loading wheel between clips. videoRefs parallels `clips`.
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([])
 
   useEffect(() => {
     let cancelled = false
@@ -6302,16 +6634,38 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
     if (activeIdx < clips.length - 1) setActiveIdx((i) => i + 1)
   }
 
+  // Drive playback imperatively when activeIdx changes. All clips
+  // live in the DOM stacked; we just pause the outgoing one and
+  // play the incoming one. Since the incoming <video> has had
+  // preload="auto" running since mount, it's already buffered and
+  // playback starts immediately — no loading wheel between clips.
+  useEffect(() => {
+    if (clips.length === 0) return
+    const next = videoRefs.current[activeIdx]
+    videoRefs.current.forEach((v, i) => {
+      if (!v || i === activeIdx) return
+      try { v.pause() } catch {}
+    })
+    if (!next) return
+    // Reset to the start each time so manual clip picks replay from 0.
+    try { next.currentTime = 0 } catch {}
+    const p = next.play()
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => setAutoplayErr(true))
+    }
+  }, [activeIdx, clips.length])
+
   async function enterFullscreen() {
     const el = wrapperRef.current
     if (!el) return
     try {
       if (el.requestFullscreen) await el.requestFullscreen()
       else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen()
-      // Kick playback on video previews; slideshows keep cycling via
-      // the existing interval.
-      if (videoRef.current) {
-        try { await videoRef.current.play() } catch { setAutoplayErr(true) }
+      // Kick playback on the currently-active video; slideshows keep
+      // cycling via the existing interval.
+      const active = videoRefs.current[activeIdx]
+      if (active) {
+        try { await active.play() } catch { setAutoplayErr(true) }
       }
     } catch (err) {
       console.warn('[preview] fullscreen failed:', err)
@@ -6362,15 +6716,44 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
         {loading ? (
           <div className="w-full aspect-video bg-[#0a0a0a] animate-pulse" />
         ) : mode === 'video' ? (
-          <video
-            ref={videoRef}
-            key={clips[activeIdx]?.url}
-            src={clips[activeIdx]?.url}
-            controls
-            playsInline
-            onEnded={onClipEnd}
-            className="w-full aspect-video bg-black"
-          />
+          // Stacked video players — one per clip. The active clip is
+          // visible and on top; all the others are invisible but still
+          // preloading (preload="auto") so switching to them is
+          // instant. We never tear down a <video> element, which was
+          // the root cause of the between-clips loading wheel.
+          <div className="relative w-full aspect-video bg-black">
+            {clips.map((clip, i) => {
+              const isActive = i === activeIdx
+              // Be gentle on bandwidth: active + immediate neighbours
+              // preload the full file; everything further away only
+              // fetches metadata. In practice trailers have 4-6 clips
+              // so this ends up preloading the whole reel anyway, but
+              // it keeps us sane for longer short/feature reels.
+              const preload = Math.abs(i - activeIdx) <= 1 ? 'auto' : 'metadata'
+              return (
+                <video
+                  key={clip.id}
+                  ref={(el) => { videoRefs.current[i] = el }}
+                  src={clip.url}
+                  preload={preload}
+                  playsInline
+                  controls={isActive}
+                  onEnded={isActive ? onClipEnd : undefined}
+                  onWaiting={isActive ? () => setBuffering(true) : undefined}
+                  onPlaying={isActive ? () => setBuffering(false) : undefined}
+                  onCanPlay={isActive ? () => setBuffering(false) : undefined}
+                  className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-100 ${
+                    isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                  }`}
+                />
+              )
+            })}
+            {buffering && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none z-20">
+                <div className="w-10 h-10 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
         ) : mode === 'slideshow' ? (
           <div className="w-full aspect-video bg-black relative">
             {frames.map((url, i) => (
