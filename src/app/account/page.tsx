@@ -32,7 +32,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { bmovies } from '@/lib/supabase-bmovies'
 import type { User } from '@supabase/supabase-js'
 
@@ -1457,17 +1456,309 @@ function ProjectCrewView(props: { projectId: string; accountId: string | null })
   )
 }
 
-function ProjectCastView(props: { projectId: string; accountId: string | null }) {
+function ProjectCastView({ projectId, accountId }: { projectId: string; accountId: string | null }) {
+  // The Cast tab used to show ONLY hired platform agents (voice actors
+  // etc.). That disagreed with the Documents tab, which shows the
+  // dramatis personae — the characters in the film itself, sourced
+  // from the pitch/casting pipeline's cast_list + char_portrait_<n>
+  // artifacts. Fix: same source of truth here as Documents.
+  //
+  // Top section  — Characters in the film (always, when present)
+  // Bottom section — Performers hired on the platform (existing behaviour)
   return (
-    <AgentRosterView
-      {...props}
-      kind="cast"
-      title="Project cast"
-      blurb="The performing talent — voice actors, on-camera stars. Post-hackathon each cast member gets their own royalty token; for now they're hired and credited on-screen."
-      roles={CAST_ROLES}
-      emptyExampleMsg="No cast hired yet. Generate a voice actor to bring your script to life."
-    />
+    <div className="space-y-10">
+      <CastCharactersPanel projectId={projectId} />
+      <AgentRosterView
+        projectId={projectId}
+        accountId={accountId}
+        kind="cast"
+        title="Performers hired"
+        blurb="Platform agents attached to this film as voice actors. Each performer is a separate bMovies agent that gets its own royalty token post-submission."
+        roles={CAST_ROLES}
+        emptyExampleMsg="No performers hired yet. Generate a voice actor to bring these characters to life."
+      />
+    </div>
   )
+}
+
+/**
+ * Renders the dramatis personae for an offer — characters + portraits
+ * sourced from the same artifacts the Documents tab collapses into a
+ * Cast pack. Two pipelines produce these:
+ *
+ *   pitch.cast_list       JSON array [{ name, role, visual_prompt }]
+ *   pitch.char_portrait_N image artifacts, one per character
+ *   casting.cast_list     plain-text fallback (feature tier): one
+ *                         paragraph per character with NAME / ROLE /
+ *                         ARCHETYPE / AGE / DESCRIPTION / VOICE NOTE.
+ *
+ * If no cast_list exists yet we render a calm empty state so the
+ * user understands the pipeline hasn't produced this artifact rather
+ * than silently hiding the panel.
+ */
+function CastCharactersPanel({ projectId }: { projectId: string }) {
+  type CharRow = {
+    name: string
+    role?: string | null
+    description?: string | null
+    voice?: string | null
+    portraitUrl?: string | null
+    visualPrompt?: string | null
+  }
+  const [characters, setCharacters] = useState<CharRow[] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+
+      // Fetch every artifact the Cast pack depends on in one round-trip.
+      const { data } = await bmovies
+        .from('bct_artifacts')
+        .select('id, kind, role, step_id, url, created_at')
+        .eq('offer_id', projectId)
+        .is('superseded_by', null)
+        .or(
+          [
+            'step_id.eq.pitch.cast_list',
+            'step_id.eq.casting.cast_list',
+            'step_id.like.pitch.char_portrait_%',
+          ].join(','),
+        )
+        .order('step_id', { ascending: true })
+
+      if (cancelled) return
+      const rows = (data || []) as Array<{
+        kind: string
+        step_id: string | null
+        url: string
+        created_at: string | null
+      }>
+
+      // ── Portraits ─────────────────────────────────────────────
+      // step_id=pitch.char_portrait_<n>, dedupe by URL, sort by
+      // numeric suffix so index 0→2 arrive in order.
+      const portraits = rows
+        .filter((r) => r.kind === 'image' && (r.step_id || '').startsWith('pitch.char_portrait_'))
+      const seen = new Set<string>()
+      const portraitsDeduped: string[] = []
+      for (const p of portraits
+        .slice()
+        .sort((a, b) => {
+          const ai = Number((a.step_id || '').match(/_(\d+)$/)?.[1] ?? 0)
+          const bi = Number((b.step_id || '').match(/_(\d+)$/)?.[1] ?? 0)
+          return ai - bi
+        })) {
+        if (seen.has(p.url)) continue
+        seen.add(p.url)
+        portraitsDeduped.push(p.url)
+      }
+
+      // ── Cast list text ────────────────────────────────────────
+      const pitchList = rows.find((r) => r.step_id === 'pitch.cast_list')
+      const castingList = rows.find((r) => r.step_id === 'casting.cast_list')
+      const listRow = pitchList ?? castingList
+      let chars: CharRow[] = []
+
+      if (listRow) {
+        let text = ''
+        if (listRow.url.startsWith('data:')) {
+          text = decodeDataUrl(listRow.url) || ''
+        } else {
+          try {
+            const r = await fetch(listRow.url)
+            if (r.ok) text = await r.text()
+          } catch {
+            text = ''
+          }
+        }
+        chars = parseCastList(text)
+      }
+
+      // ── Merge portraits in by index ───────────────────────────
+      for (let i = 0; i < chars.length; i++) {
+        if (portraitsDeduped[i]) chars[i].portraitUrl = portraitsDeduped[i]
+      }
+
+      // If we have portraits but no cast list, render placeholders
+      // so the user at least sees that portraits were produced.
+      if (chars.length === 0 && portraitsDeduped.length > 0) {
+        chars = portraitsDeduped.map((u, i) => ({
+          name: `Character ${i + 1}`,
+          portraitUrl: u,
+        }))
+      }
+
+      setCharacters(chars)
+      setLoading(false)
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [projectId])
+
+  return (
+    <div>
+      <div className="mb-4">
+        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+          Dramatis personae
+        </div>
+        <h2
+          className="text-3xl font-black leading-none text-white"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Characters <span className="text-[#E50914]">in the film</span>
+        </h2>
+        <p className="text-[#888] text-sm max-w-xl mt-2">
+          The cast written into the story — names, archetypes, and visual
+          direction that the casting director agent has developed from your
+          pitch. Portraits are the casting director&apos;s first-pass visual
+          ID for each role; swap them during production if the director sees
+          a different face.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+              <div className="aspect-[3/4] bg-[#111] mb-3" />
+              <div className="h-4 w-28 bg-[#1a1a1a] mb-2" />
+              <div className="h-3 w-40 bg-[#151515]" />
+            </div>
+          ))}
+        </div>
+      ) : !characters || characters.length === 0 ? (
+        <div className="border border-dashed border-[#222] bg-[#050505] p-6 text-center">
+          <div className="text-[#888] text-sm">
+            The casting director hasn&apos;t produced a cast list for this
+            project yet. Once the pipeline writes <code className="text-[#ccc] font-mono text-xs">pitch.cast_list</code> or{' '}
+            <code className="text-[#ccc] font-mono text-xs">casting.cast_list</code>, the characters will appear here.
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {characters.map((c, i) => (
+            <div key={i} className="border border-[#222] bg-[#0a0a0a] overflow-hidden">
+              <div className="aspect-[3/4] bg-[#050505] relative">
+                {c.portraitUrl ? (
+                  <img src={c.portraitUrl} alt={c.name} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[#444]">
+                    <span
+                      className="text-4xl"
+                      style={{ fontFamily: 'var(--font-bebas)' }}
+                    >
+                      {c.name.slice(0, 1).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                {c.role && (
+                  <div className="absolute top-2 left-2 text-[0.5rem] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#E50914] text-white">
+                    {c.role}
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <div
+                  className="text-xl font-black leading-tight text-white"
+                  style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '0.02em' }}
+                >
+                  {c.name}
+                </div>
+                {c.description && (
+                  <p className="text-[#aaa] text-sm leading-snug mt-1.5">
+                    {c.description}
+                  </p>
+                )}
+                {c.voice && (
+                  <p className="text-[#666] text-xs leading-snug mt-2 italic">
+                    Voice — {c.voice}
+                  </p>
+                )}
+                {c.visualPrompt && !c.description && (
+                  <p className="text-[#666] text-xs font-mono leading-snug mt-1.5 whitespace-pre-wrap">
+                    {c.visualPrompt}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Parse a cast_list artifact's text body. Handles both shapes:
+ *   1. JSON array of { name, role, visual_prompt } — from pitch.cast_list
+ *   2. Plain-text "NAME: Foo\nROLE: Lead\n..." paragraphs — from
+ *      casting.cast_list (feature tier)
+ * Returns [] on unrecognised input rather than throwing; the caller
+ * renders an empty state.
+ */
+function parseCastList(text: string): Array<{
+  name: string
+  role?: string | null
+  description?: string | null
+  voice?: string | null
+  visualPrompt?: string | null
+}> {
+  const trimmed = text.trim()
+  if (!trimmed) return []
+
+  // Try JSON first (pitch.cast_list is always JSON)
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      const arr = Array.isArray(parsed) ? parsed : [parsed]
+      return arr.map((c) => {
+        const entry = (c || {}) as Record<string, unknown>
+        return {
+          name: String(entry.name || entry.character || 'Unnamed'),
+          role: typeof entry.role === 'string' ? entry.role : null,
+          description:
+            typeof entry.description === 'string'
+              ? entry.description
+              : null,
+          voice:
+            typeof entry.voice === 'string'
+              ? entry.voice
+              : typeof entry.voice_note === 'string'
+                ? entry.voice_note
+                : null,
+          visualPrompt:
+            typeof entry.visual_prompt === 'string'
+              ? entry.visual_prompt
+              : null,
+        }
+      })
+    } catch {
+      // fall through to text parser
+    }
+  }
+
+  // Paragraph-separated plain text from the casting director prompt
+  // ("NAME: …\nROLE: …\nARCHETYPE: …\nAGE: …\nDESCRIPTION: …\nVOICE NOTE: …")
+  const blocks = trimmed.split(/\n{2,}/).filter((b) => b.trim().length > 0)
+  return blocks.map((block) => {
+    const fields: Record<string, string> = {}
+    for (const line of block.split(/\n/)) {
+      const m = line.match(/^\s*([A-Z][A-Z\s]+):\s*(.+)$/)
+      if (m) fields[m[1].trim().toLowerCase()] = m[2].trim()
+    }
+    const firstLine = block.split(/\n/)[0].replace(/^\s*NAME:\s*/i, '').trim()
+    return {
+      name: fields['name'] || firstLine || 'Unnamed',
+      role: fields['role'] || fields['archetype'] || null,
+      description: fields['description'] || null,
+      voice: fields['voice note'] || fields['voice'] || null,
+      visualPrompt: null,
+    }
+  })
 }
 
 /* ─── Shared roster UI for Crew + Cast ─── */
@@ -5387,8 +5678,18 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
 
   return (
     <div className="space-y-6">
-      {/* ── Inline 3D Title Designer (ported from NPGX) ────────────── */}
-      <Inline3DTitleDesigner projectTitle={projectTitle} />
+      {/* Header */}
+      <div>
+        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+          Title Designer
+        </div>
+        <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+          Title cards for <span className="text-[#E50914]">{projectTitle}</span>
+        </h2>
+        <div className="text-[#888] text-xs mt-1">
+          Real motion graphics generated by Grok Imagine Video during the trailer pipeline. Drop straight into the editor&apos;s V2 track.
+        </div>
+      </div>
 
       {/* ── Grok-generated motion title cards ──────────────────────── */}
       <div>
@@ -5462,159 +5763,6 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
           >
             Ask AI to generate a card
           </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Inline 3D title designer ─────────────────────────────────────
- *
- * Ports the NPGX Title3DScene component (R3F + drei + postprocessing)
- * into the bMovies Titles tab. Lazy-loaded so the r3f stack doesn't
- * block SSR / first paint on account pages that never open Titles.
- *
- * Controls exposed in the tab panel:
- *   - Text (pre-filled with the film title)
- *   - Material preset (chrome / gold / neon / matte / crimson / hologram / ice)
- *   - Lighting preset
- *   - Particles
- *   - Animation
- *   - Scene background
- *
- * The full NPGX designer has layer stacking, multi-line editing, and
- * post-processing pipes. We expose the 80/20 here; deep control lives
- * at /title-designer (to be ported as a standalone page later).
- */
-const Lazy3DScene = dynamic(
-  () => import('@/components/Title3DScene').then((m) => ({ default: m.default })),
-  { ssr: false, loading: () => (
-    <div className="flex items-center justify-center h-full text-[#444] text-xs uppercase tracking-wider">Loading 3D designer…</div>
-  ) },
-)
-
-function Inline3DTitleDesigner({ projectTitle }: { projectTitle: string }) {
-  const [text, setText] = useState(projectTitle || 'Title')
-  const [material, setMaterial] = useState<'chrome' | 'gold' | 'neon' | 'matte' | 'crimson' | 'hologram' | 'ice'>('chrome')
-  const [lighting, setLighting] = useState<'studio' | 'neon-alley' | 'sunset' | 'void' | 'stage'>('studio')
-  const [particles, setParticles] = useState<'none' | 'dust' | 'sparks' | 'embers'>('none')
-  const [animation, setAnimation] = useState<'none' | 'float' | 'breathe' | 'glitch' | 'pulse'>('float')
-  const [scene, setScene] = useState<'transparent' | 'void' | 'grid' | 'fog'>('void')
-  const [bloom, setBloom] = useState(0.6)
-
-  const lines = [
-    {
-      text: text || 'Title',
-      color: '#ffffff',
-      fontSize: 1.5,
-      x: 0, y: 0, rotation: 0,
-      scaleX: 1, scaleY: 1, skewX: 0,
-      opacity: 1,
-      mode: '3d' as const,
-      font: 'helvetiker' as const,
-    },
-  ]
-  const settings = {
-    material,
-    depth: 0.3,
-    bevelEnabled: true,
-    bevelSize: 0.02,
-    lighting,
-    camera: 'orbit' as const,
-    bloomIntensity: bloom,
-    particles,
-    animation,
-    scene,
-  }
-
-  const materials = ['chrome', 'gold', 'neon', 'matte', 'crimson', 'hologram', 'ice'] as const
-  const lightings = ['studio', 'neon-alley', 'sunset', 'void', 'stage'] as const
-  const particleOpts = ['none', 'dust', 'sparks', 'embers'] as const
-  const animOpts = ['none', 'float', 'breathe', 'glitch', 'pulse'] as const
-  const sceneOpts = ['transparent', 'void', 'grid', 'fog'] as const
-
-  return (
-    <div>
-      <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
-        <div>
-          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
-            3D Title Designer
-          </div>
-          <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
-            Design your <span className="text-[#E50914]">title</span>
-          </h2>
-          <div className="text-[#888] text-xs mt-1">
-            Real-time three.js. Orbit the preview with mouse. Ported from our NPGX title tool.
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-        {/* Preview */}
-        <div className="border border-[#222] bg-black" style={{ aspectRatio: '16 / 9', minHeight: 320 }}>
-          <Lazy3DScene lines={lines} settings={settings} />
-        </div>
-
-        {/* Controls */}
-        <div className="border border-[#222] bg-[#0a0a0a] p-4 space-y-4 text-xs">
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Title text</label>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Material</label>
-            <div className="grid grid-cols-2 gap-1">
-              {materials.map((m) => (
-                <button key={m} onClick={() => setMaterial(m)}
-                  className={`px-2 py-1 text-[0.6rem] uppercase tracking-wider font-bold border ${material === m ? 'border-[#E50914] bg-[#1a0003] text-[#E50914]' : 'border-[#222] text-[#888] hover:border-[#444]'}`}>
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Lighting</label>
-            <select value={lighting} onChange={(e) => setLighting(e.target.value as typeof lighting)}
-              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
-              {lightings.map((l) => <option key={l} value={l}>{l}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Scene</label>
-            <select value={scene} onChange={(e) => setScene(e.target.value as typeof scene)}
-              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
-              {sceneOpts.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Animation</label>
-            <select value={animation} onChange={(e) => setAnimation(e.target.value as typeof animation)}
-              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
-              {animOpts.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Particles</label>
-            <select value={particles} onChange={(e) => setParticles(e.target.value as typeof particles)}
-              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
-              {particleOpts.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Bloom · {bloom.toFixed(2)}</label>
-            <input type="range" min="0" max="2" step="0.05" value={bloom} onChange={(e) => setBloom(Number(e.target.value))} className="w-full accent-[#E50914]" />
-          </div>
         </div>
       </div>
     </div>
