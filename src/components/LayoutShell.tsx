@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useSyncExternalStore } from 'react'
 import { isSkin, type Skin } from '@/lib/skin'
 
 // AccountToolbar calls useSearchParams(), which Next 16 requires to be
@@ -12,18 +12,29 @@ import { isSkin, type Skin } from '@/lib/skin'
 // "Application error: a client-side exception has occurred" screen.
 const AccountToolbar = dynamic(() => import('@/components/AccountToolbar').then(m => m.AccountToolbar), { ssr: false })
 
-// Read skin from the cookie. Runs client-side only — middleware sets
-// the cookie, so by the time this component hydrates the value is
-// available. If the cookie isn't set the shell stays on the default
-// bMovies red skin.
+// Read skin from the cookie. The cookie is an external store, so
+// useSyncExternalStore is the correct hook — it renders the SSR
+// fallback ('bmovies') on first paint and swaps to the client value
+// after hydration without a setState-in-effect cycle.
+function readSkinCookie(): Skin {
+  if (typeof document === 'undefined') return 'bmovies'
+  const m = document.cookie.match(/(?:^|;\s*)skin=([^;]+)/)
+  const v = m ? decodeURIComponent(m[1]) : null
+  return isSkin(v) ? v : 'bmovies'
+}
+
+function subscribeNoop() {
+  // Cookie doesn't emit change events in the browser — we only need
+  // a single snapshot at hydration time, so subscribe is a no-op.
+  return () => {}
+}
+
 function useSkin(): Skin {
-  const [skin, setSkin] = useState<Skin>('bmovies')
-  useEffect(() => {
-    const m = document.cookie.match(/(?:^|;\s*)skin=([^;]+)/)
-    const v = m ? decodeURIComponent(m[1]) : null
-    if (isSkin(v)) setSkin(v)
-  }, [])
-  return skin
+  return useSyncExternalStore<Skin>(
+    subscribeNoop,
+    readSkinCookie,
+    () => 'bmovies',
+  )
 }
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {

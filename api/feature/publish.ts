@@ -95,6 +95,38 @@ export default async function handler(
     return;
   }
 
+  // ─── KYC gate ──────────────────────────────────────────────
+  //
+  // Publishing the film makes the royalty shares public. Mirror the
+  // share-listings gate so you can never ship an offer without a
+  // verified identity, even if no listings have been created yet.
+  // Auto-publish (cron worker) bypasses this — that path is for
+  // features whose revision_deadline elapsed and the commissioner
+  // already passed KYC at commission time.
+  const publisherAccountId = (body.accountId && typeof body.accountId === 'string')
+    ? body.accountId
+    : (offer.account_id || null);
+  if (!publisherAccountId) {
+    res.status(403).json({
+      error: 'KYC verification required — sign in before publishing',
+      code: 'kyc_account_missing',
+    });
+    return;
+  }
+  const { data: kycRow } = await supabase
+    .from('bct_user_kyc')
+    .select('status')
+    .eq('account_id', publisherAccountId)
+    .maybeSingle();
+  if (!kycRow || kycRow.status !== 'verified') {
+    res.status(403).json({
+      error: 'KYC verification required to publish — shares become publicly tradable on publish',
+      code: 'kyc_not_verified',
+      kycStatus: kycRow?.status || 'not_started',
+    });
+    return;
+  }
+
   const publishedAt = new Date().toISOString();
 
   const { error: updateErr } = await supabase

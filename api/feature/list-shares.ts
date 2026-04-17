@@ -110,6 +110,39 @@ export default async function handler(
       return;
     }
 
+    // ─── KYC gate ──────────────────────────────────────────────
+    //
+    // Listing royalty shares on the exchange is primary securities
+    // issuance. Listings only open if the seller account's KYC is
+    // verified on bct_user_kyc. We resolve the account id from the
+    // request body first, then fall back to the offer's commissioner.
+    // If we can't resolve an account at all (anonymous path), we
+    // refuse — the previous behaviour silently allowed anon listings.
+    const sellerAccountId = (body.accountId && typeof body.accountId === 'string')
+      ? body.accountId
+      : (offer.account_id || null);
+    if (!sellerAccountId) {
+      res.status(403).json({
+        error: 'KYC verification required — sign in before listing shares',
+        code: 'kyc_account_missing',
+      });
+      return;
+    }
+    const { data: kycRow } = await supabase
+      .from('bct_user_kyc')
+      .select('status, verified_at')
+      .eq('account_id', sellerAccountId)
+      .maybeSingle();
+    if (!kycRow || kycRow.status !== 'verified') {
+      res.status(403).json({
+        error: 'KYC verification required to list royalty shares for sale',
+        code: 'kyc_not_verified',
+        kycStatus: kycRow?.status || 'not_started',
+        hint: 'Complete KYC from /account then retry. Royalty share listings are a regulated issuance; we cannot open one without a verified identity on file.',
+      });
+      return;
+    }
+
     // Cap: cannot list more shares than the commissioner holds
     const commissionerShares = Math.floor((Number(offer.commissioner_percent || 99) / 100) * 1_000_000_000);
     if (sharesOffered > commissionerShares) {

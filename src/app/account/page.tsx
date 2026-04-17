@@ -535,78 +535,204 @@ function ProjectCards({
     )
   }
 
+  // ─── Workbench groups ──────────────────────────────────────
+  //
+  // Every film lives in exactly one bucket based on bct_offers.status.
+  // Drafts are the commissioner's private workbench — token already
+  // minted, but nothing on the exchange, not yet on /watch. Pipeline
+  // is everything actively generating. Live is "published" or
+  // released tokens visible to the audience. Archived is a safety
+  // net for anything explicitly withdrawn.
+  const workbench = films.filter((f) => f.status === 'draft' || f.status === 'open')
+  const pipeline  = films.filter((f) => f.status === 'funded' || f.status === 'in_progress' || f.status === 'producing')
+  const live      = films.filter((f) => f.status === 'released' || f.status === 'published' || f.status === 'auto_published')
+  const archived  = films.filter((f) => f.status === 'archived')
+
   return (
-    <div>
-      <div className="text-[#888] text-xs mb-4">
-        {films.length} film{films.length === 1 ? '' : 's'} commissioned
+    <div className="space-y-10">
+      <div className="text-[#888] text-xs">
+        {films.length} film{films.length === 1 ? '' : 's'} ·{' '}
+        <span className="text-[#f7c14b]">{workbench.length} in workbench</span> ·{' '}
+        <span className="text-[#aa66ff]">{pipeline.length} in pipeline</span> ·{' '}
+        <span className="text-[#6bff8a]">{live.length} live</span>
+        {archived.length > 0 && <> · <span className="text-[#555]">{archived.length} archived</span></>}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {films.map((f) => {
-          const posterUrl = resolvePosterUrl(f)
-          const onChain = f.token_mint_txid && /^[0-9a-f]{64}$/.test(f.token_mint_txid)
-          return (
-            <div
-              key={f.id}
-              className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors cursor-pointer"
-              onClick={() => router.push(`/account?project=${f.id}&tab=overview`, { scroll: false })}
-            >
-              {posterUrl ? (
-                <div className="aspect-[2/3] bg-[#050505] overflow-hidden">
-                  <img src={posterUrl} alt={f.title} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] flex items-center justify-center">
-                  <div
-                    className="text-[#666] text-5xl font-black"
-                    style={{ fontFamily: 'var(--font-bebas)' }}
-                  >
-                    b<span className="text-[#E50914]">M</span>
+
+      <WorkbenchGroup
+        title="Workbench"
+        subtitle="Drafts — tokens minted but not yet listed on the exchange or published. Ready for you to set a price and ship."
+        accent="#f7c14b"
+        films={workbench}
+        emptyMsg="No drafts. Commission a new pitch to start a workbench item."
+      />
+
+      <WorkbenchGroup
+        title="In pipeline"
+        subtitle="The swarm is actively generating. Drafts appear once the pipeline completes."
+        accent="#aa66ff"
+        films={pipeline}
+        emptyMsg="Nothing in production right now."
+      />
+
+      <WorkbenchGroup
+        title="Live"
+        subtitle="Published films — the audience can buy tickets, the shares are publicly tradable."
+        accent="#6bff8a"
+        films={live}
+        emptyMsg="No films live yet. Publish a draft to move it here."
+      />
+
+      {archived.length > 0 && (
+        <WorkbenchGroup
+          title="Archived"
+          subtitle="Withdrawn offers. Preserved for record-keeping; not shown on the public site."
+          accent="#555"
+          films={archived}
+          emptyMsg=""
+        />
+      )}
+    </div>
+  )
+}
+
+/* ─── Workbench group: one section per status bucket ─── */
+
+function WorkbenchGroup({
+  title, subtitle, accent, films, emptyMsg,
+}: {
+  title: string
+  subtitle: string
+  accent: string
+  films: Film[]
+  emptyMsg: string
+}) {
+  const router = useRouter()
+
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <div>
+          <div
+            className="text-[0.55rem] uppercase tracking-[0.2em] font-bold mb-1"
+            style={{ color: accent }}
+          >
+            {title} · {films.length}
+          </div>
+          <div className="text-[#888] text-xs max-w-2xl">{subtitle}</div>
+        </div>
+      </div>
+
+      {films.length === 0 ? (
+        emptyMsg ? (
+          <div className="border border-dashed border-[#222] bg-[#050505] p-4 text-[#555] text-xs">
+            {emptyMsg}
+          </div>
+        ) : null
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {films.map((f) => {
+            const posterUrl = resolvePosterUrl(f)
+            const onChain = f.token_mint_txid && /^[0-9a-f]{64}$/.test(f.token_mint_txid)
+            const isDraft = f.status === 'draft' || f.status === 'open'
+            const isLive  = f.status === 'released' || f.status === 'published' || f.status === 'auto_published'
+            return (
+              <div
+                key={f.id}
+                className="border bg-[#0a0a0a] hover:border-[#E50914] transition-colors cursor-pointer"
+                style={{ borderColor: '#222' }}
+                onClick={() => router.push(`/account?project=${f.id}&tab=overview`, { scroll: false })}
+              >
+                {posterUrl ? (
+                  <div className="aspect-[2/3] bg-[#050505] overflow-hidden relative">
+                    <img src={posterUrl} alt={f.title} className="w-full h-full object-cover" />
+                    <div
+                      className="absolute top-2 right-2 text-[0.5rem] uppercase tracking-wider font-bold px-1.5 py-0.5 text-black"
+                      style={{ background: accent }}
+                    >
+                      {title.split(' ')[0]}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[2/3] bg-gradient-to-br from-[#1a0003] to-[#0a0000] flex items-center justify-center">
+                    <div
+                      className="text-[#666] text-5xl font-black"
+                      style={{ fontFamily: 'var(--font-bebas)' }}
+                    >
+                      b<span className="text-[#E50914]">M</span>
+                    </div>
+                  </div>
+                )}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3
+                      className="font-black text-lg leading-tight text-white"
+                      style={{ fontFamily: 'var(--font-bebas)' }}
+                    >
+                      {f.title}
+                    </h3>
+                    <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+                      ${f.token_ticker}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap mb-3">
+                    <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                      {f.tier}
+                    </span>
+                    <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+                      {f.status.replace(/_/g, ' ')}
+                    </span>
+                    {onChain && (
+                      <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+                        On chain
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
+                    {f.synopsis || 'No synopsis yet.'}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/account?project=${f.id}&tab=overview`, { scroll: false })
+                      }}
+                    >
+                      Open
+                    </button>
+                    {isDraft && (
+                      // Drafts get a dedicated quick-path to the publish
+                      // tool so users don't have to drill through the
+                      // tool menu to ship a token.
+                      <button
+                        className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#f7c14b] text-[#f7c14b] hover:bg-[#f7c14b] hover:text-black transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/account?project=${f.id}&tool=publish`, { scroll: false })
+                        }}
+                      >
+                        Publish →
+                      </button>
+                    )}
+                    {isLive && (
+                      <a
+                        className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 border border-[#6bff8a] text-[#6bff8a] hover:bg-[#6bff8a] hover:text-black transition-colors"
+                        href={`/film.html?id=${encodeURIComponent(f.id)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        On /watch ↗
+                      </a>
+                    )}
                   </div>
                 </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3
-                    className="font-black text-lg leading-tight text-white"
-                    style={{ fontFamily: 'var(--font-bebas)' }}
-                  >
-                    {f.title}
-                  </h3>
-                  <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
-                    ${f.token_ticker}
-                  </span>
-                </div>
-                <div className="flex gap-1.5 flex-wrap mb-3">
-                  <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
-                    {f.tier}
-                  </span>
-                  <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
-                    {f.status.replace(/_/g, ' ')}
-                  </span>
-                  {onChain && (
-                    <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
-                      On chain
-                    </span>
-                  )}
-                </div>
-                <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
-                  {f.synopsis || 'No synopsis yet.'}
-                </p>
-                <button
-                  className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    router.push(`/account?project=${f.id}&tab=overview`, { scroll: false })
-                  }}
-                >
-                  Open
-                </button>
               </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -696,15 +822,18 @@ function ProjectView({
   const router = useRouter()
 
   // If the film hasn't loaded yet or doesn't exist in the user's list,
-  // load it directly from Supabase
+  // load it directly from Supabase. `fetching` tracks only the async
+  // fetch; the render-time `directLoading` derives from that + film.
+  // Deriving avoids a setState-in-effect flash when `film` arrives
+  // after the direct fetch already set loading=false.
   const [directFilm, setDirectFilm] = useState<Film | null>(null)
-  const [directLoading, setDirectLoading] = useState(!film)
+  const [fetching, setFetching] = useState(!film)
 
   useEffect(() => {
-    if (film) { setDirectLoading(false); return }
+    if (film) return
     let cancelled = false
     async function load() {
-      setDirectLoading(true)
+      setFetching(true)
       const { data } = await bmovies
         .from('bct_offers')
         .select(
@@ -716,7 +845,7 @@ function ProjectView({
         .maybeSingle()
       if (!cancelled) {
         setDirectFilm(data as Film | null)
-        setDirectLoading(false)
+        setFetching(false)
       }
     }
     load()
@@ -724,6 +853,7 @@ function ProjectView({
   }, [projectId, film])
 
   const currentFilm = film || directFilm
+  const directLoading = !film && fetching
 
   if (directLoading) {
     return (
@@ -4754,11 +4884,14 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
           projectTitle={projectTitle}
           artifactId={tabData[activeTab]?.artifact?.id}
           onSaved={(newContent) => {
-            // Update local state after save
-            if (tabData[activeTab]?.artifact) {
-              tabData[activeTab].artifact!.content = newContent
-              tabData[activeTab].content = newContent
-            }
+            // Update local state after save — replace the matching
+            // artifact row in state so tabData recomputes cleanly on
+            // the next render instead of mutating its derived value.
+            const savedId = tabData[activeTab]?.artifact?.id
+            if (savedId == null) return
+            setArtifacts((prev) =>
+              prev.map((a) => (a.id === savedId ? { ...a, content: newContent } : a)),
+            )
           }}
         />
       )}
@@ -5085,10 +5218,13 @@ function MovieEditorView({
 }) {
   const [allClips, setAllClips] = useState<EditorClip[]>([])
   const [loading, setLoading] = useState(true)
-  const [tier, setTier] = useState<EditorTier>('trailer')
+  // Manual tier override — when the user clicks a tab we pin it
+  // here, otherwise the active tier is derived from the project's
+  // own tier + which buckets have clips. Deriving avoids a
+  // setState-in-effect cycle on load.
+  const [manualTier, setManualTier] = useState<EditorTier | null>(null)
   const [activeClip, setActiveClip] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [tierInitialized, setTierInitialized] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -5119,19 +5255,15 @@ function MovieEditorView({
   const featureAll = allClips.filter(isFeatureClip)
   const titleAllVideo = allClips.filter(isTitleClip)
 
-  useEffect(() => {
-    if (loading || tierInitialized) return
-    const pt = (projectTier || '').toLowerCase()
-    const pick: EditorTier =
-      pt === 'feature' && featureAll.length ? 'feature' :
-      pt === 'short' && shortAll.length ? 'short' :
-      pt === 'trailer' && trailerAll.length ? 'trailer' :
-      featureAll.length ? 'feature' :
-      shortAll.length ? 'short' :
-      'trailer'
-    setTier(pick)
-    setTierInitialized(true)
-  }, [loading, tierInitialized, projectTier, featureAll.length, shortAll.length, trailerAll.length])
+  const pt = (projectTier || '').toLowerCase()
+  const defaultTier: EditorTier =
+    pt === 'feature' && featureAll.length ? 'feature' :
+    pt === 'short' && shortAll.length ? 'short' :
+    pt === 'trailer' && trailerAll.length ? 'trailer' :
+    featureAll.length ? 'feature' :
+    shortAll.length ? 'short' :
+    'trailer'
+  const tier: EditorTier = manualTier ?? defaultTier
 
   const clips =
     tier === 'feature' ? featureAll :
@@ -5159,7 +5291,7 @@ function MovieEditorView({
 
   function switchTier(next: EditorTier) {
     if (next === tier) return
-    setTier(next)
+    setManualTier(next)
     setActiveClip(0)
     setIsPlaying(false)
   }
@@ -5492,7 +5624,7 @@ function formatAudioTime(sec: number): string {
 type AudioTrack = { id: number; url: string; step_id: string | null; role: string | null }
 
 function MusicPlayer({ tracks }: { tracks: AudioTrack[] }) {
-  const [activeIdx, setActiveIdx] = useState(0)
+  const [rawActiveIdx, setActiveIdx] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -5503,9 +5635,10 @@ function MusicPlayer({ tracks }: { tracks: AudioTrack[] }) {
   })
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  useEffect(() => {
-    if (activeIdx >= tracks.length) setActiveIdx(0)
-  }, [tracks.length, activeIdx])
+  // Clamp inline — if the track list shrinks below the stored index
+  // we render position 0 without needing a setState-in-effect round
+  // trip that would flash a stale track.
+  const activeIdx = tracks.length === 0 ? 0 : Math.min(rawActiveIdx, tracks.length - 1)
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume
@@ -5837,7 +5970,22 @@ function ImageLightbox<T extends { id: number; url: string; step_id: string | nu
 // tab already has everything this viewer needs. decodeDataUrl lives
 // at the top of this file, near ScriptPane, so it can be shared.
 
-function DocumentViewer({
+// Thin keyed wrapper so internal state (text, textErr, packFrame)
+// resets automatically when the viewed document changes. React's
+// idiomatic "reset state with key" pattern — avoids setState-in-
+// effect reset loops that the react-hooks plugin (correctly) flags.
+function DocumentViewer(props: {
+  items: ArtifactRow[]
+  index: number | null
+  onClose: () => void
+  onIndexChange: (next: number) => void
+  label: (d: ArtifactRow) => string
+  dlName: (d: ArtifactRow) => string
+}) {
+  return <DocumentViewerInner key={props.index ?? 'closed'} {...props} />
+}
+
+function DocumentViewerInner({
   items,
   index,
   onClose,
@@ -5852,7 +6000,7 @@ function DocumentViewer({
   label: (d: ArtifactRow) => string
   dlName: (d: ArtifactRow) => string
 }) {
-  const [text, setText] = useState<string | null>(null)
+  const [remoteText, setRemoteText] = useState<string | null>(null)
   const [textErr, setTextErr] = useState<string | null>(null)
   // Nested lightbox: when the current doc is a pack (has children),
   // clicking a grid tile sets this to that child's index. Null =
@@ -5861,28 +6009,20 @@ function DocumentViewer({
 
   const item = index !== null ? items[index] : null
 
-  // Reset nested-lightbox state when the parent item changes — closing
-  // the nested viewer shouldn't happen automatically across navigation,
-  // but swapping the outer document definitely should.
-  useEffect(() => { setPackFrame(null) }, [index])
+  // Inline data: URLs decode synchronously — derive, don't set-state.
+  const inlineText = item?.kind === 'text' ? decodeDataUrl(item.url) : null
+  const text = inlineText ?? remoteText
 
-  // Load text content when the current item is a text artifact.
+  // Only fetch when we have a text item and no inline decode was
+  // possible. Component remounts (via outer wrapper key) whenever
+  // `index` changes, so no reset-on-change logic is needed here.
   useEffect(() => {
-    setText(null)
-    setTextErr(null)
     if (!item || item.kind !== 'text') return
-    // Inline data: URL → decode locally, no network.
-    const inline = decodeDataUrl(item.url)
-    if (inline !== null) {
-      setText(inline)
-      return
-    }
-    // Otherwise fetch. Text artifacts are usually small so no
-    // streaming / truncation needed.
+    if (decodeDataUrl(item.url) !== null) return
     let cancelled = false
     fetch(item.url)
       .then((r) => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then((t) => { if (!cancelled) setText(t) })
+      .then((t) => { if (!cancelled) setRemoteText(t) })
       .catch((e) => { if (!cancelled) setTextErr(e.message || String(e)) })
     return () => { cancelled = true }
   }, [item])
@@ -6445,46 +6585,15 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
 
   return (
     <div className="space-y-8">
+      {/* ─── Unified music player ─── */}
+      {loading ? (
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] animate-pulse h-64" />
+      ) : (
+        <MusicPlayer tracks={audioArtifacts} />
+      )}
 
       {/* ─── Music Studio ─── */}
       <MusicStudio projectId={projectId} projectTitle={projectTitle} />
-
-      {/* ─── Audio tracks on the project ─── */}
-      <div className="space-y-3">
-        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
-          Audio / Score — tracks committed to this project
-        </div>
-
-        {loading ? (
-          <div className="space-y-2 animate-pulse">
-            <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
-            <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
-          </div>
-        ) : audioArtifacts.length > 0 ? (
-          <div className="space-y-3">
-            {audioArtifacts.map((a) => (
-              <div key={a.id} className="border border-[#222] bg-[#0a0a0a] p-4">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-xs text-[#ccc] font-mono">
-                    {a.step_id || a.role || 'Audio track'}
-                  </span>
-                  <a
-                    href={a.url}
-                    target="_blank"
-                    rel="noopener"
-                    className="text-[0.6rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
-                  >
-                    Download
-                  </a>
-                </div>
-                <audio src={a.url} controls className="w-full h-8" preload="none" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-[#666] text-sm">No audio tracks generated yet. Use the Music Studio above to commission a theme.</div>
-        )}
-      </div>
 
       {/* Score brief — the composer agent's written output */}
       {scoreBrief && (
@@ -6905,6 +7014,8 @@ const TIER_DEFAULTS: Record<TierKey, { totalUsd: number; percent: number; nextLa
   feature: { totalUsd: 9999,   percent: 10, nextLabel: 'marketing tranche' },
 }
 
+type KycStatus = 'verified' | 'pending' | 'submitted' | 'rejected' | 'not_started'
+
 function PublishView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [tier, setTier] = useState<TierKey>('pitch')
   const [status, setStatus] = useState<string>('draft')
@@ -6916,10 +7027,18 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
   const [totalUsd, setTotalUsd] = useState<number>(9.99)
   const [floorUsd, setFloorUsd] = useState<string>('')   // optional; empty = no floor
   const [accountId, setAccountId] = useState<string | null>(null)
+  const [kycStatus, setKycStatus] = useState<KycStatus>('not_started')
 
-  const [submitting, setSubmitting] = useState(false)
-  const [submitErr, setSubmitErr] = useState<string | null>(null)
-  const [submitOk, setSubmitOk] = useState<string | null>(null)
+  // Two independent actions — list shares on the exchange, publish the
+  // film to /watch. The original single-button UI conflated them; now
+  // each has its own submitting/err/ok state so a failure on one side
+  // doesn't blank the other's feedback.
+  const [listing, setListing] = useState(false)
+  const [listErr, setListErr] = useState<string | null>(null)
+  const [listOk, setListOk] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
+  const [pubErr, setPubErr] = useState<string | null>(null)
+  const [pubOk, setPubOk] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -6958,7 +7077,24 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
           .select('id')
           .eq('auth_user_id', user.id)
           .maybeSingle()
-        if (!cancelled) setAccountId((acct as { id?: string } | null)?.id || null)
+        const acctId = (acct as { id?: string } | null)?.id || null
+        if (!cancelled) setAccountId(acctId)
+
+        // Pre-check KYC so we can gate the form instead of letting the
+        // user fill it out and then hit a 403. /api/kyc-status returns
+        // 'not_started' if there's no row at all, and we treat
+        // anything other than 'verified' as "can't list".
+        if (acctId) {
+          try {
+            const kycRes = await fetch(`/api/kyc-status?accountId=${encodeURIComponent(acctId)}`)
+            if (kycRes.ok) {
+              const kycPayload = await kycRes.json()
+              if (!cancelled) setKycStatus((kycPayload?.status as KycStatus) || 'not_started')
+            }
+          } catch {
+            // Non-fatal — leave as 'not_started' so the gate shows.
+          }
+        }
       }
       setLoading(false)
     }
@@ -6973,15 +7109,25 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
   const floorCents = floorUsd.trim() ? Number(floorUsd.trim()) * 100 : null
   const sharesValid = sharesOffered >= 100_000 && sharesOffered <= 99 * SHARES_PER_PERCENT
   const priceValid = pricePerShareCents > 0 && pricePerShareCents <= 100_000  // $1,000/share ceiling
+  const kycVerified = kycStatus === 'verified'
+  const canPublish = status === 'draft'   // server enforces this too; we mirror for UX
 
-  async function submit() {
+  async function refreshListings() {
+    const { data: refetched } = await bmovies
+      .from('bct_share_listings')
+      .select('id, price_per_share_cents, shares_offered, status')
+      .eq('offer_id', projectId)
+      .order('created_at', { ascending: false })
+    setExisting((refetched as any[]) || [])
+  }
+
+  // ─── Action 1: list a tranche on the exchange ─────────────────
+  async function submitListing() {
     if (!sharesValid || !priceValid) {
-      setSubmitErr('Shares or price out of range — minimum 0.01%, max 99%, max $1,000/share.')
+      setListErr('Shares or price out of range — minimum 0.01%, max 99%, max $1,000/share.')
       return
     }
-    setSubmitErr(null)
-    setSubmitOk(null)
-    setSubmitting(true)
+    setListErr(null); setListOk(null); setListing(true)
     try {
       const res = await fetch('/api/feature/list-shares?action=create', {
         method: 'POST',
@@ -6989,26 +7135,51 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
         body: JSON.stringify({
           offerId: projectId,
           sharesOffered,
-          pricePerShareCents: Math.round(pricePerShareCents * 100) / 100, // keep API happy (integer cents)
+          pricePerShareCents: Math.round(pricePerShareCents * 100) / 100,
           accountId,
         }),
       })
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // Surface KYC errors distinctly so the user knows where to go.
+        if (payload?.code === 'kyc_not_verified' || payload?.code === 'kyc_account_missing') {
+          setKycStatus((payload?.kycStatus as KycStatus) || 'not_started')
+          throw new Error(payload?.error || 'KYC required')
+        }
         throw new Error(payload?.error || `HTTP ${res.status}`)
       }
-      setSubmitOk(`Listing created · ${percent}% of ${ticker || 'this film'} now live on the exchange.`)
-      // Refresh the existing-listings strip.
-      const { data: refetched } = await bmovies
-        .from('bct_share_listings')
-        .select('id, price_per_share_cents, shares_offered, status')
-        .eq('offer_id', projectId)
-        .order('created_at', { ascending: false })
-      setExisting((refetched as any[]) || [])
+      setListOk(`Listing created · ${percent}% of ${ticker || 'this film'} now live on the exchange.`)
+      await refreshListings()
     } catch (err) {
-      setSubmitErr((err as Error).message || 'Failed to publish.')
+      setListErr((err as Error).message || 'Failed to list shares.')
     } finally {
-      setSubmitting(false)
+      setListing(false)
+    }
+  }
+
+  // ─── Action 2: publish the film to /watch ─────────────────────
+  async function submitPublish() {
+    setPubErr(null); setPubOk(null); setPublishing(true)
+    try {
+      const res = await fetch('/api/feature/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerId: projectId, accountId }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (payload?.code === 'kyc_not_verified' || payload?.code === 'kyc_account_missing') {
+          setKycStatus((payload?.kycStatus as KycStatus) || 'not_started')
+          throw new Error(payload?.error || 'KYC required')
+        }
+        throw new Error(payload?.error || `HTTP ${res.status}`)
+      }
+      setPubOk(`Published · live on /watch.html. ${payload?.watchUrl ? '' : ''}`)
+      setStatus('published')
+    } catch (err) {
+      setPubErr((err as Error).message || 'Failed to publish.')
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -7034,17 +7205,71 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
           Ship <span className="text-[#E50914]">{projectTitle}</span>
         </h2>
         <p className="text-[#888] text-sm mt-2 max-w-2xl">
-          Publishing pushes a slice of this {tier}&apos;s royalty shares to the exchange. Default
-          preset is <strong className="text-white">{def.percent}%</strong> for{' '}
-          <strong className="text-white">${def.totalUsd.toLocaleString()}</strong> total (the{' '}
-          {def.nextLabel} tier cost). Change the percent, price, or floor to suit your strategy —
-          you keep the remaining {99 - def.percent}% of the 99% that belongs to you.
+          Two actions on this tab.{' '}
+          <strong className="text-white">List shares</strong> opens a tranche of this
+          {' '}{tier}&apos;s royalty tokens on the exchange so investors can buy in and
+          fund the next tier.{' '}
+          <strong className="text-white">Publish</strong> flips the film live on{' '}
+          <code className="text-[0.75rem] text-[#E50914]">/watch</code> so the
+          audience can buy tickets. Both require a verified identity on file.
         </p>
       </div>
 
-      {/* ─── Form ─── */}
+      {/* ─── KYC gate banner ─────────────────────────────────────
+         Royalty share listings are primary securities issuance, so we
+         enforce KYC both server-side (api/feature/list-shares.ts,
+         api/feature/publish.ts) and client-side as a UX shortcut so
+         users don't fill out a form that's going to 403.           */}
+      <div className={`mb-6 border p-4 flex items-start justify-between gap-4 flex-wrap ${
+        kycVerified
+          ? 'border-[#1a5a1a] bg-[#0c1f0c]'
+          : 'border-[#5a4a1a] bg-[#1f1a08]'
+      }`}>
+        <div className="min-w-0">
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] font-bold mb-1"
+               style={{ color: kycVerified ? '#6bff8a' : '#f7c14b' }}>
+            {kycVerified ? 'Identity verified' : 'Identity check required'}
+          </div>
+          <div className="text-white text-sm leading-relaxed">
+            {kycVerified ? (
+              <>You&apos;re cleared to list royalty shares and publish films.</>
+            ) : kycStatus === 'pending' || kycStatus === 'submitted' ? (
+              <>Your KYC submission is being reviewed. Listing + publish will unlock once it&apos;s approved.</>
+            ) : kycStatus === 'rejected' ? (
+              <>Your previous KYC submission was rejected. Please restart from the account tab.</>
+            ) : (
+              <>Royalty shares are a regulated issuance. Verify your identity once to list any of your films on the exchange or publish to <code>/watch</code>.</>
+            )}
+          </div>
+        </div>
+        {!kycVerified && (
+          <a
+            href="/account?section=wallet"
+            className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#f7c14b] hover:bg-[#ffd774] text-black shrink-0"
+          >
+            Verify identity →
+          </a>
+        )}
+      </div>
+
+      {/* ─── Action 1: list a tranche on the exchange ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
         <div className="border border-[#222] bg-[#0a0a0a] p-5 space-y-4">
+          <div className="pb-3 border-b border-[#222]">
+            <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold">
+              Step 1
+            </div>
+            <h3 className="text-white text-lg font-black leading-tight" style={{ fontFamily: 'var(--font-bebas)' }}>
+              List shares on exchange
+            </h3>
+            <p className="text-[#888] text-xs mt-1">
+              Default preset: <strong className="text-white">{def.percent}%</strong> for{' '}
+              <strong className="text-white">${def.totalUsd.toLocaleString()}</strong> total
+              (the {def.nextLabel} cost). Adjust any field — the rest of your 99%
+              stays with you.
+            </p>
+          </div>
+
           <div>
             <label className="block text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-1">
               Percent of supply to release
@@ -7118,22 +7343,23 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
             </div>
             <button
               type="button"
-              disabled={submitting || !sharesValid || !priceValid}
-              onClick={submit}
+              disabled={listing || !sharesValid || !priceValid || !kycVerified}
+              onClick={submitListing}
               className="text-[0.7rem] font-bold uppercase tracking-wider px-5 py-2 bg-[#E50914] hover:bg-[#b00610] text-white disabled:opacity-40 disabled:cursor-not-allowed"
+              title={!kycVerified ? 'KYC verification required' : undefined}
             >
-              {submitting ? 'Publishing…' : 'Publish to exchange →'}
+              {listing ? 'Listing…' : 'List shares →'}
             </button>
           </div>
 
-          {submitErr && (
+          {listErr && (
             <div className="text-[#ff6b6b] text-xs border border-[#5a1a1a] bg-[#3a0e0e] p-3 font-mono">
-              {submitErr}
+              {listErr}
             </div>
           )}
-          {submitOk && (
+          {listOk && (
             <div className="text-[#6bff8a] text-xs border border-[#1a5a1a] bg-[#0e3a0e] p-3 font-mono">
-              {submitOk}{' '}
+              {listOk}{' '}
               <a href={`/offer.html?id=${encodeURIComponent(projectId)}`} className="underline">
                 Open on exchange ↗
               </a>
@@ -7152,15 +7378,70 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
             <div className="flex justify-between"><span className="text-[#888]">Release</span><span className="text-white">{percent}%</span></div>
             <div className="flex justify-between"><span className="text-[#888]">Total</span><span className="text-white">${totalUsd.toLocaleString()}</span></div>
             <div className="flex justify-between"><span className="text-[#888]">Floor</span><span className="text-white">{floorCents === null ? '—' : `$${(floorCents / 100).toFixed(4)}`}</span></div>
+            <div className="flex justify-between"><span className="text-[#888]">Offer status</span><span className="text-white font-mono">{status}</span></div>
+            <div className="flex justify-between"><span className="text-[#888]">KYC</span><span className={kycVerified ? 'text-[#6bff8a]' : 'text-[#f7c14b]'}>{kycStatus}</span></div>
           </div>
           <div className="pt-3 border-t border-[#222]">
             <div className="text-[#666] text-[0.6rem] font-mono leading-relaxed">
-              After publish, this tranche appears on /offer.html?id={projectId.slice(0, 12)}…
-              and /exchange. Buyers pay Stripe; proceeds clear to your payout address after the
-              on-chain transfer step.
+              After listing, the tranche appears on <code>/offer.html</code> and the
+              main <code>/exchange</code>. Buyers pay Stripe; proceeds clear to
+              your payout address after the on-chain transfer leg.
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ─── Action 2: publish the film to /watch ─── */}
+      <div className="mt-8 border border-[#222] bg-[#0a0a0a] p-5 space-y-3">
+        <div className="pb-3 border-b border-[#222] flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold">
+              Step 2
+            </div>
+            <h3 className="text-white text-lg font-black leading-tight" style={{ fontFamily: 'var(--font-bebas)' }}>
+              Publish to <code className="text-[#E50914]">/watch</code>
+            </h3>
+            <p className="text-[#888] text-xs mt-1 max-w-lg">
+              Flips this film from <code>draft</code> to <code>published</code>.
+              Goes live on the public catalogue, disables further presale
+              listings, stamps <code>published_at</code> on the offer.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={publishing || !canPublish || !kycVerified}
+            onClick={submitPublish}
+            className="text-[0.7rem] font-bold uppercase tracking-wider px-5 py-2 bg-[#E50914] hover:bg-[#b00610] text-white disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            title={
+              !canPublish ? `Offer is ${status}, not draft` :
+              !kycVerified ? 'KYC verification required' : undefined
+            }
+          >
+            {publishing ? 'Publishing…' :
+             status === 'published' || status === 'auto_published' ? 'Already live' :
+             status === 'released' ? 'Released' :
+             'Publish to watch →'}
+          </button>
+        </div>
+        {pubErr && (
+          <div className="text-[#ff6b6b] text-xs border border-[#5a1a1a] bg-[#3a0e0e] p-3 font-mono">
+            {pubErr}
+          </div>
+        )}
+        {pubOk && (
+          <div className="text-[#6bff8a] text-xs border border-[#1a5a1a] bg-[#0e3a0e] p-3 font-mono">
+            {pubOk}{' '}
+            <a href={`/film.html?id=${encodeURIComponent(projectId)}`} className="underline">
+              Open on /watch ↗
+            </a>
+          </div>
+        )}
+        {!canPublish && status !== 'published' && status !== 'auto_published' && (
+          <div className="text-[0.6rem] text-[#666] font-mono">
+            Only offers with <code>status=draft</code> can be manually published.
+            Current status: <span className="text-white">{status}</span>.
+          </div>
+        )}
       </div>
 
       {/* ─── Existing listings ─── */}
@@ -7185,13 +7466,6 @@ function PublishView({ projectId, projectTitle }: { projectId: string; projectTi
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {status === 'draft' && (
-        <div className="mt-6 text-[0.6rem] text-[#888] font-mono">
-          Offer status: <span className="text-[#888]">draft</span>. First publish will flip it to{' '}
-          <span className="text-[#6bff8a]">live</span>.
         </div>
       )}
     </div>
