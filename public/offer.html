@@ -369,13 +369,14 @@
 
       <div class="modal-actions">
         <button class="btn-secondary" id="fund-cancel">Cancel</button>
-        <button class="btn-primary" id="fund-confirm">Buy these shares →</button>
+        <button class="btn-primary" id="fund-confirm">Take me to the buy widget →</button>
       </div>
       <div class="modal-status" id="fund-status"></div>
       <p style="margin-top:0.8rem;font-size:0.65rem;color:#888;line-height:1.5;">
         Royalty shares are securities. BSV payment only — no card
-        checkout. You'll be asked to verify identity once, then the
-        same purchase flow as any other share buy.
+        checkout. The current buy widget settles 1% at a time at the
+        live tranche price; to commit this budget, make one or more
+        1% buys until you've hit the target.
       </p>
     </div>
   </div>
@@ -816,21 +817,24 @@
       });
     }
 
-    // fundPending carries the state of an in-flight Fund modal buy:
-    //   { tier, budgetUsd, pctToBuy }
-    // When the user confirms, handleBuy reads this to override the
-    // default 1%-at-current-price behaviour.
+    // fundPending holds the state of an in-flight Fund modal preview.
+    // The modal is informational only right now: api/handcash/buy-shares.ts
+    // hardcodes percent_bought=1.00 per transaction, so overriding
+    // priceUsd would charge the buyer their full budget but record
+    // only 1% on the cap table — a silent overcharge. That fix is
+    // backend work: accept percentBought from the client, derive it
+    // from priceUsd at the tranche price, update bct_share_sales.
+    // Until that ships, Confirm closes the modal and scrolls the user
+    // to the existing 1% buy widget so they can size the purchase
+    // themselves or make N separate 1% buys.
     let fundPending = null;
 
-    async function handleBuy(override) {
-      const priceUsd = override?.priceUsd ?? currentTranche.pricePerPercent;
+    async function handleBuy() {
       pendingPurchase = {
         offerId: currentOffer.id,
         title: currentOffer.title,
         ticker: currentOffer.token_ticker,
-        priceUsd,
-        tier: override?.tier,
-        pctToBuy: override?.pctToBuy,
+        priceUsd: currentTranche.pricePerPercent,
       };
       if (!currentSession) { showModal('signin-modal'); return; }
       if (currentKyc?.status !== 'verified') {
@@ -842,19 +846,17 @@
       proceed(pendingPurchase);
     }
 
-    // Fund modal actions
+    // Fund modal actions. Confirm = "take me to the buy widget" until
+    // the backend supports multi-percent buys in a single transaction.
     document.getElementById('fund-cancel').addEventListener('click', () => {
       hideModal('fund-modal');
       fundPending = null;
     });
     document.getElementById('fund-confirm').addEventListener('click', () => {
-      if (!fundPending) { hideModal('fund-modal'); return; }
       hideModal('fund-modal');
-      handleBuy({
-        priceUsd: fundPending.budgetUsd,
-        tier: fundPending.tier,
-        pctToBuy: fundPending.pctToBuy,
-      });
+      fundPending = null;
+      document.getElementById('buy-royalty-shares')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     loadUserState().then(load);
