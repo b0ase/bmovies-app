@@ -1,23 +1,21 @@
 /**
- * Next.js middleware — routes /boovies/* to the underlying bMovies
- * routes with the bOOvies skin engaged.
+ * Next.js middleware — two responsibilities:
  *
- * Flow:
- *   User visits /boovies/commission
- *   → middleware rewrites the URL to /commission (internal, the browser
- *     URL stays /boovies/commission)
- *   → sets skin=boovies cookie so subsequent navigation stays pink
- *   → forwards x-skin: boovies header so server components don't have
- *     to re-parse the request URL
+ * 1. /boovies/* skin routing
+ *    User visits /boovies/commission → rewrite to /commission, set
+ *    skin=boovies cookie + x-skin header so downstream renders pink.
  *
- * Paths:
- *   /boovies           → /            (Drive-In home with pink skin)
- *   /boovies/foo       → /foo
- *   everything else    → unchanged; reads cookie for sticky skin
+ * 2. Social crawler rewrite for /film.html
+ *    When a social-card bot (Twitterbot, facebookexternalhit, etc.)
+ *    hits /film.html?id=<offerId>, rewrite the request to
+ *    /api/og/film-meta?id=<offerId>. That endpoint returns a tiny
+ *    HTML document with dynamic og:image/title/description so the
+ *    preview card shows the actual film poster. Human requests pass
+ *    through to the static /film.html as before.
  *
  * Non-goals:
- *   • Does not intercept /api/* — those take an explicit `skin` param
- *     when they need to branch, to stay stateless.
+ *   • Does not intercept /api/* paths at all — those take explicit
+ *     params when they need to branch.
  *   • Does not intercept static assets in /public — the matcher below
  *     excludes them for performance.
  */
@@ -27,8 +25,33 @@ import { SKIN_COOKIE, SKIN_HEADER, stripBooviesPrefix, isSkin } from '@/lib/skin
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+// Social preview crawlers. Every renderer that fetches og:* meta needs
+// to be in this list; any false-negative means that renderer shows the
+// generic bmovies_og.jpg instead of the film's poster. Ordered
+// loosely by share volume. Case-insensitive match against UA.
+const SOCIAL_CRAWLER_RE = /(Twitterbot|facebookexternalhit|Facebot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|Pinterest|redditbot|Applebot|Googlebot|bingbot|DuckDuckBot|YandexBot|Embedly|quora link preview|vkShare|W3C_Validator|Mastodon)/i;
+
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
+
+  // ─── Social crawler rewrite ─────────────────────────────────
+  // Must run before anything else so we don't accidentally add the
+  // skin cookie to a crawler's response and skew future humans.
+  if (pathname === '/film.html') {
+    const ua = req.headers.get('user-agent') || '';
+    const isCrawler = SOCIAL_CRAWLER_RE.test(ua);
+    if (isCrawler) {
+      const id = searchParams.get('id');
+      if (id) {
+        const url = req.nextUrl.clone();
+        url.pathname = '/api/og/film-meta';
+        // Keep only ?id=; drop any tracking params so the endpoint
+        // response cache key stays tight.
+        url.search = `?id=${encodeURIComponent(id)}`;
+        return NextResponse.rewrite(url);
+      }
+    }
+  }
 
   // If the user explicitly set ?skin=bmovies|boovies on any URL, persist it.
   const querySkin = searchParams.get('skin');
