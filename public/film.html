@@ -497,22 +497,17 @@
       const byTier = {};
       for (const d of derivatives) byTier[d.tier] = d;
 
-      // Fund sub-row: show a "Fund [tier]" BSV button beneath each
-      // Make/Watch slot. Only the same offer needs funding (royalty
-      // shares settle on one pitch's cap table), so the href points
-      // back to offer.html with the target tier as context. Current
-      // tier and already-produced tiers don't get a Fund button —
-      // the columns hold a placeholder so the grid aligns vertically.
-      const fundRowButtons = TIER_ORDER.map(t => {
-        const meta = TIER_META[t];
-        const isCurrent = t === currentTier;
-        const derivative = byTier[t];
-        if (isCurrent || derivative) {
-          return '<span class="fund-btn placeholder"></span>';
-        }
-        return `<a class="fund-btn" href="offer.html?id=${encodeURIComponent(offer.id)}&target=${t}">Fund ${meta.label.toLowerCase()} · BSV</a>`;
-      }).join('');
-
+      // ONE button per tier slot. Previously we rendered two rows —
+      // a Stripe "Make tier · $99" and a BSV "Fund tier · BSV" — for
+      // every unproduced tier. That was confusing: on the film page,
+      // both buttons appeared to do the same thing. They didn't quite
+      // (Make = commissioner pays Stripe USD to trigger production;
+      // Fund = investors buy royalty shares in the existing pitch to
+      // crowdfund the next tier), but the redundancy dominated the
+      // UX. The commissioner's upgrade path now lives on /account,
+      // which owns the "your projects" surface. The film page keeps
+      // only the Fund action for investors, consistent with the
+      // "royalty shares settle on-chain" framing.
       const tierRowButtons = TIER_ORDER.map(t => {
         const meta = TIER_META[t];
         const isCurrent = t === currentTier;
@@ -532,11 +527,14 @@
           label = `▶ Watch ${meta.label.toLowerCase()}`;
           href = `film.html?id=${encodeURIComponent(derivative.id)}`;
         } else {
-          // Not yet produced — commission it, linked back to this
-          // pitch via parentOfferId so the cap table rolls up.
+          // Not yet produced — route everyone (commissioner OR
+          // external investor) to the offer page, where shares fund
+          // the production via BSV wallet. The commissioner-specific
+          // Stripe upgrade path lives on /account?project=... so we
+          // don't double-surface it here.
           state = 'upgrade';
-          label = `Make ${meta.label.toLowerCase()} · ${meta.display}`;
-          href = `commission.html?tier=${t}&parentId=${encodeURIComponent(offer.id)}&title=${encodeURIComponent(offer.title || '')}&ticker=${encodeURIComponent(offer.token_ticker || '')}`;
+          label = `Fund ${meta.label.toLowerCase()} · BSV`;
+          href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
         }
 
         if (href) {
@@ -553,10 +551,7 @@
         `;
       }).join('');
 
-      return `
-        <div class="tier-row">${tierRowButtons}</div>
-        <div class="fund-row">${fundRowButtons}</div>
-      `;
+      return `<div class="tier-row">${tierRowButtons}</div>`;
     }
 
     // Strip AI meta-commentary from agent outputs: "Below is...",
@@ -1021,46 +1016,10 @@
           thumbs.forEach((b, j) => b.addEventListener('click', () => load(j)));
         })();
 
-        // Wire tier upgrade buttons — commission the higher tier of
-        // the same film via the standard checkout flow.
-        document.querySelectorAll('.tier-btn.upgrade').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const targetTier = btn.dataset.tier;
-            const meta = TIER_META[targetTier];
-            if (!meta) return;
-            btn.disabled = true;
-            const originalText = btn.textContent;
-            btn.textContent = 'Redirecting...';
-            try {
-              const res = await fetch('/api/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  title: offer.title,
-                  ticker: offer.token_ticker,
-                  synopsis: offer.synopsis || '',
-                  tier: targetTier,
-                  source: 'tier-upgrade',
-                  parentOfferId: offer.id,
-                }),
-              });
-              if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Checkout failed');
-              }
-              const { url } = await res.json();
-              if (url) {
-                window.location.href = url;
-              } else {
-                throw new Error('No checkout URL');
-              }
-            } catch (err) {
-              alert('Upgrade failed: ' + (err.message || err));
-              btn.disabled = false;
-              btn.textContent = originalText;
-            }
-          });
-        });
+        // Tier-upgrade buttons are now plain <a href> links to
+        // offer.html (BSV-wallet funding flow); no JS hijack needed.
+        // The previous Stripe /api/checkout hijack is removed — the
+        // commissioner-specific upgrade path lives on /account.
       });
     }
 
