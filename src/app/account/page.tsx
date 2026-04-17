@@ -1559,15 +1559,26 @@ function ProjectDeckView({ film }: { film: Film }) {
 function ProjectRoomView({ film }: { film: Film }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider">
-          Production timeline &middot; {film.title}
+      <div className="flex items-end justify-between mb-4 gap-3 flex-wrap">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            Live pipeline
+          </div>
+          <h2
+            className="text-3xl font-black leading-none text-white"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            Production <span className="text-[#E50914]">room</span>
+          </h2>
+          <div className="text-[#888] text-xs mt-1">
+            ${film.token_ticker} &middot; &quot;{film.title}&quot;
+          </div>
         </div>
         <a
           href={`/production.html?id=${encodeURIComponent(film.id)}`}
           target="_blank"
           rel="noopener"
-          className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider"
+          className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.6rem] font-bold uppercase tracking-wider shrink-0"
         >
           Open in new tab
         </a>
@@ -3232,19 +3243,21 @@ function ScriptPane({
 
   return (
     <div className="space-y-3">
-      {/* Editor */}
+      {/* Editor — sized to feel like a real writing surface. Fills
+          ~75vh so a screenplay tab gives you room to actually write
+          without fighting the toolbar. */}
       {editing ? (
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="w-full bg-[#0a0a0a] border border-[#E50914] text-[#ccc] text-sm leading-relaxed p-5 font-mono resize-y focus:outline-none"
-          style={{ minHeight: '350px' }}
+          className="w-full bg-[#0a0a0a] border border-[#E50914] text-[#ccc] text-base leading-relaxed p-6 font-mono resize-y focus:outline-none"
+          style={{ minHeight: '75vh' }}
           autoFocus
         />
       ) : (
         <div
-          className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-sm leading-relaxed p-5 whitespace-pre-wrap cursor-text hover:border-[#333] transition-colors"
-          style={{ minHeight: '300px', fontFamily: 'var(--font-mono), monospace' }}
+          className="bg-[#0a0a0a] border border-[#222] text-[#ccc] text-base leading-relaxed p-6 whitespace-pre-wrap cursor-text hover:border-[#333] transition-colors"
+          style={{ minHeight: '75vh', fontFamily: 'var(--font-mono), monospace' }}
           onClick={() => setEditing(true)}
         >
           {text}

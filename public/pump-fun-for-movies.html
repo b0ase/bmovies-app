@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Pump.fun for Movies</title>
+  <meta name="description" content="bMovies is Pump.fun for movies. $0.99 to launch a film. The audience pumps the winners up the tier ladder. Royalty shares, not meme coins." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bmovies.online/pump-fun-for-movies" />
+  <meta property="og:title" content="bMovies — Pump.fun for Movies" />
+  <meta property="og:description" content="$0.99 to launch a film. Audience pumps the winners to trailer, short, feature. Royalty shares settle on BSV mainnet." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pump: #1FD882;
+      --pump-hot: #14B26B;
+      --dump: #FF4757;
+      --gold: #FFD84D;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #000;
+      color: #e8e8e8;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    main { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      text-align: center;
+      padding: 3rem 0 3rem;
+      border-bottom: 1px solid #0f3026;
+      margin-bottom: 3rem;
+      background:
+        radial-gradient(ellipse at top left, rgba(31,216,130,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(255,216,77,0.08) 0%, transparent 55%);
+    }
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--pump);
+      font-weight: 700;
+    }
+    h1.title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 11vw, 8rem);
+      color: #fff;
+      margin: 0.6rem 0 0.8rem;
+      letter-spacing: 0.02em;
+      line-height: 0.9;
+    }
+    h1.title .pump {
+      color: var(--pump);
+      display: inline-block;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    h1.title .fm {
+      display: block;
+      font-size: 0.55em;
+      color: #fff;
+      letter-spacing: 0.05em;
+    }
+    h1.title .fm em {
+      font-style: normal;
+      color: var(--gold);
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); text-shadow: 0 0 0 rgba(31,216,130,0); }
+      50%      { transform: scale(1.04); text-shadow: 0 0 32px rgba(31,216,130,0.45); }
+    }
+    .hero .sub {
+      color: #c8c8c8;
+      max-width: 720px;
+      margin: 1.2rem auto 0;
+      font-size: 1.12rem;
+      line-height: 1.6;
+    }
+    .hero .sub b { color: #fff; }
+    .hero .sub .pump { color: var(--pump); font-weight: 700; }
+
+    .flair {
+      display: inline-flex;
+      gap: 0.6rem;
+      align-items: center;
+      margin-top: 1.8rem;
+      padding: 0.6rem 1rem;
+      border: 1px dashed #1f4a36;
+      color: var(--pump);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+    }
+
+    /* Ticker band */
+    .ticker {
+      overflow: hidden;
+      white-space: nowrap;
+      margin: 2rem -2rem 0;
+      padding: 0.7rem 0;
+      border-top: 1px solid #0f3026;
+      border-bottom: 1px solid #0f3026;
+      background: #060c0a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+    .ticker .track {
+      display: inline-block;
+      animation: scroll 32s linear infinite;
+      padding-left: 100%;
+    }
+    .ticker span { margin: 0 1.6rem; color: #888; }
+    .ticker span.g { color: var(--pump); }
+    .ticker span.r { color: var(--dump); }
+    .ticker span.y { color: var(--gold); }
+    @keyframes scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-100%); }
+    }
+
+    /* Sections */
+    .section { margin-top: 4rem; }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.64rem;
+      color: var(--pump);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      margin: 0.5rem 0 1.4rem;
+    }
+    h2 span.g { color: var(--pump); }
+    h2 span.r { color: var(--dump); }
+
+    .lede {
+      color: #aaa;
+      font-size: 0.98rem;
+      line-height: 1.7;
+      max-width: 800px;
+      margin-bottom: 1.5rem;
+    }
+    .lede b { color: #fff; }
+
+    /* Side-by-side compare */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+    }
+    @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+    .cc {
+      border: 1px solid #1a1a1a;
+      background: #0a0a0a;
+      padding: 1.6rem 1.8rem;
+    }
+    .cc.them { border-color: #1a1a1a; }
+    .cc.us   { border-color: #0f3026; background: linear-gradient(180deg, #061410 0%, #0a0a0a 100%); }
+    .cc h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.8rem;
+    }
+    .cc.us h3 span { color: var(--pump); }
+    .cc ul { list-style: none; padding: 0; margin: 0; }
+    .cc li {
+      padding: 0.7rem 0;
+      border-top: 1px dashed #1a1a1a;
+      color: #a5a5a5;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .cc li:first-child { border-top: 0; }
+    .cc.them li::before { content: "◦ "; color: #555; }
+    .cc.us   li::before { content: "▶ "; color: var(--pump); }
+
+    /* Ladder */
+    .ladder {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.8rem;
+    }
+    @media (max-width: 960px) { .ladder { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .ladder { grid-template-columns: 1fr; } }
+    .rung {
+      position: relative;
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
+      padding: 1.4rem 1.2rem 1.2rem;
+      overflow: hidden;
+    }
+    .rung .step {
+      position: absolute;
+      top: 0.8rem;
+      right: 1rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.6rem;
+      color: var(--pump);
+      opacity: 0.28;
+      line-height: 1;
+    }
+    .rung h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.2rem;
+    }
+    .rung .price {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84rem;
+      color: var(--pump);
+      margin-bottom: 0.9rem;
+      font-weight: 700;
+    }
+    .rung p {
+      color: #9a9a9a;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      margin-bottom: 0.7rem;
+    }
+    .rung .grad {
+      margin-top: 0.5rem;
+      padding-top: 0.7rem;
+      border-top: 1px dashed #14321e;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+    }
+    .rung.feature {
+      border-color: var(--pump);
+      background: linear-gradient(180deg, #061410 0%, #0a0a0a 100%);
+    }
+    .rung.feature .step { color: var(--pump); opacity: 0.5; }
+
+    /* Loop diagram */
+    .loop {
+      border: 1px solid #0f3026;
+      background: #060c0a;
+      padding: 1.8rem 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+      color: #b8b8b8;
+    }
+    .loop .g { color: var(--pump); font-weight: 700; }
+    .loop .y { color: var(--gold); font-weight: 700; }
+    .loop .r { color: var(--dump); font-weight: 700; }
+    .loop .d { color: #555; }
+
+    /* CTA block */
+    .cta {
+      margin-top: 4rem;
+      border: 2px solid var(--pump);
+      background:
+        radial-gradient(ellipse at top, rgba(31,216,130,0.12) 0%, transparent 60%),
+        #060c0a;
+      padding: 2.8rem 2rem;
+      text-align: center;
+    }
+    .cta h2 { margin-bottom: 0.4rem; font-size: 2.4rem; }
+    .cta p {
+      color: #c8c8c8;
+      max-width: 640px;
+      margin: 0 auto 1.6rem;
+      font-size: 0.98rem;
+      line-height: 1.65;
+    }
+    .cta-row {
+      display: flex;
+      gap: 0.9rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .cta-btn {
+      display: inline-block;
+      padding: 1rem 1.8rem;
+      background: var(--pump);
+      color: #002012;
+      text-decoration: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+      border: 2px solid var(--pump);
+      transition: transform .15s ease, background .15s ease;
+    }
+    .cta-btn:hover { transform: translateY(-2px); background: var(--pump-hot); border-color: var(--pump-hot); }
+    .cta-btn.ghost { background: transparent; color: var(--pump); }
+    .cta-btn.ghost:hover { background: rgba(31,216,130,0.08); color: var(--pump); }
+    .cta-btn.gold { background: var(--gold); border-color: var(--gold); color: #2a1f00; }
+    .cta-btn.gold:hover { background: #F5C72B; border-color: #F5C72B; }
+
+    /* PDF preview strip */
+    .pdf-strip {
+      margin-top: 3rem;
+      border: 1px dashed #1f1f1f;
+      background:
+        linear-gradient(180deg, rgba(255,216,77,0.04) 0%, rgba(255,216,77,0) 100%),
+        #070707;
+      padding: 1.6rem 1.8rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1.4rem;
+      align-items: center;
+    }
+    @media (max-width: 720px) { .pdf-strip { grid-template-columns: 1fr; } }
+    .pdf-strip .lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.64rem;
+      color: var(--gold);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .pdf-strip h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin: 0.3rem 0 0.4rem;
+    }
+    .pdf-strip h3 span { color: var(--gold); }
+    .pdf-strip p {
+      color: #aaa;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      max-width: 620px;
+    }
+    .pdf-strip .pdf-ctas {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .pdf-strip .pdf-ctas a {
+      display: inline-block;
+      padding: 0.8rem 1.2rem;
+      text-decoration: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border: 1px solid #332a0a;
+      color: var(--gold);
+      background: rgba(255,216,77,0.03);
+      text-align: center;
+    }
+    .pdf-strip .pdf-ctas a:hover {
+      background: var(--gold);
+      color: #2a1f00;
+    }
+
+    /* Risk / honesty note */
+    .risk {
+      margin-top: 3rem;
+      border: 1px solid #332a1a;
+      background: rgba(255, 216, 77, 0.03);
+      padding: 1.4rem 1.6rem;
+    }
+    .risk h3 {
+      font-size: 0.68rem;
+      color: var(--gold);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+    }
+    .risk p {
+      color: #9a8a5a;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+    .risk p:last-child { margin-bottom: 0; }
+    .risk b { color: var(--gold); }
+
+    .footer-links {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1f1f1f;
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      font-size: 0.78rem;
+    }
+    .footer-links a {
+      color: #888;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .footer-links a:hover { color: var(--pump); }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="hero">
+      <div class="eyebrow">Marketing campaign 02 · The degen cut</div>
+      <h1 class="title">
+        <span class="pump">Pump.fun</span>
+        <span class="fm">for <em>movies.</em></span>
+      </h1>
+      <p class="sub">
+        $0.99 launches a film. Not a meme coin — <span class="pump">a movie</span>. The audience pumps the winners up the tier ladder: trailer, short, feature. Every climb is a <b>real on-chain royalty share</b> on BSV mainnet. Every dump is public. Every graduation is a premiere.
+      </p>
+      <div class="flair">▶ 99% to the creator · 1% to the studio · 0% to a VC</div>
+
+      <div class="ticker">
+        <div class="track">
+          <span class="g">$WEIRD +412% ▲</span>
+          <span>→ graduated to TRAILER</span>
+          <span class="y">$HANSARD pumped $9.99 → $99 tier</span>
+          <span class="g">$BOOB +188% ▲</span>
+          <span class="r">$SLOP -74% ▼ didn't graduate</span>
+          <span>4,211 pitches launched this week</span>
+          <span class="g">$KWEG minted first feature</span>
+          <span class="y">next graduation ceremony: Sunday 21:00 UTC</span>
+          <span>999 sats to pitch · 99M shares per launch</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 1. The pitch in one paragraph ─── -->
+    <div class="section">
+      <div class="section-label">Chapter 01 · The pitch in one paragraph</div>
+      <h2>Same loop. <span class="g">Different product.</span></h2>
+      <p class="lede">
+        Pump.fun turned token launches into a game show: anybody can spin up a coin for a few bucks, the market pumps the ones it likes, and the winners "graduate" to a bigger exchange. bMovies runs the <b>same game loop</b> — but instead of minting another dog-themed shitcoin, you mint <b>a film</b>. Every launch is a real production with a treatment, a storyboard, a poster, and a director. Every royalty share is a real on-chain asset that pays out when someone presses play.
+      </p>
+      <p class="lede">
+        The degenerate energy is a feature, not a bug. We're not apologising for it. We're <span style="color:var(--pump);font-weight:700;">pointing a firehose of speculative attention at film financing</span>, which has needed it for a hundred years.
+      </p>
+    </div>
+
+    <!-- ─── 2. Compare ─── -->
+    <div class="section">
+      <div class="section-label">Chapter 02 · The side-by-side</div>
+      <h2>Pump.fun <span class="g">vs. bMovies</span></h2>
+      <p class="lede">Same mechanic, heavier asset underneath.</p>
+      <div class="compare">
+        <div class="cc them">
+          <h3>Pump.fun</h3>
+          <ul>
+            <li>Launch a token for ~$2.</li>
+            <li>Buyers trade it on a bonding curve.</li>
+            <li>Graduate at ~$69k market cap.</li>
+            <li>The token represents… a dog.</li>
+            <li>Screenshot goes on Twitter.</li>
+            <li>Line goes up. Line goes down. Repeat.</li>
+          </ul>
+        </div>
+        <div class="cc us">
+          <h3>bMovies — <span>Pump.fun for Movies</span></h3>
+          <ul>
+            <li>Launch a film with a $0.99 pitch.</li>
+            <li>Buyers pump shares by commissioning the next tier.</li>
+            <li>Graduate from pitch → trailer → short → feature.</li>
+            <li>The share represents royalties on a real movie.</li>
+            <li>Premiere goes on the site.</li>
+            <li>Line goes up. Film gets made. Holders get paid.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 3. Graduation ladder ─── -->
+    <div class="section">
+      <div class="section-label">Chapter 03 · The graduation ladder</div>
+      <h2>Four rungs. <span class="g">Each one a pump.</span></h2>
+      <p class="lede">A pitch that finds an audience graduates to a trailer. A trailer with heat graduates to a short. A short with ticket sales graduates to a feature. Every rung is a <b>real commission</b> — not a speculative bet on a commission happening.</p>
+      <div class="ladder">
+        <div class="rung">
+          <div class="step">01</div>
+          <h3>Pitch</h3>
+          <div class="price">$0.99 · launch</div>
+          <p>Logline, synopsis, key art. Minted as 1B royalty shares in ~90 seconds. You own 99%.</p>
+          <div class="grad">→ graduates when an audience commissions the trailer</div>
+        </div>
+        <div class="rung">
+          <div class="step">02</div>
+          <h3>Trailer</h3>
+          <div class="price">$9.99 · pump #1</div>
+          <p>~32s teaser. 6-frame storyboard, poster, treatment, AI video clip. Shareable. Embed-ready.</p>
+          <div class="grad">→ graduates when someone commissions a short</div>
+        </div>
+        <div class="rung">
+          <div class="step">03</div>
+          <h3>Short</h3>
+          <div class="price">$99 · pump #2</div>
+          <p>~64s narrative. 12 frames. Voice-over, score, multi-scene edit. First tier with ticketed views.</p>
+          <div class="grad">→ graduates when a feature is commissioned on top</div>
+        </div>
+        <div class="rung feature">
+          <div class="step">04</div>
+          <h3>Feature</h3>
+          <div class="price">$999 · moon</div>
+          <p>11-specialist crew. Director, writer, cinematographer, composer, editor, sound, producer — full narrative.</p>
+          <div class="grad">→ graduated. Premiere. Screen it.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 4. The Loop ─── -->
+    <div class="section">
+      <div class="section-label">Chapter 04 · The loop</div>
+      <h2>Pump. <span class="g">Screen.</span> Repeat.</h2>
+      <p class="lede">A diagram that fits on a phone screen. Substitute "meme coin" for "movie" anywhere in your Pump.fun mental model and you're 90% there.</p>
+      <div class="loop"><span class="g">visitor</span> ──($0.99)──▶ <span class="d">launches a pitch</span>        <span class="d"># $WEIRD minted</span>
+                                    │
+                                    ▼
+                         <span class="d">1B royalty shares</span>   <span class="d"># 99% creator · 1% studio</span>
+                                    │
+<span class="g">audience</span> ──buys shares / commissions trailer──▶   <span class="y">PUMP #1</span>  <span class="d">→ tier: trailer</span>
+                                    │
+<span class="g">audience</span> ──buys shares / commissions short──▶    <span class="y">PUMP #2</span>  <span class="d">→ tier: short</span>
+                                    │
+<span class="g">audience</span> ──buys shares / commissions feature──▶  <span class="y">PUMP #3</span>  <span class="d">→ tier: feature</span>
+                                    │
+                                    ▼
+                            <span class="g">GRADUATION 🎬</span>  <span class="d"># premiere drops</span>
+                                    │
+                                    ▼
+                         <span class="g">holders earn royalties</span>   <span class="d"># per stream · per ticket</span>
+
+                         <span class="r">films that don't pump stay at their tier.</span>
+                         <span class="d">(nobody loses the art — only the upside on the next rung.)</span></div>
+    </div>
+
+    <!-- ─── 5. PUMPONOMICS PDF strip ─── -->
+    <div class="pdf-strip">
+      <div>
+        <div class="lbl">Brochure · A4 PDF · Silly-but-shippable</div>
+        <h3><span>PUMPONOMICS</span> — the field guide</h3>
+        <p>
+          The Pump.fun for Movies version of our Ponzinomics brochure. Eight A4 pages with the whole loop laid out — graduation ceremonies, the pump-and-screen cycle, the ladder math, and the pep talk. Hit <b>Cmd+P</b> (or <b>Ctrl+P</b>) to save as PDF. Good for tweets, good for investors who prefer paper, and yes, it has rocket emojis.
+        </p>
+      </div>
+      <div class="pdf-ctas">
+        <a href="pumponomics.html">Read on-screen →</a>
+        <a href="pumponomics-print.html" target="_blank">Print edition (PDF) ↗</a>
+      </div>
+    </div>
+
+    <!-- ─── 6. Why this hook ─── -->
+    <div class="section">
+      <div class="section-label">Chapter 05 · Why this hook works</div>
+      <h2>The cultural shortcut. <span class="g">Three words, everyone nods.</span></h2>
+      <p class="lede">
+        <b>"It's Pump.fun for movies"</b> is a cheat code. In one sentence your audience already knows: <b>anyone can launch</b>, the <b>market picks the winners</b>, the <b>mechanism is a bonding curve of attention</b>, and <b>graduation</b> is the promise. You don't have to explain agents, royalty shares, or BSV. You just have to say the phrase, point at the ladder, and let them click.
+      </p>
+      <p class="lede">
+        The trick is leaning into it without becoming it. Pump.fun launches a joke; bMovies launches a film. Pump.fun graduates to Raydium; bMovies graduates to a premiere. <b>The comparison sells the front door. The back door is actually a film studio.</b>
+      </p>
+    </div>
+
+    <!-- ─── 7. Honesty note ─── -->
+    <div class="risk">
+      <h3>⚠ Honesty note</h3>
+      <p><b>Royalty shares, not meme coins.</b> The things you buy on bMovies are fractional claims on a film's revenue. They pay out when someone pays to watch. They're not utility tokens, not coin offerings, and not "the next 100x". If nobody watches the film, they earn zero. We've written this one the way we wrote <a href="ponzinomics.html" style="color:var(--gold);">Ponzinomics</a> — with the odds visible and the house edge stated.</p>
+      <p><b>The degen hook is a marketing skin.</b> The engine underneath is the same one the rest of the site sits on: a studio marketplace where agents produce real artifacts on a 28-step pipeline, payments settle on BSV mainnet, and the creator keeps 99% of the shares.</p>
+    </div>
+
+    <!-- ─── 8. Final CTA ─── -->
+    <div class="cta">
+      <div class="eyebrow">Ready to launch?</div>
+      <h2>Pitch a film. <span class="g">Pump the ones you love.</span></h2>
+      <p>
+        $0.99 launches your first pitch. The audience does the rest — or they don't, and you try again with the next logline. Either way, <b>you keep 99% of the shares</b>.
+      </p>
+      <div class="cta-row">
+        <a class="cta-btn" href="commission.html">Launch a pitch →</a>
+        <a class="cta-btn gold" href="pumponomics-print.html" target="_blank">Download PUMPONOMICS PDF</a>
+        <a class="cta-btn ghost" href="exchange.html">Browse the ladder →</a>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="/marketing-ideas">← Marketing ideas</a>
+      <a href="boovies.html">bOOvies</a>
+      <a href="ponzinomics.html">Ponzinomics</a>
+      <a href="about.html">How bMovies works</a>
+      <a href="/">Home</a>
+    </div>
+  </main>
+
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>
