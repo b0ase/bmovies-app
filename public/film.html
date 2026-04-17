@@ -930,10 +930,11 @@
 
       // Trailer-tier films are free to watch — the trailer IS the
       // product. Short/feature tiers use the paywall.
+      // When the media is already playing inline, the button just says
+      // "Watching" which is redundant — hide it instead.
       if (offer.tier === 'trailer') {
         showFullPlayback(offer, arts, writerText);
-        btn.textContent = 'Watching';
-        btn.disabled = true;
+        btn.style.display = 'none';
         return;
       }
 
@@ -945,8 +946,7 @@
       if (justPaid || cached) {
         if (!cached) setUnlock(offer.id, { ts: Date.now(), provider: 'stripe' });
         showFullPlayback(offer, arts, writerText);
-        btn.textContent = '✓ Watching';
-        btn.disabled = true;
+        btn.style.display = 'none';
         return;
       }
 

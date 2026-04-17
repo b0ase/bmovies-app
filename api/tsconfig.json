@@ -1,7 +1,6 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
     "outDir": "../dist-api",
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
@@ -10,6 +9,6 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "../src/**/*.ts"],
   "exclude": []
 }
