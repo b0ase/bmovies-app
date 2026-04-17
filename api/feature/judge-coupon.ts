@@ -163,38 +163,30 @@ export default async function handler(
     }
   }
 
-  // Create the feature offer
+  // Create a TRAILER offer (not feature). Earlier iterations queued a
+  // real $999 feature for every judge which (a) wasn't honest about
+  // pipeline maturity and (b) would have burned ~$20+ of xAI credits
+  // per judge coupon. Trailer is the tight version we actually ship
+  // well right now: ~3 min wall clock, $2 xAI cost, reference-image
+  // conditioned clips, permanent mirror, real BSV-21 mint on-chain.
   const title = body.title?.trim() || DEFAULT_TITLES[Math.floor(Math.random() * DEFAULT_TITLES.length)];
   const synopsis = body.synopsis?.trim() || DEFAULT_SYNOPSIS_TEMPLATE(title);
   const ticker = body.ticker?.trim() || generateTicker(title);
-  const offerId = `feature-judge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-  // Pick a producer at random from the existing studios
-  const { data: producers } = await supabase
-    .from('bct_agents')
-    .select('id')
-    .eq('role', 'producer')
-    .limit(10);
-  const producerId = producers && producers.length > 0
-    ? producers[Math.floor(Math.random() * producers.length)].id
-    : 'spielbergx';
+  const offerId = `trailer-judge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const { error: offerErr } = await supabase.from('bct_offers').insert({
     id: offerId,
-    producer_id: producerId,
+    producer_id: 'stripe-trailer', // matches the Stripe-webhook trailer path
     producer_address: process.env.PITCH_RECEIVE_ADDRESS || '15q3UKrYYNuXRSg3gtb52pEnbaeiGK4m7b',
     title,
     synopsis,
-    required_sats: 25000,
-    raised_sats: 25000,
+    required_sats: 1000,
+    raised_sats: 1000,
     status: 'funded',
     token_ticker: ticker,
-    tier: 'feature',
+    tier: 'trailer',
     commissioner_percent: 99,
     parent_offer_id: null,
-    production_phase: 'preproduction',
-    current_step: 'producer.token_mint',
-    next_step_at: new Date().toISOString(),
     account_id: accountId,
     pipeline_state: {
       source: 'judge-coupon',
@@ -210,6 +202,19 @@ export default async function handler(
     return;
   }
 
+  // Kick off the Vercel trailer pipeline inline — same path the Stripe
+  // webhook uses for a real $9.99 trailer commission. Fire-and-forget
+  // so we respond to the judge fast; the pipeline takes ~3 min and
+  // writes artifacts as it goes.
+  const origin = 'https://bmovies.online';
+  fetch(`${origin}/api/trailer/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ offerId }),
+  }).catch((err) => {
+    console.error(`[feature/judge-coupon] failed to kick off trailer pipeline:`, err);
+  });
+
   // Record the rate-limit row
   await supabase.from('bct_judge_commissions').insert({
     ip_address: ip,
@@ -217,15 +222,15 @@ export default async function handler(
     coupon: expectedCoupon,
   });
 
-  console.log(`[feature/judge-coupon] judge=${body.judgeName || 'anon'} ip=${ip} → offer=${offerId} title="${title}"`);
+  console.log(`[feature/judge-coupon] judge=${body.judgeName || 'anon'} ip=${ip} → trailer=${offerId} title="${title}"`);
 
   res.status(200).json({
     ok: true,
     offerId,
     title,
     ticker,
-    producerId,
+    tier: 'trailer',
     productionUrl: `https://bmovies.online/production.html?id=${encodeURIComponent(offerId)}`,
-    message: 'Production queued. Worker will pick it up within ~30 seconds.',
+    message: 'Trailer queued. Artifacts land within ~3 minutes.',
   });
 }
