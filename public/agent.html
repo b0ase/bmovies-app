@@ -354,6 +354,11 @@
         return;
       }
 
+      // Stash on window so the hire dialog (appended later, outside
+      // this closure) can read agent.name / agent.role without a
+      // second DB round-trip.
+      window.__agent = agent;
+
       document.title = `bMovies — ${agent.name} · ${agent.role.replace('_', ' ')}`;
 
       // Load the agent's studio
@@ -447,7 +452,7 @@
               </div>
             </div>
 
-            <a href="commission.html" class="hire-cta">Hire this agent →</a>
+            <button type="button" id="open-hire-btn" class="hire-cta" style="border:none;font:inherit;cursor:pointer;">Hire this agent &rarr;</button>
           </div>
         </div>
 
@@ -597,7 +602,163 @@
 
     load().then(() => {
       if (agentId) loadCertificate(agentId);
+      // Wire up the "Hire this agent" dialog once the page has rendered.
+      wireHireDialog(agentId);
     });
+
+    // ─── Hire dialog ─────────────────────────────────────────────
+    //
+    // Opens on click of #open-hire-btn. Lets the signed-in user
+    // propose a direct contract with this agent — task type, brief,
+    // fee. POSTs /api/agents/hire with their bearer token. The
+    // endpoint inserts a row in bct_agent_hires (status='proposed').
+    // Post-hackathon: the agent reads its inbox, accepts, delivers.
+    function wireHireDialog(agentId) {
+      const openBtn = document.getElementById('open-hire-btn');
+      if (!openBtn || !agentId) return;
+
+      openBtn.addEventListener('click', async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          if (confirm('You need to sign in before hiring an agent.\n\nOpen the sign-in page?')) {
+            window.location.href = '/account';
+          }
+          return;
+        }
+        openHireModal(agentId, session.access_token);
+      });
+    }
+
+    const TASK_TYPES = [
+      { id: 'pitch',          label: 'Refine a film pitch',         fee: 0.99,  hint: 'I have an idea. Give me a one-paragraph pitch a producer would read.' },
+      { id: 'logline',        label: 'Write a logline',             fee: 0.99,  hint: 'Distil this film into one sentence under 25 words.' },
+      { id: 'synopsis',       label: 'Write a one-page synopsis',   fee: 1.99,  hint: 'Expand this pitch into a ~250-word synopsis: setup, conflict, resolution.' },
+      { id: 'screenplay',     label: 'Write opening scenes',        fee: 19.99, hint: 'Give me the opening 3 scenes in screenplay format, ~3000 words.' },
+      { id: 'storyboard',     label: 'Storyboard a scene',          fee: 9.99,  hint: '6-frame storyboard of the opening beat. Specify shot types + mood.' },
+      { id: 'director_notes', label: "Director's vision statement", fee: 4.99,  hint: 'Write the director\'s vision: tone, references, emotional arc.' },
+      { id: 'shot_list',      label: 'Cinematography shot list',    fee: 4.99,  hint: '15-20 shots: framing, lens, camera movement, lighting.' },
+      { id: 'score',          label: 'Composer brief + cue list',   fee: 4.99,  hint: 'Tone of the score, main theme, motif map, 5-8 cue ideas.' },
+      { id: 'voice',          label: 'Voice performance',           fee: 9.99,  hint: 'Record the following lines in character. [paste lines below]' },
+      { id: 'poster',         label: 'Poster / key art',            fee: 4.99,  hint: 'One-sheet poster for this film. Portrait orientation, festival-caliber.' },
+      { id: 'cast_list',      label: 'Casting breakdown',           fee: 2.99,  hint: '4-6 principal characters with archetype, age, voice notes.' },
+      { id: 'lookbook',       label: 'Production lookbook',         fee: 4.99,  hint: 'Visual refs, color palette, set design, costume, key locations.' },
+      { id: 'edit',           label: 'Editor pacing notes',         fee: 4.99,  hint: 'Watch the rough cut and write a scene-by-scene pacing pass.' },
+      { id: 'sound_design',   label: 'Sound design plan',           fee: 4.99,  hint: 'Ambient layers, key SFX, foley, audio atmosphere per act.' },
+      { id: 'custom',         label: 'Custom task (describe below)',fee: 9.99,  hint: 'Describe what you want this agent to do.' },
+    ];
+
+    function openHireModal(agentId, accessToken) {
+      const agentName = (window.__agent && window.__agent.name) || 'this agent';
+      const agentRole = (window.__agent && window.__agent.role) || 'agent';
+
+      const scrim = document.createElement('div');
+      scrim.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+      scrim.innerHTML = `
+        <div id="hire-modal" style="background:#0a0a0a;border:1px solid #E50914;max-width:560px;width:100%;padding:1.8rem;max-height:90vh;overflow-y:auto;">
+          <div style="font-size:0.55rem;color:#E50914;letter-spacing:0.18em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">Hire agent</div>
+          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:#fff;margin:0 0 0.3rem;line-height:1;">Contract ${esc(agentName)}</h3>
+          <div style="font-size:0.75rem;color:#888;margin-bottom:1.2rem;">${esc(agentRole.replace(/_/g,' '))} &middot; bMovies roster</div>
+
+          <label style="display:block;font-size:0.55rem;color:#888;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Task</label>
+          <select id="hire-task-type" style="width:100%;background:#111;border:1px solid #333;color:#fff;padding:0.6rem;margin-bottom:1rem;font-family:inherit;">
+            ${TASK_TYPES.map(t => `<option value="${t.id}" data-fee="${t.fee}" data-hint="${esc(t.hint)}">${esc(t.label)} &mdash; $${t.fee}</option>`).join('')}
+          </select>
+
+          <label style="display:block;font-size:0.55rem;color:#888;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Brief</label>
+          <textarea id="hire-brief" rows="5" placeholder="" style="width:100%;background:#111;border:1px solid #333;color:#fff;padding:0.6rem;margin-bottom:1rem;font-family:inherit;font-size:0.85rem;resize:vertical;"></textarea>
+
+          <label style="display:block;font-size:0.55rem;color:#888;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Fee (USD)</label>
+          <input id="hire-fee" type="number" step="0.01" min="0" style="width:100%;background:#111;border:1px solid #333;color:#fff;padding:0.6rem;margin-bottom:0.4rem;font-family:inherit;" />
+          <div style="font-size:0.65rem;color:#666;margin-bottom:1.2rem;line-height:1.5;">
+            The agent can accept, counter-offer, or decline. If they accept, you'll be invoiced via Stripe.
+            Post-hackathon: payment flows through an escrow contract on BSV and releases to the agent on delivery.
+          </div>
+
+          <div id="hire-error" style="display:none;color:#ff6b7a;font-size:0.8rem;padding:0.6rem;background:#3a0e0e;border:1px solid #5a1a1a;margin-bottom:0.8rem;"></div>
+
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+            <button type="button" id="hire-cancel" style="padding:0.6rem 1rem;border:1px solid #333;background:transparent;color:#888;font:inherit;cursor:pointer;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Cancel</button>
+            <button type="button" id="hire-submit" style="padding:0.6rem 1.2rem;border:none;background:#E50914;color:#fff;font:inherit;cursor:pointer;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Send proposal &rarr;</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(scrim);
+
+      const taskSelect = scrim.querySelector('#hire-task-type');
+      const briefField = scrim.querySelector('#hire-brief');
+      const feeField   = scrim.querySelector('#hire-fee');
+      const errBox     = scrim.querySelector('#hire-error');
+
+      const applyTask = () => {
+        const opt = taskSelect.options[taskSelect.selectedIndex];
+        if (!briefField.value) briefField.placeholder = opt.dataset.hint;
+        feeField.value = opt.dataset.fee;
+      };
+      applyTask();
+      taskSelect.addEventListener('change', applyTask);
+
+      scrim.querySelector('#hire-cancel').addEventListener('click', () => scrim.remove());
+      scrim.addEventListener('click', (e) => { if (e.target === scrim) scrim.remove(); });
+
+      scrim.querySelector('#hire-submit').addEventListener('click', async () => {
+        const taskType = taskSelect.value;
+        const brief = briefField.value.trim();
+        const feeUsd = Number(feeField.value);
+
+        if (brief.length < 12) {
+          errBox.textContent = 'Brief must be at least 12 characters.';
+          errBox.style.display = 'block';
+          return;
+        }
+        if (!Number.isFinite(feeUsd) || feeUsd < 0) {
+          errBox.textContent = 'Fee must be a positive number.';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        const submitBtn = scrim.querySelector('#hire-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        errBox.style.display = 'none';
+
+        try {
+          const res = await fetch('/api/agents/hire', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + accessToken,
+            },
+            body: JSON.stringify({ agentId, taskType, brief, feeUsd }),
+          });
+          const body = await res.json();
+          if (!res.ok) {
+            errBox.textContent = body?.error || ('HTTP ' + res.status);
+            errBox.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Send proposal &rarr;';
+            return;
+          }
+          // Success — replace modal content with confirmation
+          scrim.querySelector('#hire-modal').innerHTML = `
+            <div style="font-size:0.55rem;color:#6bff8a;letter-spacing:0.18em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">Proposal sent</div>
+            <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:#fff;margin:0 0 0.6rem;line-height:1;">${esc(agentName)} has your brief</h3>
+            <p style="color:#bbb;font-size:0.85rem;line-height:1.6;margin-bottom:1rem;">
+              Contract #${body.id} recorded. The agent will reply with accept / counter / decline.
+              Track it from your <a href="/account" style="color:#E50914;">account page</a>.
+            </p>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+              <button type="button" id="hire-done" style="padding:0.6rem 1.2rem;border:none;background:#E50914;color:#fff;font:inherit;cursor:pointer;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Close</button>
+            </div>
+          `;
+          scrim.querySelector('#hire-done').addEventListener('click', () => scrim.remove());
+        } catch (err) {
+          errBox.textContent = err.message || String(err);
+          errBox.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Send proposal &rarr;';
+        }
+      });
+    }
   </script>
   <script type="module" src="js/nav-session.js"></script>
 </body>

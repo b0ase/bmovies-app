@@ -408,7 +408,7 @@
 
       // xAI temp CDN URLs expire in ~24h — reject them so a live
       // POSTER_MAP static JPG wins over a dead DB URL.
-      const isEphemeralUrl = (u) => typeof u === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(u);
+      const isEphemeralUrl = (u) => typeof u === 'string' && /(imgen|vidgen|videos)\.x\.ai/.test(u);
       const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
       // Deck hero priority is inverted vs film.html — the deck wants a
       // storyboard frame if one exists (investor packs traditionally use

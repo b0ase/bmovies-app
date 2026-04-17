@@ -785,7 +785,7 @@
       const slug = slugify(title);
       return slug && LOCAL_POSTERS.has(slug) ? `img/films/${slug}.jpg` : null;
     };
-    const isEphemeralUrl = (url) => typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url);
+    const isEphemeralUrl = (url) => typeof url === 'string' && /(imgen|vidgen|videos)\.x\.ai/.test(url);
 
     // BSV formatting
     const satsToBsv = (sats) => {
