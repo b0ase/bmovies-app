@@ -55,7 +55,13 @@
     .film-hero .content {
       position: relative; z-index: 2; max-width: 1200px;
       margin: 0 auto; padding: 5rem 3rem 4rem;
-      display: flex; gap: 3rem; align-items: flex-end;
+      display: flex; gap: 3rem;
+      /* flex-start keeps the poster pinned top-left. With long synopsis
+         text the right column used to grow taller than the 540px poster;
+         flex-end left the poster floating disconnected from the bottom
+         rule. Top-align is the stable layout for arbitrary synopsis
+         length. */
+      align-items: flex-start;
     }
     .film-hero .poster {
       width: 360px; flex-shrink: 0; aspect-ratio: 2/3;
@@ -65,7 +71,11 @@
     .film-hero .poster img {
       width: 100%; height: 100%; object-fit: cover;
     }
-    .film-hero .info { flex: 1; }
+    /* Info column caps at 720px — same width as the tier + fund button
+       grids below, so the kicker, h1, synopsis, and all six buttons
+       share a single content rhythm instead of the text running wider
+       than the buttons. */
+    .film-hero .info { flex: 1; max-width: 720px; }
     .film-hero .kicker {
       font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
       color: #E50914; font-weight: 700;
@@ -76,9 +86,38 @@
       line-height: 1; margin-top: 0.5rem;
     }
     .film-hero .tagline {
-      font-size: 1.2rem; color: #ccc; line-height: 1.5;
-      margin-top: 1rem; max-width: 620px;
+      font-size: 1.1rem; color: #ccc; line-height: 1.55;
+      margin-top: 1rem;
+      /* Justify + hyphenation so the synopsis block aligns edge-to-edge
+         with the 720px tier-row grid directly below. Without hyphens
+         justification can create rivers of whitespace on long words. */
+      text-align: justify;
+      hyphens: auto;
+      -webkit-hyphens: auto;
     }
+    /* Clamp overly long synopses (common on trailer + feature tiers
+       where the writer agent produces full-paragraph treatments).
+       Shows ~8 lines by default with a soft fade; the .expanded
+       class — toggled by the 'Read more' button rendered in JS —
+       removes the cap. */
+    .film-hero .tagline.clamp {
+      max-height: 14rem; overflow: hidden; position: relative;
+    }
+    .film-hero .tagline.clamp::after {
+      content: ''; position: absolute; inset: auto 0 0 0; height: 4rem;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      pointer-events: none;
+    }
+    .film-hero .tagline.expanded { max-height: none; }
+    .film-hero .tagline.expanded::after { display: none; }
+    .film-hero .tagline-more {
+      display: inline-block; margin-top: 0.6rem;
+      background: none; border: none; color: #E50914;
+      font-family: inherit; font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      cursor: pointer; padding: 0;
+    }
+    .film-hero .tagline-more:hover { color: #ff5260; }
     .film-hero .meta {
       display: flex; gap: 1.5rem; margin-top: 1.5rem;
       font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
@@ -1211,7 +1250,26 @@
               <div class="info">
                 <div class="kicker">A bMovies production · ${esc((offer.tier || 'feature').toUpperCase())} tier</div>
                 <h1>${esc(offer.title)}</h1>
-                <p class="tagline">${esc(offer.synopsis || '')}</p>
+                ${(() => {
+                  // Clamp only kicks in for synopses longer than a
+                  // comfortable reading block (~420 chars). Shorter
+                  // ones render as-is so the hero doesn't gratuitously
+                  // hide a 2-sentence pitch behind a toggle.
+                  const syn = offer.synopsis || '';
+                  const longSyn = syn.length > 420;
+                  if (!longSyn) {
+                    return `<p class="tagline">${esc(syn)}</p>`;
+                  }
+                  return `
+                    <p class="tagline clamp" id="film-tagline">${esc(syn)}</p>
+                    <button type="button" class="tagline-more" id="film-tagline-toggle"
+                            onclick="(function(b){
+                              var p=document.getElementById('film-tagline');
+                              var on=p.classList.toggle('expanded');
+                              b.textContent=on?'Read less ↑':'Read more ↓';
+                            })(this)">Read more ↓</button>
+                  `;
+                })()}
 
                 ${renderTierRow(offer, derivatives)}
 
