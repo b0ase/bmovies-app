@@ -226,6 +226,84 @@
       .canvas-toolbar { padding: 0.5rem; }
     }
 
+    /* ─── Post-refine tier buttons ───
+       Four side-by-side cards (Pitch / Trailer / Short / Feature).
+       First click on a card updates the "What you get" section and
+       arms the button; second click on the SAME card fires Stripe
+       checkout for that tier. Switching to a different card resets
+       the arm state on the previous one. */
+    .post-refine-tiers {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.7rem;
+    }
+    @media (max-width: 900px) { .post-refine-tiers { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .post-refine-tiers { grid-template-columns: 1fr; } }
+    .post-refine-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.4rem;
+      padding: 1.1rem 1rem;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      border: 1px solid #2a2a2a;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    }
+    .post-refine-btn:hover {
+      border-color: #E50914;
+      background: #120003;
+      transform: translateY(-1px);
+    }
+    .post-refine-btn .pr-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+    .post-refine-btn .pr-price {
+      font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #E50914;
+      letter-spacing: 0.02em;
+    }
+    .post-refine-btn .pr-desc {
+      font-size: 0.7rem;
+      color: #888;
+      line-height: 1.4;
+    }
+
+    /* Armed state: the card the user tapped once. "What you get"
+       below has just updated to match this tier. Second tap ships. */
+    .post-refine-btn.armed {
+      border-color: #E50914;
+      background: linear-gradient(160deg, #1a0003 0%, #0a0000 100%);
+      box-shadow: 0 0 0 1px #E50914 inset, 0 10px 30px rgba(229, 9, 20, 0.25);
+    }
+    .post-refine-btn.armed::after {
+      content: 'Tap again to checkout →';
+      margin-top: 0.2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #fff;
+      background: #E50914;
+      padding: 0.3rem 0.5rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      align-self: stretch;
+      text-align: center;
+    }
+    .post-refine-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     /* Preview */
     .preview {
       margin-top: 1.5rem; padding: 1.2rem 1.4rem;
@@ -545,9 +623,34 @@
       <div class="status" id="status"></div>
 
       <div id="commission-cta-row" style="display:none;margin-top:2rem;">
-        <button id="btn-commission-now" class="primary" type="button" style="font-size:0.8rem;padding:1.1rem 2.5rem;">
-          Commission <span id="btn-tier-label">Feature</span> — <span id="btn-tier-price">$999</span> →
-        </button>
+        <div style="font-size:0.6rem;color:#888;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;margin-bottom:0.9rem;">
+          Ready when you are — pick any tier
+        </div>
+        <div class="post-refine-tiers">
+          <button class="post-refine-btn" data-tier="pitch" type="button">
+            <span class="pr-label">Create pitch</span>
+            <span class="pr-price">$0.99</span>
+            <span class="pr-desc">Logline, synopsis, key art. ~90s.</span>
+          </button>
+          <button class="post-refine-btn" data-tier="trailer" type="button">
+            <span class="pr-label">Make trailer</span>
+            <span class="pr-price">$9.99</span>
+            <span class="pr-desc">32s teaser with storyboard and score.</span>
+          </button>
+          <button class="post-refine-btn" data-tier="short" type="button">
+            <span class="pr-label">Shoot short</span>
+            <span class="pr-price">$99</span>
+            <span class="pr-desc">64s short film with voice and score.</span>
+          </button>
+          <button class="post-refine-btn" data-tier="feature" type="button">
+            <span class="pr-label">Produce feature</span>
+            <span class="pr-price">$999</span>
+            <span class="pr-desc">Full 8-agent crew, feature-length.</span>
+          </button>
+        </div>
+        <div style="font-size:0.7rem;color:#666;margin-top:0.9rem;max-width:620px;line-height:1.5;">
+          You can also start with a pitch today and upgrade to a trailer, short, or feature later from the film page — each upgrade rolls into the same cap table.
+        </div>
       </div>
     </section>
 
@@ -583,9 +686,6 @@
     const pSynopsis = document.getElementById('p-synopsis');
     const status = document.getElementById('status');
     const commissionCtaRow = document.getElementById('commission-cta-row');
-    const btnCommission = document.getElementById('btn-commission-now');
-    const btnTierLabel = document.getElementById('btn-tier-label');
-    const btnTierPrice = document.getElementById('btn-tier-price');
     const selIndicator = document.getElementById('selected-tier-indicator');
     const selTierName = document.getElementById('sel-tier-name');
 
@@ -604,6 +704,15 @@
             .from('bct_user_kyc').select('status').eq('account_id', account.id).maybeSingle();
           currentKyc = kyc;
         }
+      }
+      // Refine spends xAI tokens per click. Anonymous visitors would
+      // let us be free-AI-generator-for-the-internet, so the button is
+      // gated on sign-in — if there's no session, swap it to a Sign-in
+      // CTA that redirects to /account. Click handler is also guarded
+      // defensively in case the session goes stale mid-session.
+      if (btnRefine && !session?.user) {
+        btnRefine.textContent = 'Sign in to refine →';
+        btnRefine.dataset.gated = '1';
       }
     })();
 
@@ -722,10 +831,8 @@
         const isSelected = btn.dataset.tier === tier;
         btn.textContent = isSelected ? '✓ Selected' : `Select ${TIER_META[btn.dataset.tier].label}`;
       });
-      btnTierLabel.textContent = TIER_META[tier].label;
-      btnTierPrice.textContent = TIER_META[tier].price;
-      selTierName.textContent = TIER_META[tier].label;
-      selIndicator.style.display = 'block';
+      if (selTierName) selTierName.textContent = TIER_META[tier].label;
+      if (selIndicator) selIndicator.style.display = 'block';
       renderDeliverables(tier);
       if (refined) commissionCtaRow.style.display = 'block';
     }
@@ -875,6 +982,16 @@
 
     // ─── Refine ───
     btnRefine.addEventListener('click', async () => {
+      // Auth gate: Refine calls xAI per click. Anonymous visitors get
+      // bounced to /account. The dataset flag is set on load; the live
+      // session check re-validates in case a long-idle tab lost its JWT.
+      const { data: { session: live } } = await supabase.auth.getSession();
+      currentSession = live;
+      if (!live?.user) {
+        setStatus('Sign in to refine your pitch with the AI.', 'error');
+        setTimeout(() => { window.location.href = '/account'; }, 900);
+        return;
+      }
       let idea = ideaEl.value.trim();
       if (idea.length < 8) {
         setStatus('Write a bit more — at least a sentence.', 'error');
@@ -968,22 +1085,34 @@
     }
 
     // ─── Commission checkout ───
-    btnCommission.addEventListener('click', async () => {
-      if (!refined || !selectedTier) return;
+    //
+    // The four post-refine tier buttons use a two-click arm-and-fire
+    // pattern so "What you get" has time to visually update before a
+    // user commits to a different tier:
+    //
+    //   1st click: selectTier(tier) → updates deliverables + tier cards
+    //              above. The clicked button enters .armed state.
+    //   2nd click on the SAME button: runs commission(tier) → Stripe.
+    //   Click a DIFFERENT button: disarms the old, arms the new, and
+    //              re-renders deliverables for the new tier.
+    //
+    // No browser dialogs.
 
-      // Gate: sign in required to commission a film
+    async function commission(tier) {
+      if (!refined || !TIER_META[tier]) return;
+
+      // Sign-in gate
       if (!(await ensureSignedIn())) return;
 
-      // Gate: KYC required for trailer+ — skipped for the $0.99 pitch tier.
-      // Pitch is an impulse flow; KYC friction would kill conversion. Users
-      // who upgrade a pitch to trailer/short/feature later will hit the
-      // KYC gate on that upgrade.
-      if (selectedTier !== 'pitch') {
+      // KYC gate — trailer / short / feature only. Pitch ($0.99) is
+      // an impulse flow; KYC friction kills conversion. Pitch upgrades
+      // will hit KYC at the upgrade step.
+      if (tier !== 'pitch') {
         if (!(await ensureKyc())) return;
       }
 
       const email = emailEl.value.trim() || currentSession.user.email;
-      btnCommission.disabled = true;
+      disableAllTierBtns(true);
       setStatus('Redirecting to checkout…');
       try {
         const res = await fetch('/api/checkout', {
@@ -993,7 +1122,7 @@
             title: refined.title,
             ticker: refined.ticker,
             synopsis: refined.synopsis,
-            tier: selectedTier,
+            tier,
             email: email || undefined,
             supabaseUserId: getSignedInSupabaseUserId() || undefined,
             // Upgrade flow: when commission.html was opened from
@@ -1016,9 +1145,43 @@
         }
       } catch (err) {
         setStatus('Checkout failed: ' + (err.message || err), 'error');
-        btnCommission.disabled = false;
+        disableAllTierBtns(false);
       }
+    }
+
+    function disableAllTierBtns(disabled) {
+      document.querySelectorAll('.post-refine-btn').forEach(b => { b.disabled = disabled; });
+    }
+
+    function disarmAllTierBtns() {
+      document.querySelectorAll('.post-refine-btn.armed').forEach(b => b.classList.remove('armed'));
+    }
+
+    // Wire all four post-refine tier buttons
+    document.querySelectorAll('.post-refine-btn').forEach(btn => {
+      const tier = btn.dataset.tier;
+      if (!tier) return;
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('armed')) {
+          // Second click on the armed tier → checkout.
+          commission(tier);
+          return;
+        }
+        // First click on a new tier → update deliverables, arm the
+        // button, and disarm any other armed one.
+        disarmAllTierBtns();
+        selectTier(tier);
+        btn.classList.add('armed');
+        // Nudge the user's eye down to the updated "What you get"
+        // block so the cause-and-effect is obvious.
+        const delHd = document.getElementById('del-heading');
+        if (delHd) delHd.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
+
+    // Any keystroke in the canvas while a tier is armed disarms it —
+    // the user is still writing, not committing.
+    ideaEl.addEventListener('input', disarmAllTierBtns, { passive: true });
 
     // ─── BSVA Judge coupon flow ───
     // When the user lands with ?judge=<coupon>, expose the judge panel.
