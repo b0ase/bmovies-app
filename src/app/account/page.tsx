@@ -1896,7 +1896,18 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-6">
+            {/* ═══ PLATFORM ═══ */}
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-[0.6rem] uppercase tracking-[0.2em] text-[#E50914] font-bold">
+                  Platform token
+                </h3>
+                <span className="text-[0.55rem] uppercase tracking-wider text-[#555]">
+                  1 of 1 · BSV-21 · 1B supply
+                </span>
+              </div>
+              <div className="space-y-3">
             {/* $bMovies platform token — always render as a balance row,
                 even when holdings are 0, so the user always sees a clear
                 line item in the wallet. */}
@@ -1971,10 +1982,28 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               )
             })()}
 
-            {/* Studio tokens */}
+              </div>
+            </div>
+
+            {/* ═══ STUDIO TOKENS ═══ */}
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-[0.6rem] uppercase tracking-[0.2em] text-[#66aaff] font-bold">
+                  Studio tokens
+                </h3>
+                <span className="text-[0.55rem] uppercase tracking-wider text-[#555]">
+                  {(walletData?.studios ?? []).length} owned · royalty on every film your studio produces
+                </span>
+              </div>
+              <div className="space-y-3">
             {(walletData?.studios ?? []).length > 0 ? (
               walletData!.studios.map((s) => (
-                <div key={s.id} className="border border-[#222] bg-[#0a0a0a] p-5">
+                <div key={s.id} className="border border-[#1a3a5a] bg-gradient-to-br from-[#030a14] to-[#0a0a0a] p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[0.5rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#0a1a3a] text-[#66aaff]">
+                      Studio
+                    </span>
+                  </div>
                   <div className="flex items-start justify-between gap-4 mb-1">
                     <div className="flex items-center gap-3">
                       <span
@@ -2025,10 +2054,28 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               </div>
             )}
 
-            {/* Film holdings */}
+              </div>
+            </div>
+
+            {/* ═══ FILM TOKENS ═══ */}
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-[0.6rem] uppercase tracking-[0.2em] text-[#6bff8a] font-bold">
+                  Film tokens
+                </h3>
+                <span className="text-[0.55rem] uppercase tracking-wider text-[#555]">
+                  {films.length} held · royalty share in individual films
+                </span>
+              </div>
+              <div className="space-y-3">
             {films.length > 0 ? (
               films.map((f) => (
-                <div key={f.id} className="border border-[#222] bg-[#0a0a0a] p-5">
+                <div key={f.id} className="border border-[#1a3a1a] bg-gradient-to-br from-[#030f03] to-[#0a0a0a] p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[0.5rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#0a1a0a] text-[#6bff8a]">
+                      Film
+                    </span>
+                  </div>
                   <div className="flex items-start justify-between gap-4 mb-1">
                     <div className="flex items-center gap-3">
                       <span
@@ -2092,7 +2139,20 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
               </div>
             )}
 
-            {/* Agent roster */}
+              </div>
+            </div>
+
+            {/* ═══ AGENTS ═══ */}
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-[0.6rem] uppercase tracking-[0.2em] text-[#aaa] font-bold">
+                  Agents
+                </h3>
+                <span className="text-[0.55rem] uppercase tracking-wider text-[#555]">
+                  {(walletData?.agents ?? []).length} hired · the crew that makes your films
+                </span>
+              </div>
+              <div className="space-y-3">
             {(walletData?.agents ?? []).length > 0 ? (
               walletData!.agents.map((a) => (
                 <div key={a.id} className="border border-[#222] bg-[#0a0a0a] p-5">
@@ -2137,6 +2197,8 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
                 </div>
               )
             )}
+              </div>
+            </div>
           </div>
         )}
       </div>
