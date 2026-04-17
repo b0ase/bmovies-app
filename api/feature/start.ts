@@ -96,27 +96,17 @@ export default async function handler(
     auth: { persistSession: false },
   });
 
-  // KYC gate (defense in depth — primary gate is /api/checkout).
-  // Every real user commission must have a KYC-approved account.
-  // Exceptions: judge-coupon flow (BSVA demo) skips this via source.
+  // Account gate (KYC is NOT required here — commission is a service
+  // purchase, not a securities issuance; KYC belongs on
+  // api/feature/list-shares and api/feature/publish where the royalty
+  // token goes public). Judge-coupon flow still skips account linkage
+  // entirely for the BSVA demo.
   const isJudgeFlow = body.source === 'judge-coupon';
   if (!isJudgeFlow) {
     if (!body.accountId) {
       res.status(403).json({
-        error: 'accountId required — commissions must be linked to a KYC-verified account.',
+        error: 'accountId required — commissions must be linked to an account.',
         reason: 'account_missing',
-      });
-      return;
-    }
-    const { data: kyc } = await supabase
-      .from('bct_user_kyc')
-      .select('status')
-      .eq('account_id', body.accountId)
-      .maybeSingle();
-    if (!kyc || kyc.status !== 'verified') {
-      res.status(403).json({
-        error: 'KYC verification required for the commissioner account.',
-        reason: 'kyc_required',
       });
       return;
     }

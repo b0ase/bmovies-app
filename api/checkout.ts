@@ -108,11 +108,22 @@ export default async function handler(
   const tierInfo = TIER_PRICES[tier] || TIER_PRICES.feature;
   const origin = 'https://bmovies.online';
 
-  // KYC gate: commissions birth a tokenizable offer, so the commissioner
-  // must be a verified human. We require supabaseUserId in the body and
-  // verify the linked bct_accounts row has bct_user_kyc.status='verified'.
-  // Judge-coupon flow bypasses this via /api/feature/judge-coupon, which
-  // calls /api/feature/start directly — not this endpoint.
+  // Sign-in gate (KYC is NOT required at commission time).
+  //
+  // Commissioning pays for a service — the swarm produces a film and
+  // delivers it to the commissioner's account as a draft. The file
+  // the user gets is an asset (a movie); the 1B royalty-share token
+  // mints along with it but sits private. Becoming publicly tradable
+  // — listing shares on the exchange or publishing the film to
+  // /watch — is where regulated-issuance rules apply, and both
+  // endpoints (api/feature/list-shares, api/feature/publish) enforce
+  // bct_user_kyc.status='verified' there.
+  //
+  // Here we only require a signed-in account so the offer has an
+  // owner. Accounts without a KYC cert get the commission; they
+  // simply can't publish or list shares until they complete KYC from
+  // their /account tab. Judge-coupon flow calls /api/feature/start
+  // directly (not this endpoint) with source='judge-coupon'.
   {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -137,22 +148,9 @@ export default async function handler(
       .maybeSingle();
     if (!account) {
       res.status(403).json({
-        error: 'No bMovies account linked to this user. Complete sign-in, then verify KYC.',
+        error: 'No bMovies account linked to this user. Complete sign-in first.',
         reason: 'account_missing',
-        next: '/kyc.html',
-      });
-      return;
-    }
-    const { data: kyc } = await supabase
-      .from('bct_user_kyc')
-      .select('status')
-      .eq('account_id', account.id)
-      .maybeSingle();
-    if (!kyc || kyc.status !== 'verified') {
-      res.status(403).json({
-        error: 'KYC verification required before commissioning a film.',
-        reason: 'kyc_required',
-        next: '/kyc.html',
+        next: '/account',
       });
       return;
     }

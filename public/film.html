@@ -34,6 +34,20 @@
       background-size: cover; background-position: center;
       filter: brightness(0.35);
     }
+    /* Optional motion backdrop — a muted looping clip plays behind
+       the hero copy when the offer has video artifacts. Cross-fades
+       between clips so the whole trailer shows in the background,
+       not just the opening shot. */
+    .film-hero .bg-video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      filter: brightness(0.28) saturate(1.05);
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    .film-hero .bg-video.active { opacity: 1; }
     .film-hero .vignette {
       position: absolute; inset: 0;
       background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.95) 100%);
@@ -426,6 +440,68 @@
     }
     .trailer-sound-toggle:hover { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
     .trailer-sound-toggle.on    { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
+
+    /* Big PLAY TRAILER button that owns the first-frame view of the
+       trailer-player. Nothing plays until the user taps it — video,
+       music, and VO all start synchronously when it's clicked, which
+       is the only reliable way to get sound through browser autoplay
+       policies. After the trailer finishes playing through, the same
+       button reappears as a ↻ REPLAY. */
+    .trailer-play-gate {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      cursor: pointer;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    .trailer-play-gate.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .trailer-play-gate .play-button {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 1.2rem 2.4rem;
+      background: #E50914;
+      color: #fff;
+      border: 2px solid #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 16px 60px rgba(0, 0, 0, 0.85),
+                  0 0 0 0 rgba(229, 9, 20, 0.6);
+      animation: trailer-play-pulse 2.2s ease-in-out infinite;
+      transition: transform 0.15s ease;
+    }
+    .trailer-play-gate .play-button:hover { transform: scale(1.04); }
+    .trailer-play-gate .play-button .glyph {
+      font-size: 1.4em;
+      line-height: 0.8;
+      margin-top: -0.1em;
+    }
+    @keyframes trailer-play-pulse {
+      0%, 100% { box-shadow: 0 16px 60px rgba(0, 0, 0, 0.85), 0 0 0 0 rgba(229, 9, 20, 0.55); }
+      50%      { box-shadow: 0 16px 60px rgba(0, 0, 0, 0.85), 0 0 0 24px rgba(229, 9, 20, 0); }
+    }
+    .trailer-play-gate .hint {
+      position: absolute;
+      bottom: 1.2rem;
+      left: 0; right: 0;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.16em;
+      color: rgba(255, 255, 255, 0.55);
+      text-transform: uppercase;
+    }
     .trailer-sound-toggle.prompt {
       top: 50%; left: 50%; bottom: auto;
       transform: translate(-50%, -50%);
@@ -619,17 +695,21 @@
       const byTier = {};
       for (const d of derivatives) byTier[d.tier] = d;
 
-      // ONE button per tier slot. Previously we rendered two rows —
-      // a Stripe "Make tier · $99" and a BSV "Fund tier · BSV" — for
-      // every unproduced tier. That was confusing: on the film page,
-      // both buttons appeared to do the same thing. They didn't quite
-      // (Make = commissioner pays Stripe USD to trigger production;
-      // Fund = investors buy royalty shares in the existing pitch to
-      // crowdfund the next tier), but the redundancy dominated the
-      // UX. The commissioner's upgrade path now lives on /account,
-      // which owns the "your projects" surface. The film page keeps
-      // only the Fund action for investors, consistent with the
-      // "royalty shares settle on-chain" framing.
+      // Two-row layout per unproduced tier:
+      //   Row 1 (tier-row, primary) — state button:
+      //     ✓ Current  |  ▶ Watch existing derivative  |  Fund TIER · BSV
+      //     (BSV path routes to /offer.html — investors buy royalty
+      //      shares against the parent, crowdfunding the next tier)
+      //   Row 2 (fund-row, secondary) — the Stripe alternative:
+      //     Fund TIER · STRIPE
+      //     Routes the commissioner (or anyone willing to pay USD) to
+      //     /commission.html in the parent-derived flow. The resulting
+      //     offer lands in the funder's /account workbench as a draft.
+      //     KYC is NOT required to commission — it's required to
+      //     publish or list shares, enforced server-side on
+      //     api/feature/publish + api/feature/list-shares.
+      const tierTitle = encodeURIComponent(offer.title || '');
+      const tierTicker = encodeURIComponent(offer.token_ticker || '');
       const tierRowButtons = TIER_ORDER.map(t => {
         const meta = TIER_META[t];
         const isCurrent = t === currentTier;
@@ -644,16 +724,10 @@
           label = `✓ ${meta.label}`;
           disabled = true;
         } else if (derivative) {
-          // Already produced — link to the derivative's film page.
           state = 'included';
           label = `▶ Watch ${meta.label.toLowerCase()}`;
           href = `film.html?id=${encodeURIComponent(derivative.id)}`;
         } else {
-          // Not yet produced — route everyone (commissioner OR
-          // external investor) to the offer page, where shares fund
-          // the production via BSV wallet. The commissioner-specific
-          // Stripe upgrade path lives on /account?project=... so we
-          // don't double-surface it here.
           state = 'upgrade';
           label = `Fund ${meta.label.toLowerCase()} · BSV`;
           href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
@@ -673,7 +747,34 @@
         `;
       }).join('');
 
-      return `<div class="tier-row">${tierRowButtons}</div>`;
+      // Row 2 — Stripe funding. One button per tier that doesn't yet
+      // exist and isn't the current page. Tiers that are current or
+      // already produced get a spacer so the grid stays aligned.
+      const fundRowButtons = TIER_ORDER.map(t => {
+        const meta = TIER_META[t];
+        const isCurrent = t === currentTier;
+        const derivative = byTier[t];
+        if (isCurrent || derivative) {
+          return `<div class="fund-btn placeholder" aria-hidden="true"></div>`;
+        }
+        // Route to /commission.html pre-filled with parent + tier so
+        // the Stripe checkout fires as a derivative commission.
+        const href = `commission.html?tier=${encodeURIComponent(t)}`
+          + `&parentId=${encodeURIComponent(offer.id)}`
+          + `&title=${tierTitle}`
+          + `&ticker=${tierTicker}`;
+        const price = meta.display || '';
+        return `
+          <a class="fund-btn" href="${href}">
+            Fund ${meta.label.toLowerCase()} · Stripe${price ? ' ' + price : ''}
+          </a>
+        `;
+      }).join('');
+
+      return `
+        <div class="tier-row">${tierRowButtons}</div>
+        <div class="fund-row">${fundRowButtons}</div>
+      `;
     }
 
     // Strip AI meta-commentary from agent outputs: "Below is...",
