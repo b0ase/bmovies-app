@@ -36,17 +36,22 @@ function setCors(res: VercelResponse): void {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-// Platform custody addresses for cross-chain payments.
-// These should be treasury wallets controlled by the platform.
-// For the hackathon demo these are placeholder addresses — the ETH
-// and SOL flows will record the payment but the actual settlement
-// bridge via x402 is a Phase 4 item.
+// Platform custody addresses for cross-chain payments. These are
+// treasury wallets controlled by the platform. An unset env var means
+// the chain is NOT configured for settlement — for the USDC variants
+// we refuse to return a burn address (would lose real user funds).
+// The BSV fallback is a live address owned by the studio, so bsv
+// payments can still settle even if the env var is missing.
 const PLATFORM_BSV_ADDRESS = process.env.PITCH_RECEIVE_ADDRESS
   || '15q3UKrYYNuXRSg3gtb52pEnbaeiGK4m7b';
-const PLATFORM_ETH_ADDRESS = process.env.PLATFORM_ETH_ADDRESS
-  || '0x0000000000000000000000000000000000000000';
-const PLATFORM_SOL_ADDRESS = process.env.PLATFORM_SOL_ADDRESS
-  || '11111111111111111111111111111111';
+const PLATFORM_ETH_ADDRESS = process.env.PLATFORM_ETH_ADDRESS || '';
+const PLATFORM_SOL_ADDRESS = process.env.PLATFORM_SOL_ADDRESS || '';
+
+// Well-known burn / zero addresses that must never be offered as a
+// payment destination. If the env var is accidentally set to these,
+// bail the same way we do for an unset var.
+const BURN_ETH = '0x0000000000000000000000000000000000000000';
+const BURN_SOL = '11111111111111111111111111111111';
 
 export default async function handler(
   req: VercelRequest,
@@ -71,9 +76,6 @@ export default async function handler(
   if (chain === 'bsv') {
     address = PLATFORM_BSV_ADDRESS;
   } else if (chain === 'eth' || chain === 'base' || chain === 'base-usdc') {
-    // Same EOA works for native ETH and for ERC-20 USDC on Base. For
-    // base-usdc we also return the USDC contract address so the client
-    // knows which token to transfer.
     address = PLATFORM_ETH_ADDRESS;
     if (chain === 'base-usdc') token = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
   } else if (chain === 'sol' || chain === 'solana-usdc') {
@@ -81,6 +83,19 @@ export default async function handler(
     if (chain === 'solana-usdc') token = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   } else {
     res.status(400).json({ error: 'Unknown chain' });
+    return;
+  }
+
+  // Guard: refuse to hand out a burn / zero / unset address. Better
+  // to 503 the payment flow than let the client send real USDC into
+  // the void. Operator fixes this by setting PLATFORM_ETH_ADDRESS or
+  // PLATFORM_SOL_ADDRESS in the Vercel project env.
+  const isBurn = !address || address === BURN_ETH || address === BURN_SOL;
+  if (isBurn) {
+    res.status(503).json({
+      error: `Platform address for chain=${chain} is not configured. Set PLATFORM_${chain.startsWith('sol') ? 'SOL' : 'ETH'}_ADDRESS in Vercel env.`,
+      chain,
+    });
     return;
   }
 
