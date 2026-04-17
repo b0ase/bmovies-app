@@ -233,8 +233,13 @@ function respond(
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:image" content="${esc(image)}">
   <meta property="og:image:alt" content="${esc(title)}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <!-- No og:image:width/height declared. Film posters are portrait
+       2:3 (784x1168 for POSTER_MAP entries; similar aspect for pipeline
+       artifacts). Twitter/Facebook prefer landscape 1200x630, but
+       declaring a false size would make them crop or reject the real
+       image. Omitting the hint lets each renderer measure the image
+       itself and pick the best fit for its card shape. A dedicated
+       landscape OG composite is Phase 2. -->
   <meta property="og:url" content="${esc(canonical)}">
 
   <meta name="twitter:card" content="summary_large_image">
