@@ -256,6 +256,10 @@
           .from('bct_offers')
           .select('id, title, synopsis, status, token_ticker, created_at, bct_artifacts(id, kind, url, role)')
           .is('archived_at', null)
+          // Exclude streaming-swarm demo rows — matches the filter used
+          // by productions.html, watch.html and exchange.html. Without
+          // this, 29 SPIELB001-006 swarm offers pollute the leaderboard.
+          .not('is_swarm', 'is', true)
           .order('created_at', { ascending: false })
           .limit(100),
         supabase
