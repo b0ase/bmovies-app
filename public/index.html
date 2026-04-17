@@ -599,8 +599,22 @@
         // Only surface features that are actually moving. Drafts are
         // commissions waiting on user input, not active productions, so
         // they shouldn't masquerade as "producing right now".
+        //
+        // Two additional guards added after the homepage was caught
+        // lying about what's producing:
+        //   1. Exclude swarm-generated offers. The streaming swarm
+        //      inserts rows with tier='feature' and status='funded' but
+        //      never moves them through the pipeline — see
+        //      scripts/mint-new-offers.ts which uses the same signature.
+        //      All swarm rows have id prefix 'offer-'; real commissions
+        //      start with pitch-/trailer-/short-/feature-.
+        //   2. Require current_step to be non-null so the strip only
+        //      shows features the feature-worker has actively stepped
+        //      into, not 'funded' rows waiting at the starting line.
         const url = 'https://api.b0ase.com/rest/v1/bct_offers?tier=eq.feature' +
           '&status=in.(funded,in_progress)' +
+          '&id=not.ilike.offer-*' +
+          '&current_step=not.is.null' +
           '&select=id,title,status,production_phase,current_step,token_ticker,started_at,bct_artifacts(role,kind,url,superseded_by)' +
           '&order=started_at.desc.nullslast&limit=4';
         const res = await fetch(url, {
