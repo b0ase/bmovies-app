@@ -1783,6 +1783,15 @@ type ArtifactRow = {
   url: string
   superseded_by: number | null
   created_at?: string
+  // Client-side only — populated when we collapse multiple related
+  // artifacts (storyboard frames, character portraits, location stills)
+  // into a single pack row. The viewer renders the pack as a grid and
+  // opens a nested modal on any tile.
+  children?: ArtifactRow[]
+  // Display metadata for grid tiles + nested modal headers.
+  caption?: string           // e.g. "Elias Moreau" or "Frame 3"
+  subtitle?: string | null   // e.g. "lead · antagonist" role tag
+  description?: string | null // e.g. the character's visual_prompt
 }
 
 function ProjectDocumentsView({ film }: { film: Film }) {
@@ -1800,10 +1809,162 @@ function ProjectDocumentsView({ film }: { film: Film }) {
         .eq('offer_id', film.id)
         .is('superseded_by', null)
         .order('step_id', { ascending: true })
-      if (!cancelled) {
-        setDocs((data || []) as ArtifactRow[])
-        setLoading(false)
+      if (cancelled) return
+      const all = (data || []) as ArtifactRow[]
+
+      // ─── Three packs: storyboard frames, cast portraits, location stills ───
+      //
+      // Each pack collapses N image artifacts into a single row so the
+      // Documents table stays short and judges don't have to scroll
+      // past 20 rows of "frame_1 / frame_2 / …". The packs live in
+      // bct_artifacts with step_id patterns:
+      //
+      //   Storyboard:  storyboard.frame_<n>, pitch.teaser_frame_<n>
+      //   Cast:        pitch.char_portrait_<n>   (names in pitch.cast_list)
+      //   Prod design: pitch.loc_still_<n>       (names in pitch.lookbook)
+      //
+      // For cast + production design, we also fetch the JSON sidecar
+      // (cast_list / lookbook) so each portrait can show its character
+      // name + visual prompt in the nested lightbox. Without that
+      // sidecar the grid tiles are nameless squares — the exact bug
+      // reported against the Cast view earlier.
+
+      const storyboardFrames: ArtifactRow[] = []
+      const charPortraits: ArtifactRow[] = []
+      const locStills: ArtifactRow[] = []
+      const rest: ArtifactRow[] = []
+
+      let castListUrl: string | null = null
+      let lookbookUrl: string | null = null
+
+      for (const row of all) {
+        const s = row.step_id || ''
+        if (s === 'pitch.cast_list') { castListUrl = row.url; rest.push(row); continue }
+        if (s === 'pitch.lookbook')  { lookbookUrl = row.url; rest.push(row); continue }
+
+        if (row.kind === 'image') {
+          // Storyboard: both new-style (storyboard.frame_<n>) and pitch
+          // teaser frames (pitch.teaser_frame_<n>) count as frames.
+          if (
+            (s.startsWith('storyboard.') && s !== 'storyboard.poster') ||
+            s.startsWith('pitch.teaser_frame_')
+          ) {
+            storyboardFrames.push(row); continue
+          }
+          if (s.startsWith('pitch.char_portrait_')) { charPortraits.push(row); continue }
+          if (s.startsWith('pitch.loc_still_'))     { locStills.push(row); continue }
+        }
+        rest.push(row)
       }
+
+      // Parse JSON sidecars. Both are data: URLs in practice but fall
+      // back to a fetch just in case a future pipeline writes them to
+      // remote storage.
+      async function loadJsonSidecar(url: string | null): Promise<Array<Record<string, unknown>>> {
+        if (!url) return []
+        try {
+          if (url.startsWith('data:')) {
+            const decoded = decodeDataUrl(url)
+            if (decoded === null) return []
+            return JSON.parse(decoded)
+          }
+          const r = await fetch(url)
+          if (!r.ok) return []
+          return await r.json()
+        } catch {
+          return []
+        }
+      }
+
+      const [castList, lookbook] = await Promise.all([
+        loadJsonSidecar(castListUrl),
+        loadJsonSidecar(lookbookUrl),
+      ])
+      if (cancelled) return
+
+      // Sort each pack by the numeric suffix on step_id so frame_0…N
+      // arrive in order rather than lexicographically (…_10 before _2).
+      const numericOrder = (a: ArtifactRow, b: ArtifactRow) => {
+        const nA = Number((a.step_id || '').match(/_(\d+)$/)?.[1] ?? 0)
+        const nB = Number((b.step_id || '').match(/_(\d+)$/)?.[1] ?? 0)
+        return nA - nB
+      }
+      storyboardFrames.sort(numericOrder)
+      charPortraits.sort(numericOrder)
+      locStills.sort(numericOrder)
+
+      // Dedupe each pack by URL (legacy rows sometimes share mirror
+      // filenames when the generator reuses step_ids).
+      const dedupe = (xs: ArtifactRow[]) =>
+        Array.from(new Map(xs.map((r) => [r.url, r])).values())
+
+      const storyChildren = dedupe(storyboardFrames).map((r, i) => ({
+        ...r,
+        caption: `Frame ${i + 1}`,
+      }))
+
+      const castChildren = dedupe(charPortraits).map((r, i) => {
+        const c = (castList[i] || {}) as { name?: string; role?: string; visual_prompt?: string }
+        return {
+          ...r,
+          caption: c.name || `Character ${i + 1}`,
+          subtitle: c.role || null,
+          description: c.visual_prompt || null,
+        }
+      })
+
+      const locChildren = dedupe(locStills).map((r, i) => {
+        const l = (lookbook[i] || {}) as { name?: string; visual_prompt?: string }
+        return {
+          ...r,
+          caption: l.name || `Location ${i + 1}`,
+          description: l.visual_prompt || null,
+        }
+      })
+
+      // Assemble the merged list. Text sidecars (cast_list / lookbook)
+      // stay as regular text rows in `rest` so they remain directly
+      // accessible — the packs are an additional way to view the
+      // portraits, not a replacement for the source text.
+      const merged: ArtifactRow[] = [...rest]
+      if (storyChildren.length > 0) {
+        merged.push({
+          id: -1,
+          kind: 'storyboard',
+          role: 'storyboard',
+          step_id: 'storyboard.pack',
+          url: storyChildren[0].url,
+          superseded_by: null,
+          created_at: storyChildren[0].created_at,
+          children: storyChildren,
+        })
+      }
+      if (castChildren.length > 0) {
+        merged.push({
+          id: -2,
+          kind: 'cast',
+          role: 'casting_director',
+          step_id: 'casting.portraits',
+          url: castChildren[0].url,
+          superseded_by: null,
+          created_at: castChildren[0].created_at,
+          children: castChildren,
+        })
+      }
+      if (locChildren.length > 0) {
+        merged.push({
+          id: -3,
+          kind: 'locations',
+          role: 'production_designer',
+          step_id: 'production.stills',
+          url: locChildren[0].url,
+          superseded_by: null,
+          created_at: locChildren[0].created_at,
+          children: locChildren,
+        })
+      }
+      setDocs(merged)
+      setLoading(false)
     }
     load()
     return () => { cancelled = true }
@@ -1823,8 +1984,12 @@ function ProjectDocumentsView({ film }: { film: Film }) {
       'casting.cast_list':     'Cast list',
       'production.lookbook':   'Lookbook',
       'dp.shot_plan':          'Shot plan',
-      'storyboard.pack':       'Storyboard pack',
+      'storyboard.pack':       'Storyboard',
       'storyboard.poster':     'Poster',
+      'casting.portraits':     'Cast',
+      'production.stills':     'Production design',
+      'pitch.cast_list':       'Cast list',
+      'pitch.lookbook':        'Lookbook',
       'composer.themes':       'Score brief',
       'composer.final_score':  'Final score',
       'sound.final_mix':       'Final sound mix',
@@ -1896,6 +2061,7 @@ function ProjectDocumentsView({ film }: { film: Film }) {
           </div>
           {docs.map((d, i) => {
             const isDataUrl = d.url.startsWith('data:')
+            const frameCount = d.children?.length ?? 0
             return (
               <div
                 key={d.id}
@@ -1906,7 +2072,12 @@ function ProjectDocumentsView({ film }: { film: Film }) {
                   {d.kind}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-white text-sm truncate">{labelFor(d)}</div>
+                  <div className="text-white text-sm truncate">
+                    {labelFor(d)}
+                    {frameCount > 0 && (
+                      <span className="text-[#666] text-xs font-mono ml-2">· {frameCount} frames</span>
+                    )}
+                  </div>
                   {d.role && (
                     <div className="text-[#555] text-[0.55rem] uppercase tracking-wider mt-0.5">
                       {d.role}
@@ -4601,8 +4772,17 @@ function DocumentViewer({
 }) {
   const [text, setText] = useState<string | null>(null)
   const [textErr, setTextErr] = useState<string | null>(null)
+  // Nested lightbox: when the current doc is a pack (has children),
+  // clicking a grid tile sets this to that child's index. Null =
+  // showing the grid itself; number = showing a single child frame.
+  const [packFrame, setPackFrame] = useState<number | null>(null)
 
   const item = index !== null ? items[index] : null
+
+  // Reset nested-lightbox state when the parent item changes — closing
+  // the nested viewer shouldn't happen automatically across navigation,
+  // but swapping the outer document definitely should.
+  useEffect(() => { setPackFrame(null) }, [index])
 
   // Load text content when the current item is a text artifact.
   useEffect(() => {
@@ -4626,9 +4806,21 @@ function DocumentViewer({
   }, [item])
 
   // Keyboard + body-scroll management.
+  //
+  // Nested lightbox takes priority: when a pack frame is open, Esc
+  // closes the nested view (back to the grid), and ←/→ navigate
+  // across frames within the pack. When no frame is open, the same
+  // keys operate on the outer document list.
   useEffect(() => {
     if (index === null) return
+    const children = items[index]?.children || []
     function handleKey(e: KeyboardEvent) {
+      if (packFrame !== null) {
+        if (e.key === 'Escape') setPackFrame(null)
+        else if (e.key === 'ArrowLeft' && packFrame > 0) setPackFrame(packFrame - 1)
+        else if (e.key === 'ArrowRight' && packFrame < children.length - 1) setPackFrame(packFrame + 1)
+        return
+      }
       if (e.key === 'Escape') onClose()
       else if (e.key === 'ArrowLeft' && index !== null && index > 0) onIndexChange(index - 1)
       else if (e.key === 'ArrowRight' && index !== null && index < items.length - 1) onIndexChange(index + 1)
@@ -4640,7 +4832,7 @@ function DocumentViewer({
       window.removeEventListener('keydown', handleKey)
       document.body.style.overflow = prev
     }
-  }, [index, items.length, onClose, onIndexChange])
+  }, [index, items, packFrame, onClose, onIndexChange])
 
   if (index === null || !item) return null
 
@@ -4658,6 +4850,36 @@ function DocumentViewer({
   })()
 
   const body = (() => {
+    // Pack (storyboard / cast / production design): render a grid of
+    // children. Each tile is clickable to open the nested lightbox.
+    if (item.children && item.children.length > 0) {
+      return (
+        <div className="max-w-[88vw] max-h-[80vh] overflow-auto p-2">
+          <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+            {item.children.map((c, i) => (
+              <button
+                key={c.id ?? i}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setPackFrame(i) }}
+                className="block text-left bg-[#0a0a0a] border border-[#222] hover:border-[#E50914] transition-colors overflow-hidden"
+              >
+                <div className="aspect-[4/5] bg-[#050505] overflow-hidden">
+                  <img src={c.url} alt={c.caption || ''} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+                <div className="px-2 py-1.5">
+                  <div className="text-white text-[0.72rem] truncate">{c.caption || '—'}</div>
+                  {c.subtitle && (
+                    <div className="text-[#E50914] text-[0.5rem] uppercase tracking-wider mt-0.5">
+                      {c.subtitle}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
     if (item.kind === 'image') {
       return (
         <img
@@ -4743,30 +4965,130 @@ function DocumentViewer({
         onClick={(e) => e.stopPropagation()}
         className="flex flex-col items-center gap-3 max-w-[92vw]"
       >
+        <div className="text-center mb-1">
+          <div className="text-[#E50914] text-[0.55rem] font-bold uppercase tracking-[0.2em]">
+            {label(item)}
+          </div>
+          {item.children && item.children.length > 0 && (
+            <div className="text-[#666] text-[0.6rem] mt-0.5">
+              {item.children.length} items · click any tile to view
+            </div>
+          )}
+        </div>
         {body}
         <figcaption className="flex items-center gap-3 text-[0.6rem] font-mono text-[#888] uppercase tracking-wider flex-wrap justify-center">
-          <span className="text-[#E50914]">{label(item)}</span>
           <span className="text-[#555]">{index + 1} / {items.length}</span>
           <span className="text-[#444]">· {item.kind}{item.step_id ? ' · ' + item.step_id : ''}</span>
-          <a
-            href={item.url}
-            download={dlName(item)}
-            onClick={(e) => e.stopPropagation()}
-            className="text-[#aaa] hover:text-[#E50914] underline decoration-dotted"
-          >
-            download ↓
-          </a>
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="text-[#666] hover:text-[#E50914] underline decoration-dotted"
-          >
-            open original ↗
-          </a>
+          {!item.children && (
+            <>
+              <a
+                href={item.url}
+                download={dlName(item)}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#aaa] hover:text-[#E50914] underline decoration-dotted"
+              >
+                download ↓
+              </a>
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#666] hover:text-[#E50914] underline decoration-dotted"
+              >
+                open original ↗
+              </a>
+            </>
+          )}
         </figcaption>
       </figure>
+
+      {/* ─── Nested pack-frame modal ─── */}
+      {packFrame !== null && item.children && item.children[packFrame] && (() => {
+        const f = item.children[packFrame]
+        const hasPrevFrame = packFrame > 0
+        const hasNextFrame = packFrame < item.children.length - 1
+        return (
+          <div
+            onClick={(e) => { e.stopPropagation(); setPackFrame(null) }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${label(item)} — ${f.caption || 'frame'}`}
+            className="fixed inset-0 z-[210] bg-black/97 flex items-center justify-center p-4 md:p-8"
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); setPackFrame(null) }}
+              aria-label="Close frame"
+              className="absolute top-3 right-3 md:top-5 md:right-5 w-10 h-10 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl font-mono"
+            >
+              ×
+            </button>
+            {hasPrevFrame && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setPackFrame(packFrame - 1) }}
+                aria-label="Previous frame"
+                className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl"
+              >
+                &#9664;
+              </button>
+            )}
+            {hasNextFrame && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setPackFrame(packFrame + 1) }}
+                aria-label="Next frame"
+                className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl"
+              >
+                &#9654;
+              </button>
+            )}
+            <figure
+              onClick={(e) => e.stopPropagation()}
+              className="flex flex-col items-center gap-3 max-w-[92vw]"
+            >
+              <img
+                src={f.url}
+                alt={f.caption || ''}
+                className="max-w-full max-h-[72vh] object-contain border border-[#222] bg-black"
+              />
+              <figcaption className="text-center max-w-[680px]">
+                <div className="text-[#E50914] text-[0.55rem] font-bold uppercase tracking-[0.2em] mb-1">
+                  {label(item)} · {packFrame + 1} / {item.children.length}
+                </div>
+                <div className="text-white text-lg font-black leading-tight" style={{ fontFamily: 'var(--font-bebas)' }}>
+                  {f.caption || 'Untitled'}
+                </div>
+                {f.subtitle && (
+                  <div className="text-[#888] text-xs uppercase tracking-wider mt-1">{f.subtitle}</div>
+                )}
+                {f.description && (
+                  <p className="text-[#bbb] text-xs leading-relaxed mt-3 whitespace-pre-wrap text-left">
+                    {f.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-3 text-[0.55rem] font-mono text-[#666] uppercase tracking-wider mt-3 justify-center">
+                  <a
+                    href={f.url}
+                    download
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[#aaa] hover:text-[#E50914] underline decoration-dotted"
+                  >
+                    download ↓
+                  </a>
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="hover:text-[#E50914] underline decoration-dotted"
+                  >
+                    open original ↗
+                  </a>
+                </div>
+              </figcaption>
+            </figure>
+          </div>
+        )
+      })()}
     </div>
   )
 }
