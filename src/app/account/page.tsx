@@ -1890,52 +1890,79 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Platform tokens */}
-            {(walletData?.platformTokens ?? 0) > 0 ? (
-              <div className="border border-[#222] bg-[#0a0a0a] p-5">
-                <div className="flex items-start justify-between gap-4 mb-1">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-xl font-black text-[#E50914] leading-none"
-                      style={{ fontFamily: 'var(--font-bebas)' }}
-                    >
-                      $bMovies
-                    </span>
-                    <span className="text-white text-sm font-bold">
-                      {formatTokens(walletData!.platformTokens)} tokens
-                    </span>
+            {/* $bMovies platform token — always render as a balance row,
+                even when holdings are 0, so the user always sees a clear
+                line item in the wallet. */}
+            {(() => {
+              const bal = walletData?.platformTokens ?? 0
+              const priceCents = walletData?.pricePerTokenCents ?? 0.1
+              const valueUsd = (bal * priceCents) / 100
+              const supplyPct = (bal / 1_000_000_000) * 100
+              const hasBalance = bal > 0
+              return (
+                <div
+                  className={`border p-5 ${hasBalance ? 'border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0a0a]' : 'border-[#222] bg-[#0a0a0a]'}`}
+                >
+                  <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 items-center">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className="text-2xl font-black text-[#E50914] leading-none"
+                          style={{ fontFamily: 'var(--font-bebas)' }}
+                        >
+                          $bMovies
+                        </span>
+                        <span className="text-[0.55rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#1a1a1a] text-[#888]">
+                          Platform token
+                        </span>
+                      </div>
+                      <div className="text-[#666] text-xs">
+                        BSV-21 · 1B supply · @ ${(priceCents / 100).toFixed(4)}/token
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+                        Balance
+                      </div>
+                      <div
+                        className={`text-xl font-black leading-none tabular-nums ${hasBalance ? 'text-white' : 'text-[#555]'}`}
+                        style={{ fontFamily: 'var(--font-bebas)' }}
+                      >
+                        {formatTokens(bal)}
+                      </div>
+                      <div className="text-[#666] text-[0.6rem] tabular-nums">
+                        {supplyPct.toFixed(4)}% supply
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+                        Value
+                      </div>
+                      <div
+                        className={`text-xl font-black leading-none tabular-nums ${hasBalance ? 'text-[#6bff8a]' : 'text-[#555]'}`}
+                        style={{ fontFamily: 'var(--font-bebas)' }}
+                      >
+                        {formatUsd(valueUsd)}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <a
+                        href="/invest.html"
+                        className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-center whitespace-nowrap"
+                      >
+                        Buy
+                      </a>
+                      <a
+                        href="/captable.html?id=platform"
+                        className="text-[0.55rem] font-bold uppercase tracking-wider px-3 py-1 border border-[#333] hover:border-[#E50914] text-[#888] hover:text-white text-center whitespace-nowrap"
+                      >
+                        Cap table
+                      </a>
+                    </div>
                   </div>
-                  <span className="text-[#888] text-sm shrink-0">
-                    Value: {formatUsd((walletData!.platformTokens * walletData!.pricePerTokenCents) / 100)}
-                  </span>
                 </div>
-                <div className="text-[#666] text-xs">
-                  @ ${(walletData!.pricePerTokenCents / 100).toFixed(4)}/token
-                  {' \u00b7 '}
-                  {((walletData!.platformTokens / 1_000_000_000) * 100).toFixed(4)}% of supply
-                </div>
-              </div>
-            ) : (
-              <div className="border border-dashed border-[#222] bg-[#050505] p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span
-                      className="text-lg font-black text-[#666] leading-none"
-                      style={{ fontFamily: 'var(--font-bebas)' }}
-                    >
-                      $bMovies
-                    </span>
-                    <span className="text-[#666] text-sm ml-3">No tokens yet</span>
-                  </div>
-                  <a
-                    href="/invest.html"
-                    className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
-                  >
-                    Buy $bMovies
-                  </a>
-                </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* Studio tokens */}
             {(walletData?.studios ?? []).length > 0 ? (
@@ -3887,8 +3914,26 @@ function RoyaltiesSection({
         <h2 className="text-2xl font-black leading-none" style={{ fontFamily: 'var(--font-bebas)' }}>
           Royalties
         </h2>
-        <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold">
-          Paid in <span className="text-[#6bff8a]">$MNEE</span>
+        {/* Payout-token toggle. $MNEE (BSV stablecoin) is the only live
+            option for the hackathon; $USDC on Base/Sol is the post-BSVA
+            roadmap and rendered greyed so users can see it's coming. */}
+        <div className="flex items-center gap-1 text-[0.55rem] uppercase tracking-[0.18em] font-bold">
+          <span className="text-[#666]">Paid in</span>
+          <button
+            type="button"
+            className="px-2 py-1 border border-[#6bff8a] bg-[#02120a] text-[#6bff8a] cursor-default"
+            title="Active payout rail — USD stablecoin on BSV"
+          >
+            $MNEE
+          </button>
+          <button
+            type="button"
+            disabled
+            className="px-2 py-1 border border-[#222] bg-transparent text-[#444] cursor-not-allowed"
+            title="Coming post-hackathon — USDC on Base / Solana"
+          >
+            $USDC
+          </button>
         </div>
       </div>
 
