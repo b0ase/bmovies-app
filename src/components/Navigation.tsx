@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 /**
  * Unified top nav for the Next.js routes.
@@ -44,23 +44,29 @@ function isSessionValid(): boolean {
   }
 }
 
+// localStorage + custom auth-changed event form the external store
+// the signed-in state mirrors. useSyncExternalStore is the canonical
+// way to bind that, and it sidesteps the setState-in-effect lint
+// rule by design.
+function subscribeAuth(notify: () => void): () => void {
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === 'bmovies-auth') notify()
+  }
+  window.addEventListener('storage', onStorage)
+  window.addEventListener('bmovies:auth-changed', notify)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    window.removeEventListener('bmovies:auth-changed', notify)
+  }
+}
+
 export function Navigation() {
   const pathname = usePathname()
-  const [signedIn, setSignedIn] = useState(false)
-
-  useEffect(() => {
-    setSignedIn(isSessionValid())
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'bmovies-auth') setSignedIn(isSessionValid())
-    }
-    const onAuthChanged = () => setSignedIn(isSessionValid())
-    window.addEventListener('storage', onStorage)
-    window.addEventListener('bmovies:auth-changed', onAuthChanged)
-    return () => {
-      window.removeEventListener('storage', onStorage)
-      window.removeEventListener('bmovies:auth-changed', onAuthChanged)
-    }
-  }, [])
+  const signedIn = useSyncExternalStore<boolean>(
+    subscribeAuth,
+    isSessionValid,
+    () => false,
+  )
 
   return (
     <header

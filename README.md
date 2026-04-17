@@ -79,3 +79,9 @@ Full legal pack lives on [bmovies.online](https://bmovies.online):
 - [Runar Covenant Design](https://bmovies.online/legal/runar-covenant-design.html)
 
 All legal documents currently carry a **DRAFT** status banner and must not be relied upon for investment decisions until reviewed by FCA-experienced counsel. See [`docs/LEGAL-REVIEW-2026-04-14.md`](https://github.com/b0ase/bmovies/blob/main/docs/LEGAL-REVIEW-2026-04-14.md) for the full legal audit punch list.
+
+## Licence
+
+Source-available under the **[PolyForm Noncommercial License 1.0.0](./LICENSE)**. You may read, study, and run this software for noncommercial purposes (personal study, research, evaluation, academic use). **Commercial use of any kind requires a separate written licence** from The Bitcoin Corporation Ltd — contact [online.bmovies@gmail.com](mailto:online.bmovies@gmail.com).
+
+Copyright © 2026 The Bitcoin Corporation Ltd. All rights not expressly granted in the licence are reserved.

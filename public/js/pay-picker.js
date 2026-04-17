@@ -213,6 +213,8 @@ export async function openPayPicker(opts) {
   const titleEl = document.getElementById('pp-title');
   if (type === 'shares') {
     titleEl.textContent = `Buy 1% of "${title}" · $${priceUsd}`;
+  } else if (type === 'titles') {
+    titleEl.textContent = `Generate title card for "${title}" · $${priceUsd.toFixed(2)}`;
   } else {
     titleEl.textContent = `Watch "${title}" · $${priceUsd.toFixed(2)}`;
   }
@@ -296,11 +298,13 @@ export async function openPayPicker(opts) {
             cleanup();
             resolve(result);
           } else if (result?.success) {
-            setStatus('Payment confirmed! Refreshing...', 'success');
+            setStatus('Payment confirmed!', 'success');
             setTimeout(() => {
               cleanup();
               resolve(result);
-              window.location.reload();
+              // 'titles' leaves the reload to the caller so it can
+              // run the Grok generation step after payment clears.
+              if (type !== 'titles') window.location.reload();
             }, 1000);
           } else {
             disableOptions(false);

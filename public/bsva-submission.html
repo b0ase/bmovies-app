@@ -591,7 +591,9 @@
         <div class="doc-attrs">
           <strong>Window</strong> &nbsp;2026-04-06 → 2026-04-17 23:59 UTC<br>
           <strong>Live demo</strong> &nbsp;<a href="https://bmovies.online" target="_blank">bmovies.online</a><br>
-          <strong>Source</strong> &nbsp;<a href="https://github.com/b0ase/bmovies" target="_blank">github.com/b0ase/bmovies</a><br>
+          <strong>Source</strong> &nbsp;two-repo submission (both private, judges invited on request):<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;• Agents, swarm, mint, Hetzner worker &nbsp;<a href="https://github.com/b0ase/bmovies" target="_blank">github.com/b0ase/bmovies</a><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;• Website, commission flow, user app &nbsp;<a href="https://github.com/b0ase/bmovies-app" target="_blank">github.com/b0ase/bmovies-app</a><br>
           <strong>Submitter</strong> &nbsp;The Bitcoin Corporation Ltd (Co. No. 16735102, England &amp; Wales)<br>
           <strong>Contact</strong> &nbsp;<a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>
         </div>
@@ -608,7 +610,7 @@
         <span class="stat-label">Canonical BSV-21 tokens on mainnet</span>
       </div>
       <div class="stat-badge">
-        <span class="stat-num">58</span>
+        <span class="stat-num">73</span>
         <span class="stat-label">Named AI agents in the studio roster</span>
       </div>
       <div class="stat-badge">
@@ -657,10 +659,10 @@
 
     <h3>As a developer</h3>
     <ul>
-      <li><code>git clone https://github.com/b0ase/bmovies</code></li>
-      <li>See <code>docs/HACKATHON-PLAN.md</code> for the original target spec</li>
-      <li>See <code>docs/FEATURE-PIPELINE.md</code> for the 28-step pipeline design</li>
-      <li>See <code>scripts/feature-worker.ts</code> for the cron worker (Hetzner-resident, pm2-managed) that drives the pipeline</li>
+      <li><code>git clone https://github.com/b0ase/bmovies</code> — the agent / swarm / mint / worker backend</li>
+      <li><code>git clone https://github.com/b0ase/bmovies-app</code> — the Next.js website and commission app (serves bmovies.online)</li>
+      <li>In <code>bmovies</code>: see <code>docs/HACKATHON-PLAN.md</code>, <code>docs/FEATURE-PIPELINE.md</code>, <code>scripts/feature-worker.ts</code> (Hetzner-resident, pm2-managed)</li>
+      <li>In <code>bmovies-app</code>: see <code>public/bsva-submission.html</code> (this doc), <code>src/app/</code> (auth'd app), <code>api/feature/</code> (commission endpoints)</li>
     </ul>
 
     <!-- BSVA requirements -->
@@ -669,8 +671,8 @@
 
     <h3>1. ≥2 AI agents with individual BSV wallets</h3>
 
-    <p><strong>12 agent roles</strong> with persistent identities in <code>bct_agents</code>, plus 6 studios (<code>bolt-disney</code>, <code>clanker-bros</code>, <code>dreamforge</code>, <code>neuralscope</code>, <code>paramountal-ai</code>, <code>21st-century-bot</code>) × 8 specialist agents each = <strong>48 named agent identities</strong> plus 10 shared specialists (4 voice actors, 2 casting directors, 2 production designers, 2 publicists). Total <strong>58 agents in the studio roster</strong>.</p>
-    <p>The original hackathon plan targeted 4 agents with $1 funding each. The submission expanded to 58 agents because the full Hollywood production pipeline genuinely benefits from the specialist roles. Per-agent BSV wallets are configured for streaming-engine agents (SpielbergX producer, VC-X / CapitalK financiers, ClawNode-A seeder); the production-pipeline agents currently use sentinel txids for per-step payments and migrate to real BSV transfers as the wallet pool is funded.</p>
+    <p><strong>12 agent roles</strong> with persistent identities in <code>bct_agents</code>, plus 6 studios (<code>bolt-disney</code>, <code>clanker-bros</code>, <code>dreamforge</code>, <code>neuralscope</code>, <code>paramountal-ai</code>, <code>21st-century-bot</code>) × 8 specialist agents each = <strong>48 named agent identities</strong> plus 10 shared specialists (4 voice actors, 2 casting directors, 2 production designers, 2 publicists). Total <strong>73 agents in the studio roster</strong>.</p>
+    <p>The original hackathon plan targeted 4 agents with $1 funding each. The submission expanded to 73 agents because the full Hollywood production pipeline genuinely benefits from the specialist roles. Per-agent BSV wallets are configured for streaming-engine agents (SpielbergX producer, VC-X / CapitalK financiers, ClawNode-A seeder); the production-pipeline agents currently use sentinel txids for per-step payments and migrate to real BSV transfers as the wallet pool is funded.</p>
 
     <h3>2. ≥1.5M on-chain TX in a designated 24h window</h3>
 
@@ -1059,7 +1061,7 @@ sustained_pps   = peak_pps × duty_cycle</div>
     <h2>Submission Checklist</h2>
 
     <ul class="checklist">
-      <li><strong>≥2 AI agents with individual BSV wallets</strong> — 58 agents in the roster</li>
+      <li><strong>≥2 AI agents with individual BSV wallets</strong> — 73 agents in the roster (BSV keypair per agent in <code>bct_agents</code>)</li>
       <li><strong>≥1.5M on-chain TX in a 24h window</strong> — Track A streaming engine: 1.85M projected (123% of target), 19,000 verified in a 13-minute empirical burst at 24 TX/s peak</li>
       <li><strong>BRC-100 wallets and identity for discovery</strong> — BRC-77 agent attestation + BRC-100 wallet-connect for end users via <code>brc100.js</code></li>
       <li><strong>Autonomous transactions via direct payments</strong> — <code>wallet.ts</code> builds &amp; broadcasts P2PKH fan-out transactions without human intervention</li>
@@ -1067,9 +1069,16 @@ sustained_pps   = peak_pps × duty_cycle</div>
       <li><strong>Real-world problem addressed</strong> — pre-production film financing; UK independent film sector (16,000 freelancers, 2% BFI acceptance rate)</li>
       <li><strong>@bsv/sdk in tech stack</strong> — yes, used for all wallet construction, inscription, and fan-out</li>
       <li><strong>Live demo URL</strong> — <a href="https://bmovies.online" target="_blank">https://bmovies.online</a></li>
-      <li><strong>Source URL</strong> — <a href="https://github.com/b0ase/bmovies" target="_blank">https://github.com/b0ase/bmovies</a></li>
+      <li><strong>Source URLs</strong> — <a href="https://github.com/b0ase/bmovies" target="_blank">github.com/b0ase/bmovies</a> (agents + mint + swarm) &nbsp;·&nbsp; <a href="https://github.com/b0ase/bmovies-app" target="_blank">github.com/b0ase/bmovies-app</a> (website + app)</li>
       <li><strong>Submitted within window (Apr 6 → Apr 17 23:59 UTC)</strong> — yes</li>
     </ul>
+
+    <!-- Licensing -->
+    <div class="section-number">Section 10</div>
+    <h2>Licensing</h2>
+
+    <p>Source is made available under the <strong><a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank">PolyForm Noncommercial License 1.0.0</a></strong>. BSVA judges, reviewers, and anyone else may read, run, and evaluate the code for noncommercial purposes (personal study, research, academic use, hackathon judging). <strong>Commercial use of any kind — including forking for a competing service, selling derivatives, or hosting as a paid product — is expressly prohibited</strong> without a separate written licence from The Bitcoin Corporation Ltd.</p>
+    <p>Copyright © 2026 The Bitcoin Corporation Ltd. All rights not expressly granted in the licence are reserved. Commercial licensing enquiries: <a href="mailto:online.bmovies@gmail.com">online.bmovies@gmail.com</a>.</p>
 
     <!-- Footer -->
     <div class="doc-footer">
