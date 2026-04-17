@@ -494,7 +494,7 @@
 
     // xAI temp CDN URLs expire after a few hours — don't trust them.
     const isEphemeralUrl = (url) =>
-      typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url);
+      typeof url === 'string' && /(imgen|vidgen|videos)\.x\.ai/.test(url);
 
     // Priority chain for the public-teaser poster.
     //   1. POSTER_MAP override (commissioner-curated, permanent)

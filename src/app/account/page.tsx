@@ -32,6 +32,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { bmovies } from '@/lib/supabase-bmovies'
 import type { User } from '@supabase/supabase-js'
 
@@ -4517,52 +4518,197 @@ function TitleDesignerView({ projectId, projectTitle }: { projectId: string; pro
 
   return (
     <div className="space-y-6">
-      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
-        Title cards
-      </div>
+      {/* ── Inline 3D Title Designer (ported from NPGX) ────────────── */}
+      <Inline3DTitleDesigner projectTitle={projectTitle} />
 
-      {loading ? (
-        <div className="grid grid-cols-2 gap-3 animate-pulse">
-          <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
-          <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+      {/* ── Existing title-card gallery ────────────────────────────── */}
+      <div>
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
+          AI-generated title cards for this project
         </div>
-      ) : titleCards.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {titleCards.map((tc) => (
-            <div key={tc.id} className="border border-[#222] bg-[#0a0a0a] overflow-hidden hover:border-[#E50914] transition-colors">
-              <div className="aspect-video bg-[#050505]">
-                <img src={tc.url} alt="Title card" className="w-full h-full object-cover" loading="lazy" />
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 animate-pulse">
+            <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+            <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
+          </div>
+        ) : titleCards.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {titleCards.map((tc) => (
+              <div key={tc.id} className="border border-[#222] bg-[#0a0a0a] overflow-hidden hover:border-[#E50914] transition-colors">
+                <div className="aspect-video bg-[#050505]">
+                  <img src={tc.url} alt="Title card" className="w-full h-full object-cover" loading="lazy" />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        ) : (
+          <div className="text-[#666] text-sm">No AI-generated cards yet — the designer above is the quickest way to create one.</div>
+        )}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => {
+              (window as unknown as { bmoviesChat?: { open: (s: string) => void } }).bmoviesChat?.open(
+                `Design a cinematic title card for "${projectTitle}". Use the film's genre and tone.`,
+              )
+            }}
+            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+          >
+            Ask AI to generate a card
+          </button>
         </div>
-      ) : (
-        <div className="text-[#666] text-sm">No title cards generated yet.</div>
-      )}
+      </div>
+    </div>
+  )
+}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => {
-            (window as any).bmoviesChat?.open(`Design a cinematic title card for "${projectTitle}". Use the film's genre and tone.`)
-          }}
-          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
-        >
-          Design a title card
-        </button>
+/* ── Inline 3D title designer ─────────────────────────────────────
+ *
+ * Ports the NPGX Title3DScene component (R3F + drei + postprocessing)
+ * into the bMovies Titles tab. Lazy-loaded so the r3f stack doesn't
+ * block SSR / first paint on account pages that never open Titles.
+ *
+ * Controls exposed in the tab panel:
+ *   - Text (pre-filled with the film title)
+ *   - Material preset (chrome / gold / neon / matte / crimson / hologram / ice)
+ *   - Lighting preset
+ *   - Particles
+ *   - Animation
+ *   - Scene background
+ *
+ * The full NPGX designer has layer stacking, multi-line editing, and
+ * post-processing pipes. We expose the 80/20 here; deep control lives
+ * at /title-designer (to be ported as a standalone page later).
+ */
+const Lazy3DScene = dynamic(
+  () => import('@/components/Title3DScene').then((m) => ({ default: m.default })),
+  { ssr: false, loading: () => (
+    <div className="flex items-center justify-center h-full text-[#444] text-xs uppercase tracking-wider">Loading 3D designer…</div>
+  ) },
+)
+
+function Inline3DTitleDesigner({ projectTitle }: { projectTitle: string }) {
+  const [text, setText] = useState(projectTitle || 'Title')
+  const [material, setMaterial] = useState<'chrome' | 'gold' | 'neon' | 'matte' | 'crimson' | 'hologram' | 'ice'>('chrome')
+  const [lighting, setLighting] = useState<'studio' | 'neon-alley' | 'sunset' | 'void' | 'stage'>('studio')
+  const [particles, setParticles] = useState<'none' | 'dust' | 'sparks' | 'embers'>('none')
+  const [animation, setAnimation] = useState<'none' | 'float' | 'breathe' | 'glitch' | 'pulse'>('float')
+  const [scene, setScene] = useState<'transparent' | 'void' | 'grid' | 'fog'>('void')
+  const [bloom, setBloom] = useState(0.6)
+
+  const lines = [
+    {
+      text: text || 'Title',
+      color: '#ffffff',
+      fontSize: 1.5,
+      x: 0, y: 0, rotation: 0,
+      scaleX: 1, scaleY: 1, skewX: 0,
+      opacity: 1,
+      mode: '3d' as const,
+      font: 'helvetiker' as const,
+    },
+  ]
+  const settings = {
+    material,
+    depth: 0.3,
+    bevelEnabled: true,
+    bevelSize: 0.02,
+    lighting,
+    camera: 'orbit' as const,
+    bloomIntensity: bloom,
+    particles,
+    animation,
+    scene,
+  }
+
+  const materials = ['chrome', 'gold', 'neon', 'matte', 'crimson', 'hologram', 'ice'] as const
+  const lightings = ['studio', 'neon-alley', 'sunset', 'void', 'stage'] as const
+  const particleOpts = ['none', 'dust', 'sparks', 'embers'] as const
+  const animOpts = ['none', 'float', 'breathe', 'glitch', 'pulse'] as const
+  const sceneOpts = ['transparent', 'void', 'grid', 'fog'] as const
+
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            3D Title Designer
+          </div>
+          <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            Design your <span className="text-[#E50914]">title</span>
+          </h2>
+          <div className="text-[#888] text-xs mt-1">
+            Real-time three.js. Orbit the preview with mouse. Ported from our NPGX title tool.
+          </div>
+        </div>
       </div>
 
-      <div className="border border-dashed border-[#222] bg-[#050505] p-8">
-        <div
-          className="text-xl font-black mb-3 leading-none"
-          style={{ fontFamily: 'var(--font-bebas)' }}
-        >
-          3D Title <span className="text-[#E50914]">Designer</span>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+        {/* Preview */}
+        <div className="border border-[#222] bg-black" style={{ aspectRatio: '16 / 9', minHeight: 320 }}>
+          <Lazy3DScene lines={lines} settings={settings} />
         </div>
-        <p className="text-[#888] text-sm leading-relaxed">
-          The interactive 3D title designer will let you position, animate,
-          and style your film&apos;s title card in real-time with Three.js.
-          Coming soon.
-        </p>
+
+        {/* Controls */}
+        <div className="border border-[#222] bg-[#0a0a0a] p-4 space-y-4 text-xs">
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Title text</label>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Material</label>
+            <div className="grid grid-cols-2 gap-1">
+              {materials.map((m) => (
+                <button key={m} onClick={() => setMaterial(m)}
+                  className={`px-2 py-1 text-[0.6rem] uppercase tracking-wider font-bold border ${material === m ? 'border-[#E50914] bg-[#1a0003] text-[#E50914]' : 'border-[#222] text-[#888] hover:border-[#444]'}`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Lighting</label>
+            <select value={lighting} onChange={(e) => setLighting(e.target.value as typeof lighting)}
+              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
+              {lightings.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Scene</label>
+            <select value={scene} onChange={(e) => setScene(e.target.value as typeof scene)}
+              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
+              {sceneOpts.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Animation</label>
+            <select value={animation} onChange={(e) => setAnimation(e.target.value as typeof animation)}
+              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
+              {animOpts.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Particles</label>
+            <select value={particles} onChange={(e) => setParticles(e.target.value as typeof particles)}
+              className="w-full bg-[#111] border border-[#333] text-white px-2 py-1.5 focus:outline-none focus:border-[#E50914] text-sm">
+              {particleOpts.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[0.5rem] uppercase tracking-wider text-[#666] font-bold mb-1">Bloom · {bloom.toFixed(2)}</label>
+            <input type="range" min="0" max="2" step="0.05" value={bloom} onChange={(e) => setBloom(Number(e.target.value))} className="w-full accent-[#E50914]" />
+          </div>
+        </div>
       </div>
     </div>
   )
