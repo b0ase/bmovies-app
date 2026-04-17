@@ -610,11 +610,24 @@
     // Trailer is the cheapest entry point and the natural starting
     // tier — users shouldn't be looking at a $999 feature pack on
     // first load.
-    const urlTier = new URLSearchParams(window.location.search).get('tier');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTier = urlParams.get('tier');
     if (urlTier && TIER_META[urlTier]) {
       selectTier(urlTier);
     } else {
       selectTier('trailer');
+    }
+
+    // Upgrade flow from film.html — when a user clicks "Make trailer"
+    // on an existing pitch we arrive here with ?parentId + ?title +
+    // ?ticker pre-filled. Prefill the idea textarea so they can either
+    // tweak the brief or hit Refine / Commission straight away.
+    const urlParentId = urlParams.get('parentId');
+    const urlTitle = urlParams.get('title');
+    const urlTicker = urlParams.get('ticker');
+    window.__commissionParentOfferId = urlParentId || null;
+    if (urlTitle && ideaEl && !ideaEl.value) {
+      ideaEl.value = urlTitle + (urlParams.get('synopsis') ? '\n\n' + urlParams.get('synopsis') : '');
     }
 
     // ─── Refine ───
@@ -734,6 +747,12 @@
             tier: selectedTier,
             email: email || undefined,
             supabaseUserId: getSignedInSupabaseUserId() || undefined,
+            // Upgrade flow: when commission.html was opened from
+            // film.html's "Make trailer/short/feature" button the
+            // parent offer id is stashed in window by the prefill
+            // block above. Pipes through to the stripe-webhook as
+            // meta.parentOfferId so the cap table rolls up cleanly.
+            parentOfferId: window.__commissionParentOfferId || undefined,
           }),
         });
         if (!res.ok) {

@@ -336,30 +336,65 @@
       feature: { label: 'Feature', price: 999,  display: '$999' },
     };
 
-    function renderTierRow(offer) {
-      const currentTier = offer.tier || 'feature';
-      const currentIdx = TIER_ORDER.indexOf(currentTier);
+    /**
+     * Tier row — three buttons, one per tier (trailer / short / feature).
+     *
+     * Each button resolves to one of three states depending on whether
+     * the tier already exists as a derivative of the current pitch:
+     *
+     *   - Exists  → "Watch trailer" (links to that tier's film.html)
+     *   - Missing → "Make trailer · $9.99" (links to commission.html
+     *               with parent_id pre-filled, so payment flows as an
+     *               upgrade of this pitch)
+     *   - Current → "✓ Trailer" (disabled; this IS the page you're on)
+     *
+     * `derivatives` is the flat list of offers where parent_offer_id
+     * equals this offer's id. Same logic works whether the current page
+     * is a pitch, trailer, or short — the tier-row always lists the
+     * tiers ABOVE the current one.
+     */
+    function renderTierRow(offer, derivatives = []) {
+      const currentTier = offer.tier || 'pitch';
+      const byTier = {};
+      for (const d of derivatives) byTier[d.tier] = d;
+
       return `
         <div class="tier-row">
           ${TIER_ORDER.map(t => {
             const meta = TIER_META[t];
             const isCurrent = t === currentTier;
-            const isLower = TIER_ORDER.indexOf(t) < currentIdx;
-            const isUpgrade = TIER_ORDER.indexOf(t) > currentIdx;
+            const derivative = byTier[t];
             let state = '';
             let label = '';
+            let href = '';
+            let disabled = false;
+
             if (isCurrent) {
               state = 'current';
               label = `✓ ${meta.label}`;
-            } else if (isLower) {
+              disabled = true;
+            } else if (derivative) {
+              // Already produced — link to the derivative's film page.
               state = 'included';
-              label = `${meta.label} (included)`;
-            } else if (isUpgrade) {
+              label = `▶ Watch ${meta.label.toLowerCase()}`;
+              href = `film.html?id=${encodeURIComponent(derivative.id)}`;
+            } else {
+              // Not yet produced — commission it, linked back to this
+              // pitch via parentOfferId so the cap table rolls up.
               state = 'upgrade';
-              label = `Commission as ${meta.label} · ${meta.display}`;
+              label = `Make ${meta.label.toLowerCase()} · ${meta.display}`;
+              href = `commission.html?tier=${t}&parentId=${encodeURIComponent(offer.id)}&title=${encodeURIComponent(offer.title || '')}&ticker=${encodeURIComponent(offer.token_ticker || '')}`;
+            }
+
+            if (href) {
+              return `
+                <a class="tier-btn ${state}" href="${href}" style="text-align:center;text-decoration:none;">
+                  ${label}
+                </a>
+              `;
             }
             return `
-              <button class="tier-btn ${state}" data-tier="${t}" ${isLower || isCurrent ? 'disabled' : ''}>
+              <button class="tier-btn ${state}" data-tier="${t}" ${disabled ? 'disabled' : ''}>
                 ${label}
               </button>
             `;
@@ -746,7 +781,7 @@
                 <h1>${esc(offer.title)}</h1>
                 <p class="tagline">${esc(offer.synopsis || '')}</p>
 
-                ${renderTierRow(offer)}
+                ${renderTierRow(offer, derivatives)}
 
                 <div style="display:flex;gap:0.8rem;margin-top:1.2rem;flex-wrap:wrap;">
                   <button class="cta primary" id="btn-watch">▶ Watch now</button>
