@@ -1788,6 +1788,7 @@ type ArtifactRow = {
 function ProjectDocumentsView({ film }: { film: Film }) {
   const [docs, setDocs] = useState<ArtifactRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -1893,12 +1894,13 @@ function ProjectDocumentsView({ film }: { film: Film }) {
             <div>Step</div>
             <div></div>
           </div>
-          {docs.map((d) => {
+          {docs.map((d, i) => {
             const isDataUrl = d.url.startsWith('data:')
             return (
               <div
                 key={d.id}
-                className="grid grid-cols-[auto_2fr_1fr_auto] gap-3 px-4 py-3 border-b border-[#111] last:border-b-0 items-center"
+                onClick={() => setViewerIndex(i)}
+                className="grid grid-cols-[auto_2fr_1fr_auto] gap-3 px-4 py-3 border-b border-[#111] last:border-b-0 items-center cursor-pointer hover:bg-[#0f0f0f] transition-colors"
               >
                 <div className="text-[0.55rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#1a1a1a] text-[#888]">
                   {d.kind}
@@ -1915,17 +1917,17 @@ function ProjectDocumentsView({ film }: { film: Film }) {
                   {d.step_id || '—'}
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <a
-                    href={d.url}
-                    target="_blank"
-                    rel="noopener"
-                    className="text-[0.55rem] font-bold uppercase tracking-wider text-[#888] hover:text-white"
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setViewerIndex(i) }}
+                    className="text-[0.55rem] font-bold uppercase tracking-wider text-[#888] hover:text-white bg-transparent border-none cursor-pointer"
                   >
                     View
-                  </a>
+                  </button>
                   <a
                     href={d.url}
                     download={dlName(d)}
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
                   >
                     {isDataUrl ? 'Save' : 'Download'} ↓
@@ -1936,6 +1938,15 @@ function ProjectDocumentsView({ film }: { film: Film }) {
           })}
         </div>
       )}
+
+      <DocumentViewer
+        items={docs}
+        index={viewerIndex}
+        onClose={() => setViewerIndex(null)}
+        onIndexChange={setViewerIndex}
+        label={labelFor}
+        dlName={dlName}
+      />
     </div>
   )
 }
@@ -3541,7 +3552,25 @@ function decodeDataUrl(url: string): string | null {
   if (!url.startsWith('data:')) return null
   const comma = url.indexOf(',')
   if (comma < 0) return null
-  return decodeURIComponent(url.slice(comma + 1))
+  const header = url.slice(5, comma)  // e.g. "text/plain;base64"
+  const payload = url.slice(comma + 1)
+  try {
+    if (header.includes(';base64')) {
+      // Preserve multi-byte UTF-8: atob → binary string → percent-encode
+      // each byte → decodeURIComponent to get the real characters back.
+      const bin = atob(payload)
+      try {
+        return decodeURIComponent(
+          Array.from(bin, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''),
+        )
+      } catch {
+        return bin
+      }
+    }
+    return decodeURIComponent(payload)
+  } catch {
+    return null
+  }
 }
 
 /* ── ScriptPane: editable text with save, AI rewrite, version history ── */
@@ -4516,6 +4545,217 @@ function ImageLightbox<T extends { id: number; url: string; step_id: string | nu
         <figcaption className="flex items-center gap-3 text-[0.6rem] font-mono text-[#888] uppercase tracking-wider">
           <span className="text-[#E50914]">{label(item, index)}</span>
           <span className="text-[#555]">{index + 1} / {items.length}</span>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-[#666] hover:text-[#E50914] underline decoration-dotted"
+          >
+            open original ↗
+          </a>
+        </figcaption>
+      </figure>
+    </div>
+  )
+}
+
+/* ── Document viewer ──
+ *
+ * Used by the Documents tab. Each artifact has a `kind` (text / image
+ * / video / audio / …) and a `url` (which may be a data: URL for
+ * inline text or an https URL for storage-backed files). The viewer
+ * picks a renderer per kind:
+ *
+ *   image   → <img> in the lightbox, object-contain
+ *   video   → <video controls>, capped at 80vh
+ *   audio   → <audio controls>, plus the filename
+ *   text    → fetch the URL (or decode data:) and render <pre>, with
+ *             JSON pretty-printed when the content parses as JSON
+ *   other   → iframe fallback (PDFs render natively in modern browsers)
+ *
+ * Close: overlay click / ✕ button / Escape.
+ * Navigate: ◀ / ▶ buttons / Left / Right arrows.
+ * The "Download" and "Open original" actions stay accessible in the
+ * caption so judges can still pull a file out when needed.
+ */
+
+// DocumentViewer operates on ArtifactRow directly — the Documents
+// tab already has everything this viewer needs. decodeDataUrl lives
+// at the top of this file, near ScriptPane, so it can be shared.
+
+function DocumentViewer({
+  items,
+  index,
+  onClose,
+  onIndexChange,
+  label,
+  dlName,
+}: {
+  items: ArtifactRow[]
+  index: number | null
+  onClose: () => void
+  onIndexChange: (next: number) => void
+  label: (d: ArtifactRow) => string
+  dlName: (d: ArtifactRow) => string
+}) {
+  const [text, setText] = useState<string | null>(null)
+  const [textErr, setTextErr] = useState<string | null>(null)
+
+  const item = index !== null ? items[index] : null
+
+  // Load text content when the current item is a text artifact.
+  useEffect(() => {
+    setText(null)
+    setTextErr(null)
+    if (!item || item.kind !== 'text') return
+    // Inline data: URL → decode locally, no network.
+    const inline = decodeDataUrl(item.url)
+    if (inline !== null) {
+      setText(inline)
+      return
+    }
+    // Otherwise fetch. Text artifacts are usually small so no
+    // streaming / truncation needed.
+    let cancelled = false
+    fetch(item.url)
+      .then((r) => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((t) => { if (!cancelled) setText(t) })
+      .catch((e) => { if (!cancelled) setTextErr(e.message || String(e)) })
+    return () => { cancelled = true }
+  }, [item])
+
+  // Keyboard + body-scroll management.
+  useEffect(() => {
+    if (index === null) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft' && index !== null && index > 0) onIndexChange(index - 1)
+      else if (e.key === 'ArrowRight' && index !== null && index < items.length - 1) onIndexChange(index + 1)
+    }
+    window.addEventListener('keydown', handleKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = prev
+    }
+  }, [index, items.length, onClose, onIndexChange])
+
+  if (index === null || !item) return null
+
+  const hasPrev = index > 0
+  const hasNext = index < items.length - 1
+
+  // Pretty-print JSON text when applicable.
+  const displayText = (() => {
+    if (text === null) return null
+    const trimmed = text.trim()
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try { return JSON.stringify(JSON.parse(trimmed), null, 2) } catch { /* not JSON */ }
+    }
+    return text
+  })()
+
+  const body = (() => {
+    if (item.kind === 'image') {
+      return (
+        <img
+          src={item.url}
+          alt={label(item)}
+          className="max-w-full max-h-[78vh] object-contain border border-[#222] bg-black"
+        />
+      )
+    }
+    if (item.kind === 'video') {
+      return (
+        <video
+          src={item.url}
+          controls
+          autoPlay
+          className="max-w-full max-h-[78vh] border border-[#222] bg-black"
+        />
+      )
+    }
+    if (item.kind === 'audio') {
+      return (
+        <div className="flex flex-col gap-4 items-center">
+          <div className="text-6xl text-[#E50914]">♪</div>
+          <audio src={item.url} controls autoPlay className="w-[32rem] max-w-full" />
+        </div>
+      )
+    }
+    if (item.kind === 'text') {
+      if (textErr) return <pre className="text-[#ff6b6b] text-xs font-mono p-6">Failed to load: {textErr}</pre>
+      if (displayText === null) return <div className="text-[#666] text-xs p-6">Loading…</div>
+      return (
+        <pre className="max-w-[80vw] max-h-[78vh] overflow-auto p-6 bg-[#0a0a0a] border border-[#222] text-[#e5e5e5] text-[0.82rem] leading-relaxed font-mono whitespace-pre-wrap break-words">
+          {displayText}
+        </pre>
+      )
+    }
+    // Fallback — let the browser try (PDFs render inline).
+    return (
+      <iframe
+        src={item.url}
+        className="w-[90vw] h-[80vh] border border-[#222] bg-black"
+        title={label(item)}
+      />
+    )
+  })()
+
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Document viewer"
+      className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 md:p-8"
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose() }}
+        aria-label="Close"
+        className="absolute top-3 right-3 md:top-5 md:right-5 w-10 h-10 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl font-mono"
+      >
+        ×
+      </button>
+
+      {hasPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onIndexChange(index - 1) }}
+          aria-label="Previous document"
+          className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl"
+        >
+          &#9664;
+        </button>
+      )}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onIndexChange(index + 1) }}
+          aria-label="Next document"
+          className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white border border-[#333] hover:border-[#E50914] hover:text-[#E50914] bg-black/60 text-xl"
+        >
+          &#9654;
+        </button>
+      )}
+
+      <figure
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-col items-center gap-3 max-w-[92vw]"
+      >
+        {body}
+        <figcaption className="flex items-center gap-3 text-[0.6rem] font-mono text-[#888] uppercase tracking-wider flex-wrap justify-center">
+          <span className="text-[#E50914]">{label(item)}</span>
+          <span className="text-[#555]">{index + 1} / {items.length}</span>
+          <span className="text-[#444]">· {item.kind}{item.step_id ? ' · ' + item.step_id : ''}</span>
+          <a
+            href={item.url}
+            download={dlName(item)}
+            onClick={(e) => e.stopPropagation()}
+            className="text-[#aaa] hover:text-[#E50914] underline decoration-dotted"
+          >
+            download ↓
+          </a>
           <a
             href={item.url}
             target="_blank"

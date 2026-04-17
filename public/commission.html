@@ -173,6 +173,14 @@
       border-color: #E50914;
       color: #fff;
     }
+    /* Arm state: after first click on a destructive tool, the button
+       repaints red to signal "tap again to confirm". No modal, no
+       browser dialog. The state self-clears after a few seconds. */
+    .canvas-toolbar button.tool.armed {
+      border-color: #E50914;
+      background: #1a0003;
+      color: #fff;
+    }
     .canvas-toolbar .spacer { flex: 1; }
 
     /* The textarea itself. Overrides the base textarea rule for height,
@@ -811,22 +819,59 @@
     ideaEl.addEventListener('input', () => { updateCounts(); scheduleSave(); });
     toneEl?.addEventListener('change', scheduleSave);
 
-    sampleBtn?.addEventListener('click', () => {
-      if (ideaEl.value.trim() && !confirm('Replace what you have with a sample?')) return;
-      ideaEl.value = ideaEl.placeholder.replace(/\n{2,}/g, '\n\n');
-      updateCounts();
-      scheduleSave();
-      ideaEl.focus();
-    });
+    // Arm-and-confirm: replaces window.confirm() for destructive tools.
+    // First click on a destructive button sets it to an "armed" state
+    // (red background, label flips to "Tap again to confirm"). A second
+    // click within 3.5s runs the action. Anything else (mouseout,
+    // timeout, typing) disarms it. No browser dialogs.
+    function armOrRun(btn, originalLabel, armLabel, run) {
+      if (!btn) return;
+      let armedAt = 0;
+      let timer = null;
+      function disarm() {
+        btn.classList.remove('armed');
+        btn.textContent = originalLabel;
+        armedAt = 0;
+        if (timer) { clearTimeout(timer); timer = null; }
+      }
+      btn.addEventListener('click', () => {
+        if (Date.now() - armedAt < 3500) {
+          disarm();
+          run();
+          return;
+        }
+        btn.classList.add('armed');
+        btn.textContent = armLabel;
+        armedAt = Date.now();
+        timer = setTimeout(disarm, 3500);
+      });
+      // Safety: if the user starts typing again, cancel the arm.
+      ideaEl.addEventListener('input', disarm, { passive: true });
+    }
 
-    clearBtn?.addEventListener('click', () => {
-      if (!ideaEl.value.trim()) return;
-      if (!confirm('Clear the canvas? Your draft will be removed.')) return;
-      ideaEl.value = '';
-      try { localStorage.removeItem(DRAFT_KEY); } catch {}
-      updateCounts();
-      ideaEl.focus();
-    });
+    armOrRun(
+      sampleBtn,
+      'Sample idea',
+      'Tap again to replace',
+      () => {
+        ideaEl.value = ideaEl.placeholder.replace(/\n{2,}/g, '\n\n');
+        updateCounts();
+        scheduleSave();
+        ideaEl.focus();
+      },
+    );
+
+    armOrRun(
+      clearBtn,
+      'Clear',
+      'Tap again to clear',
+      () => {
+        ideaEl.value = '';
+        try { localStorage.removeItem(DRAFT_KEY); } catch {}
+        updateCounts();
+        ideaEl.focus();
+      },
+    );
 
     // ─── Refine ───
     btnRefine.addEventListener('click', async () => {
