@@ -317,16 +317,8 @@ export function AccountToolbar() {
               selected, tabs point at the first project in the user's
               portfolio (or are disabled if there are none yet). ═══ */}
       <div style={{ ...rowStyle, borderTop: '1px solid #111' }}>
-        {/* Back + project selector */}
-        <button
-          onClick={() => navigateTo('/account')}
-          style={{ ...subTabStyle(false), color: '#888', fontSize: '0.55rem' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
-        >
-          ← Studio
-        </button>
-        <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
+        {/* Project selector — "← Studio" back button removed; Studio is
+            reachable via the top nav row so a second link is redundant. */}
         <ProjectSelector
           projects={projects}
           loading={projectsLoading}
