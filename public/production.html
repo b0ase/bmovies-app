@@ -461,10 +461,58 @@
     async function loadOffer(id) {
       const { data } = await supabase
         .from('bct_offers')
-        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, current_step, production_phase, started_at, target_complete_at, revision_deadline, revisions_remaining, presale_open, token_mint_txid, parent_offer_id')
+        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, current_step, production_phase, started_at, target_complete_at, revision_deadline, revisions_remaining, presale_open, token_mint_txid, parent_offer_id, account_id')
         .eq('id', id)
         .maybeSingle();
       return data;
+    }
+
+    /**
+     * Determine what the current viewer is allowed to see:
+     *   'commissioner'  owns the offer (offer.account_id matches user)
+     *   'holder'        owns shares via bct_share_sales
+     *   'judge'         has ?judge=<any-value> in the URL (soft bypass
+     *                   baked into BSVA tour links so reviewers don't
+     *                   hit a paywall)
+     *   'public'        everyone else — sees the teaser + buy CTA
+     *
+     * Anything other than 'public' unlocks the full pipeline / artifacts
+     * / step log / rough-cut player.
+     */
+    async function resolveAccessLevel(offer) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('judge')) return 'judge';
+
+        const { data: sessionRes } = await supabase.auth.getSession();
+        const user = sessionRes?.session?.user;
+        if (!user) return 'public';
+
+        const { data: accountRow } = await supabase
+          .from('bct_accounts')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        const accountId = accountRow?.id;
+        if (!accountId) return 'public';
+
+        if (offer.account_id && offer.account_id === accountId) {
+          return 'commissioner';
+        }
+
+        const { data: shareRows } = await supabase
+          .from('bct_share_sales')
+          .select('id')
+          .eq('offer_id', offer.id)
+          .eq('buyer_account', accountId)
+          .limit(1);
+        if (shareRows && shareRows.length > 0) return 'holder';
+
+        return 'public';
+      } catch (err) {
+        console.warn('[access] resolve failed, defaulting to public:', err);
+        return 'public';
+      }
     }
 
     async function loadStepLog(id) {
@@ -1343,8 +1391,110 @@
       }
     }
 
+    // ─── Public teaser render ──────────────────────────────────
+    //
+    // Shown to anyone who's NOT the commissioner, a share holder, or
+    // a judge. Reveals: poster, title/ticker/tier, logline, synopsis,
+    // trailer (if available), progress bar; hides: the step log, raw
+    // artifacts, rough-cut player, and audit trail. Drops a "buy a
+    // share" CTA in place of the pipeline.
+    function renderPublicTeaser(offer, log, artifacts) {
+      const poster = artifacts.find(a =>
+        a.kind === 'image' && (a.role === 'poster' || (a.step_id || '').startsWith('storyboard.poster'))
+      );
+      const trailer = artifacts.find(a =>
+        a.kind === 'video' && (a.role === 'trailer' || (a.step_id || '').startsWith('editor.trailer_cut'))
+      );
+      const loglineArt = artifacts.find(a =>
+        (a.step_id || '').startsWith('writer.logline')
+      );
+      const logline = loglineArt ? (decodeDataUrl(loglineArt.url) || '') : '';
+
+      // Phase progress WITHOUT revealing per-step artifacts
+      const completedSet = new Set(log.filter(e => e.status === 'completed').map(e => e.step_id));
+      const total = PIPELINE_STEPS.length;
+      const done = PIPELINE_STEPS.filter(s => completedSet.has(s.id)).length;
+      const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+      const posterHtml = poster
+        ? `<div style="border:1px solid #222;background:#050505;overflow:hidden;max-width:320px;">
+             <img src="${esc(poster.url)}" alt="${esc(offer.title)} poster" style="width:100%;display:block;" />
+           </div>`
+        : `<div style="width:320px;aspect-ratio:2/3;background:linear-gradient(135deg,#1a0003,#0a0000);border:1px solid #222;display:flex;align-items:center;justify-content:center;">
+             <div style="font-family:'Bebas Neue',sans-serif;font-size:4rem;color:#333;font-weight:900;">b<span style="color:#E50914;">M</span></div>
+           </div>`;
+
+      const trailerHtml = trailer
+        ? `<div style="margin-top:1.5rem;background:#000;border:1px solid #222;">
+             <div style="font-size:0.55rem;color:#e50914;text-transform:uppercase;letter-spacing:0.16em;font-weight:900;padding:0.8rem 1rem 0;">Official trailer</div>
+             <video controls preload="metadata" style="width:100%;display:block;background:#000;margin-top:0.5rem;" src="${esc(trailer.url)}"></video>
+           </div>`
+        : '';
+
+      root.innerHTML = `
+        <div class="head">
+          <div class="kicker">Public preview</div>
+          <h1>${esc(offer.title)}</h1>
+          <div class="ticker">$${esc(offer.token_ticker)} · ${esc((offer.tier || 'feature').toUpperCase())} tier</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:320px 1fr;gap:2rem;margin-top:2rem;align-items:start;">
+          ${posterHtml}
+          <div>
+            ${logline ? `<div style="font-size:0.55rem;color:#e50914;text-transform:uppercase;letter-spacing:0.18em;font-weight:900;margin-bottom:0.6rem;">Logline</div>
+              <p style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;line-height:1.15;margin-bottom:1.6rem;">${esc(logline)}</p>` : ''}
+
+            ${offer.synopsis ? `<div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.18em;font-weight:900;margin-bottom:0.4rem;">Synopsis</div>
+              <p style="color:#bbb;font-size:0.9rem;line-height:1.6;margin-bottom:1.6rem;">${esc(offer.synopsis)}</p>` : ''}
+
+            <div style="font-size:0.55rem;color:#888;text-transform:uppercase;letter-spacing:0.18em;font-weight:900;margin-bottom:0.4rem;">Production progress</div>
+            <div style="height:10px;background:#111;border:1px solid #222;margin-bottom:0.4rem;">
+              <div style="height:100%;background:linear-gradient(90deg,#E50914,#ff4757);width:${pct}%;"></div>
+            </div>
+            <div style="font-size:0.7rem;color:#888;margin-bottom:1.6rem;">${done} of ${total} steps complete · ${pct}%</div>
+          </div>
+        </div>
+
+        ${trailerHtml}
+
+        <div style="margin-top:2.4rem;border:1px solid #E50914;background:linear-gradient(135deg,#1a0003,#0a0000);padding:2rem;">
+          <div style="font-size:0.55rem;color:#E50914;text-transform:uppercase;letter-spacing:0.18em;font-weight:900;margin-bottom:0.4rem;">
+            Access-controlled
+          </div>
+          <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#fff;margin:0 0 0.4rem;border:none;padding:0;">
+            The production room is for <span style="color:#E50914;">holders only</span>
+          </h2>
+          <p style="color:#bbb;font-size:0.9rem;line-height:1.6;max-width:640px;margin-bottom:1.4rem;">
+            The 28-step pipeline, live step log, raw artifacts, on-chain audit trail, and
+            rough-cut player are visible to the commissioner and anyone holding a royalty
+            share in $${esc(offer.token_ticker)}. Buy a share to unlock full access — it's
+            also how you earn royalties from every ticket this film sells.
+          </p>
+          <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+            <a href="/offer.html?id=${encodeURIComponent(offer.id)}"
+               style="display:inline-block;padding:0.65rem 1.1rem;background:#E50914;color:#fff;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
+              Buy a share →
+            </a>
+            <a href="/marketplace.html?offer=${encodeURIComponent(offer.id)}"
+               style="display:inline-block;padding:0.65rem 1.1rem;background:transparent;color:#E50914;border:1px solid #E50914;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
+              Secondary market
+            </a>
+            <a href="/film.html?id=${encodeURIComponent(offer.id)}"
+               style="display:inline-block;padding:0.65rem 1.1rem;background:transparent;color:#888;border:1px solid #333;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
+              Film page
+            </a>
+            <a href="/login"
+               style="display:inline-block;padding:0.65rem 1.1rem;background:transparent;color:#888;border:1px solid #333;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
+              Sign in if you're a holder
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
     let lastTxCount = 0;
     let lastRenderHash = '';
+    let lastAccessLevel = null; // cache so we don't re-check every 5s
     async function tick() {
       const id = getOfferId();
       if (!id) {
@@ -1359,6 +1509,21 @@
       ]);
       if (!offer) {
         root.innerHTML = `<div class="empty"><h2 style="font-family:Bebas Neue;font-size:2rem;color:#888;">Production not found</h2><p>${esc(id)}</p></div>`;
+        return;
+      }
+
+      // Resolve access tier on first tick only — cached afterwards so
+      // the 5-second poll doesn't slam auth + share lookups. Login
+      // changes are picked up on next full page load, which is fine.
+      if (lastAccessLevel === null) {
+        lastAccessLevel = await resolveAccessLevel(offer);
+        console.info(`[production] access level: ${lastAccessLevel}`);
+      }
+      if (lastAccessLevel === 'public') {
+        // Public teaser — render once and stop polling for changes.
+        // Anything past this early-return (full render, rough-cut
+        // player, audit trail) is holder-only.
+        renderPublicTeaser(offer, log, artifacts);
         return;
       }
       // Skip the full re-render if nothing actually changed. Without
