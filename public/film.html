@@ -728,9 +728,18 @@
           label = `▶ Watch ${meta.label.toLowerCase()}`;
           href = `film.html?id=${encodeURIComponent(derivative.id)}`;
         } else {
+          // Primary action: MAKE TIER via Stripe — commission a new
+          // derivative owned by the funder. Routes to /commission.html
+          // with the parent pre-filled so Stripe checkout fires as a
+          // derivative commission. The BSV "buy shares" path moves
+          // into the secondary row below.
+          const price = meta.display || '';
           state = 'upgrade';
-          label = `Fund ${meta.label.toLowerCase()} · BSV`;
-          href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
+          label = `Make ${meta.label.toLowerCase()}${price ? ' · ' + price : ''}`;
+          href = `commission.html?tier=${encodeURIComponent(t)}`
+            + `&parentId=${encodeURIComponent(offer.id)}`
+            + `&title=${tierTitle}`
+            + `&ticker=${tierTicker}`;
         }
 
         if (href) {
@@ -747,9 +756,11 @@
         `;
       }).join('');
 
-      // Row 2 — Stripe funding. One button per tier that doesn't yet
-      // exist and isn't the current page. Tiers that are current or
-      // already produced get a spacer so the grid stays aligned.
+      // Row 2 — Secondary action: BUY royalty shares in the parent
+      // pitch via BSV wallet. Different path entirely from the Make
+      // button above. One slot per tier that doesn't exist and
+      // isn't the current page; current/existing tiers get a spacer
+      // so the 3-column grid stays aligned.
       const fundRowButtons = TIER_ORDER.map(t => {
         const meta = TIER_META[t];
         const isCurrent = t === currentTier;
@@ -757,16 +768,13 @@
         if (isCurrent || derivative) {
           return `<div class="fund-btn placeholder" aria-hidden="true"></div>`;
         }
-        // Route to /commission.html pre-filled with parent + tier so
-        // the Stripe checkout fires as a derivative commission.
-        const href = `commission.html?tier=${encodeURIComponent(t)}`
-          + `&parentId=${encodeURIComponent(offer.id)}`
-          + `&title=${tierTitle}`
-          + `&ticker=${tierTicker}`;
-        const price = meta.display || '';
+        // ?target=<tier> hints the offer page about the tranche size
+        // the commissioner is raising toward, so the default slider
+        // lands in the right neighbourhood.
+        const href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
         return `
           <a class="fund-btn" href="${href}">
-            Fund ${meta.label.toLowerCase()} · Stripe${price ? ' ' + price : ''}
+            Buy shares (${meta.label.toLowerCase()} raise) · BSV
           </a>
         `;
       }).join('');
@@ -1532,6 +1540,18 @@
         // Expose loadClip so the compositor can reset to clip 0 when
         // the PLAY gate is pressed (or the user hits REPLAY).
         window._trailerLoadClip = loadClip;
+
+        // Synchronous reset — no fade, no setTimeout, no closure-
+        // breaking. The PLAY gate calls this so its subsequent
+        // player.play() fires inside the same user-gesture window
+        // (critical for browser autoplay-with-sound to not reject).
+        window._trailerReset = () => {
+          current = 0;
+          if (clips[0]) player.src = clips[0];
+          player.style.opacity = '1';
+          if (idxEl) idxEl.textContent = '1';
+          highlightThumb(0);
+        };
       })();
 
       // ─── Post-production compositor ───
@@ -1640,14 +1660,15 @@
         let soundOn = false;
 
         function updateSoundButton() {
+          // The PLAY gate is now the single audio entry point — the
+          // sound pill would only be a redundant "click for sound"
+          // control after the user has already clicked PLAY. Keep it
+          // wired (in case we want to re-enable later) but always
+          // hidden so it doesn't flash over the trailer.
           if (!soundBtn) return;
           soundBtn.classList.toggle('on', soundOn);
-          soundBtn.classList.toggle('prompt', hasAudioTracks && !soundOn);
-          const icon = document.getElementById('trailer-sound-icon');
-          const label = document.getElementById('trailer-sound-label');
-          if (icon)  icon.textContent  = soundOn ? '🔊' : '🔈';
-          if (label) label.textContent = soundOn ? 'Sound on' : 'Click for sound';
-          soundBtn.style.display = hasAudioTracks ? 'flex' : 'none';
+          soundBtn.classList.remove('prompt');
+          soundBtn.style.display = 'none';
         }
         function syncSound() {
           if (musicEl) {
@@ -1683,33 +1704,39 @@
         const playHint  = document.getElementById('trailer-play-hint');
 
         async function startTrailer() {
-          // Rewind everything to the start. When called from the REPLAY
-          // button (after a full playthrough) the video is paused on the
-          // last clip; reset to clip 0 so the next run plays from the top.
+          // Every side-effect in this function must be SYNCHRONOUS inside
+          // the click-callback window — any await before .play() will
+          // cost us the user gesture and browsers will reject the audio
+          // plays. So no src reassignment on first-play (which triggers
+          // an async load), and reset is only done on REPLAY.
           try {
-            if (window._trailerLoadClip) {
-              window._trailerLoadClip(0, { autoplay: false });
-            } else {
-              player.src = clips[0] || player.src;
+            const isReplay = player.ended || (player.duration && player.currentTime >= player.duration - 0.1);
+            if (isReplay) {
+              if (window._trailerReset) window._trailerReset();
+              try { player.currentTime = 0; } catch {}
+              if (musicEl?.src) { try { musicEl.currentTime = 0; } catch {} }
+              if (voEl?.src)    { try { voEl.currentTime    = 0; } catch {} }
             }
-            player.currentTime = 0;
             if (musicEl && musicEl.src) {
               musicEl.muted = false;
               musicEl.volume = 0.35;
-              musicEl.currentTime = 0;
             }
             if (voEl && voEl.src) {
               voEl.muted = false;
               voEl.volume = 1.0;
-              voEl.currentTime = 0;
             }
-            // Dismiss the gate BEFORE .play() calls resolve — the click
-            // event is still in-flight so autoplay-with-sound is allowed.
+            // Video always muted — Grok clips have ambient audio that
+            // clashes with music + VO.
+            player.muted = true;
+            player.volume = 0;
+            // Hide the gate BEFORE .play() resolves — the click event is
+            // still in-flight so autoplay-with-sound is allowed.
             playGate?.classList.add('hidden');
             soundOn = hasAudioTracks;
-            const plays = [ player.play() ];
-            if (musicEl?.src) plays.push(musicEl.play());
-            if (voEl?.src)    plays.push(voEl.play());
+            // Fire all plays synchronously inside the gesture.
+            const plays = [ player.play().catch((e) => console.warn('[compositor] video play rejected', e)) ];
+            if (musicEl?.src) plays.push(musicEl.play().catch(() => {}));
+            if (voEl?.src)    plays.push(voEl.play().catch(() => {}));
             await Promise.allSettled(plays);
           } catch (err) {
             console.warn('[compositor] start trailer failed:', err);
