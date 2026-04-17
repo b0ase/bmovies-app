@@ -578,7 +578,8 @@
         const arts = (o.bct_artifacts || []).filter(a => !isEphemeralUrl(a.url));
         // POSTER_MAP wins so commissioner-provided canonical art beats
         // whatever the pipeline produced.
-        const posterMap = POSTER_MAP[(o.title || '').toLowerCase()];
+        const posterKeyA = (o.title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+        const posterMap = POSTER_MAP[posterKeyA] || POSTER_MAP[(o.title || '').toLowerCase()];
         if (posterMap) { images.push(posterMap); continue; }
         const posterArt = arts?.find(a => a.role === 'poster' && a.kind === 'image');
         if (posterArt?.url) { images.push(posterArt.url); continue; }
@@ -656,7 +657,9 @@
           const isDraft = r.status === 'draft';
           const phase = r.production_phase || r.status;
           const arts = (r.bct_artifacts || []).filter(a => !a.superseded_by && !isEphemeralUrl(a.url));
-          const poster = POSTER_MAP[(r.title || '').toLowerCase()]
+          const rposterKey = (r.title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+          const poster = POSTER_MAP[rposterKey]
+                      || POSTER_MAP[(r.title || '').toLowerCase()]
                       || arts.find(a => a.role === 'poster' && a.kind === 'image')?.url
                       || arts.find(a => a.role === 'storyboard' && a.kind === 'image')?.url
                       || '';

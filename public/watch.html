@@ -475,7 +475,8 @@
       //   2. Non-ephemeral poster artifact from the DB.
       //   3. Non-ephemeral storyboard frame.
       //   4. Any other non-ephemeral image.
-      const posterMap = POSTER_MAP[(title || '').toLowerCase()];
+      const posterKey = (title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+      const posterMap = POSTER_MAP[posterKey] || POSTER_MAP[(title || '').toLowerCase()];
       if (posterMap) return { url: posterMap, kind: 'image', role: 'poster' };
       const liveArts = (arts || []).filter((a) => !isEphemeralUrl(a.url));
       const posterArt = liveArts.find((a) => a.role === 'poster' && a.kind === 'image');

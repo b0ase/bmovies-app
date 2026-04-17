@@ -504,7 +504,8 @@
     //   5. ephemeral poster (last resort — may be dead)
     //   6. null → caller shows the bMovies placeholder card
     function pickPoster(artifacts, title) {
-      const override = POSTER_MAP[(title || '').toLowerCase()];
+      const pKey = (title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+      const override = POSTER_MAP[pKey] || POSTER_MAP[(title || '').toLowerCase()];
       if (override) return { url: override };
       const images = (artifacts || []).filter((a) => a.kind === 'image');
       const isPoster = (a) => a.role === 'poster' || (a.step_id || '').startsWith('storyboard.poster');

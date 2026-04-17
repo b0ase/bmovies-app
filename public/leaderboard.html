@@ -247,7 +247,8 @@
       if (sb) return sb.url;
       const img = arts?.find(a => a.kind === 'image');
       if (img) return img.url;
-      return POSTER_MAP[(title || '').toLowerCase()] || null;
+      const lbKey = (title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+      return POSTER_MAP[lbKey] || POSTER_MAP[(title || '').toLowerCase()] || null;
     }
 
     async function load() {

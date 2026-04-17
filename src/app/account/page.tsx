@@ -97,7 +97,8 @@ function posterPlaceholder(title: string, ticker?: string | null): string {
 }
 
 function resolvePosterUrl(film: Film): string {
-  const mapHit = POSTER_MAP[(film.title || '').toLowerCase()]
+  const pKey = (film.title || '').toLowerCase().replace(/[!?.]+$/, '').trim()
+  const mapHit = POSTER_MAP[pKey] || POSTER_MAP[(film.title || '').toLowerCase()]
   if (mapHit) return mapHit
   const arts = film.bct_artifacts || []
   const poster = arts.find(
@@ -4949,7 +4950,8 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
       )
       const posterArt = allImages.find((a) => a.role === 'poster' || a.step_id === 'storyboard.poster')
       const titleLower = (offer?.title || '').toLowerCase()
-      const mapUrl = POSTER_MAP[titleLower]
+      const titleLowerStripped = titleLower.replace(/[!?.]+$/, '').trim()
+      const mapUrl = POSTER_MAP[titleLowerStripped] || POSTER_MAP[titleLower]
       if (mapUrl) {
         setPosterUrl(mapUrl)
       } else if (posterArt?.url && !isEphemeralUrl(posterArt.url)) {

@@ -529,7 +529,8 @@
       const root = document.getElementById('root');
       // xAI temp CDN URLs expire in ~24h. Reject them so POSTER_MAP wins.
       const isEphemeralUrl = (u) => typeof u === 'string' && /(imgen|vidgen|videos)\.x\.ai/.test(u);
-      const posterUrl = POSTER_MAP[(offer.title || '').toLowerCase()];
+      const posterKey = (offer.title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+      const posterUrl = POSTER_MAP[posterKey] || POSTER_MAP[(offer.title || '').toLowerCase()];
       const arts = (offer.bct_artifacts || []).filter((a) => !isEphemeralUrl(a.url));
       const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
       const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
