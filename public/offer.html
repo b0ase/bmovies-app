@@ -568,7 +568,9 @@
                 ${hasVideo ? `<a href="film.html?id=${encodeURIComponent(offer.id)}" style="padding:0.8rem 1.5rem;border:1px solid #fff;color:#fff;text-decoration:none;font-size:0.7rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;">▶ Watch</a>` : ''}
                 ${upstreamTiers.map(t => `
                   <button type="button" class="fund-tier-btn" data-fund-tier="${t}"
-                    style="padding:0.8rem 1.2rem;background:transparent;border:1px solid #E50914;color:#E50914;font-family:inherit;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">
+                    style="padding:0.8rem 1.2rem;background:#E50914;border:1px solid #E50914;color:#fff;font-family:inherit;font-size:0.65rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.15s;"
+                    onmouseover="this.style.background='#b00610'"
+                    onmouseout="this.style.background='#E50914'">
                     Fund ${t} · $${TIER_BUDGETS_USD[t]}
                   </button>
                 `).join('')}
