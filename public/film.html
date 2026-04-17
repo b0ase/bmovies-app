@@ -705,13 +705,15 @@
       //     it's required to list shares or flip status→published.
       //     This is the e-commerce path: buy a service, get a film.
       //
-      //   Row 2 (fund-row, secondary) — "Buy shares · BSV"
+      //   Row 2 (fund-row, secondary) — "Fund TIER · BSV"
       //     BSV → /offer.html where you buy royalty shares in the
       //     PARENT pitch from the commissioner's float. You don't
       //     own the new film — you own a fractional claim on the
       //     existing one. Proceeds go to the commissioner who
       //     chooses when to spend them on the next tier. This is
-      //     the investment path.
+      //     the investment path. 'Fund' here is deliberately
+      //     different from Row 1's 'Make' — you're helping the
+      //     commissioner raise toward the next tier.
       //
       // 'Fund' was the same word for both actions until 2026-04-17;
       // users couldn't tell whether they were buying a movie or
@@ -782,7 +784,7 @@
         const href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
         return `
           <a class="fund-btn" href="${href}">
-            Buy shares (${meta.label.toLowerCase()} raise) · BSV
+            Fund ${meta.label.toLowerCase()} · BSV
           </a>
         `;
       }).join('');
