@@ -764,7 +764,7 @@ function ProjectView({
       // getting blocked in some Chrome configurations (extensions / ORB)
       // and showed the "broken document" icon. Native render reads the
       // same Supabase tables as /captable.html and avoids the issue.
-      return <ProjectCapTableView film={currentFilm} />
+      return <ProjectCapTableView film={currentFilm} viewerAccountId={accountId} />
 
     case 'crew':
       return <ProjectCrewView projectId={projectId} accountId={accountId} />
@@ -1215,18 +1215,34 @@ type ShareSaleRow = {
   payment_txid: string | null
 }
 
-function ProjectCapTableView({ film }: { film: Film }) {
+type ShareListingRow = {
+  id: number
+  shares_offered: number
+  price_per_share_cents: number
+  total_price_cents: number
+  status: string
+  seller_account_id: string | null
+  created_at: string
+}
+
+// 1% of the 1B-token supply.
+const SHARES_PER_PERCENT_CAPTABLE = 10_000_000
+const MIN_LISTING_SHARES = 100_000 // 0.01%
+
+function ProjectCapTableView({ film, viewerAccountId }: { film: Film; viewerAccountId: string | null }) {
   const [shareSales, setShareSales] = useState<ShareSaleRow[]>([])
+  const [listings, setListings] = useState<ShareListingRow[]>([])
   const [ticketCount, setTicketCount] = useState(0)
   const [ticketRevUsd, setTicketRevUsd] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [reloadTick, setReloadTick] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
       try {
-        const [salesRes, tixRes] = await Promise.all([
+        const [salesRes, tixRes, listRes] = await Promise.all([
           bmovies
             .from('bct_share_sales')
             .select('id, tranche, percent_bought, price_usd, created_at, buyer_email, payment_txid')
@@ -1236,6 +1252,11 @@ function ProjectCapTableView({ film }: { film: Film }) {
             .from('bct_ticket_sales')
             .select('price_usd')
             .eq('offer_id', film.id),
+          bmovies
+            .from('bct_share_listings')
+            .select('id, shares_offered, price_per_share_cents, total_price_cents, status, seller_account_id, created_at')
+            .eq('offer_id', film.id)
+            .order('created_at', { ascending: false }),
         ])
         if (cancelled) return
         const sales = (salesRes.data || []) as ShareSaleRow[]
@@ -1243,6 +1264,7 @@ function ProjectCapTableView({ film }: { film: Film }) {
         const tix = (tixRes.data || []) as { price_usd: number }[]
         setTicketCount(tix.length)
         setTicketRevUsd(tix.reduce((s, t) => s + Number(t.price_usd ?? 0), 0))
+        setListings((listRes.data || []) as ShareListingRow[])
       } catch (err) {
         console.warn('[captable] load error:', err)
       } finally {
@@ -1251,12 +1273,28 @@ function ProjectCapTableView({ film }: { film: Film }) {
     }
     load()
     return () => { cancelled = true }
-  }, [film.id])
+  }, [film.id, reloadTick])
 
   const commissionerPct = Number(film.commissioner_percent ?? 99)
   const soldPct = shareSales.reduce((s, r) => s + Number(r.percent_bought ?? 0), 0)
-  const platformPct = Math.max(0, 100 - commissionerPct - soldPct)
+  const openListings = listings.filter((l) => l.status === 'open')
+  const listedOpenPct = openListings.reduce(
+    (s, l) => s + (Number(l.shares_offered) / 1_000_000_000) * 100,
+    0,
+  )
+  // "Held" = commissioner's float that is neither sold nor currently
+  // listed. This is what the commissioner can still list at will.
+  // Guard against negative if historical data inconsistent.
+  const heldPct = Math.max(0, commissionerPct - soldPct - listedOpenPct)
+  const platformPct = Math.max(0, 100 - commissionerPct)
   const onChain = film.token_mint_txid && /^[0-9a-f]{64}$/.test(film.token_mint_txid)
+
+  // The viewer can manage listings only if they are the project's
+  // commissioner. `film.account_id` is set when the commission was
+  // created by a signed-in user; if it's null (older offers) we
+  // fall back to allowing any signed-in user to try — the API is
+  // the real gate.
+  const isCommissioner = !!viewerAccountId && (!film.account_id || film.account_id === viewerAccountId)
 
   const fmtUsd = (n: number) =>
     `$${(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -1296,18 +1334,34 @@ function ProjectCapTableView({ film }: { film: Film }) {
         </a>
       </div>
 
-      {/* Ownership summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {/* Ownership summary — five slots so the commissioner can see
+          held-vs-listed at a glance. "Held" is the float they could
+          list next; "Listed" is the float currently exposed for sale
+          but not yet bought; "Investors" is what's already sold. */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
-          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Commissioner</div>
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Held</div>
           <div className="text-2xl font-black leading-none text-[#E50914]" style={{ fontFamily: 'var(--font-bebas)' }}>
-            {commissionerPct.toFixed(2)}%
+            {heldPct.toFixed(2)}%
+          </div>
+          <div className="text-[0.6rem] text-[#555] mt-1">Commissioner float, unlisted</div>
+        </div>
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Listed (for sale)</div>
+          <div className="text-2xl font-black leading-none text-[#ffc766]" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {listedOpenPct.toFixed(2)}%
+          </div>
+          <div className="text-[0.6rem] text-[#555] mt-1">
+            {openListings.length} open listing{openListings.length === 1 ? '' : 's'}
           </div>
         </div>
         <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
-          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Investors</div>
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Investors (sold)</div>
           <div className="text-2xl font-black leading-none text-[#66aaff]" style={{ fontFamily: 'var(--font-bebas)' }}>
             {soldPct.toFixed(2)}%
+          </div>
+          <div className="text-[0.6rem] text-[#555] mt-1">
+            {shareSales.length} purchase{shareSales.length === 1 ? '' : 's'}
           </div>
         </div>
         <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
@@ -1315,6 +1369,7 @@ function ProjectCapTableView({ film }: { film: Film }) {
           <div className="text-2xl font-black leading-none text-[#888]" style={{ fontFamily: 'var(--font-bebas)' }}>
             {platformPct.toFixed(2)}%
           </div>
+          <div className="text-[0.6rem] text-[#555] mt-1">Studio / infra fee</div>
         </div>
         <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
           <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Supply</div>
@@ -1322,6 +1377,27 @@ function ProjectCapTableView({ film }: { film: Film }) {
             1B
           </div>
           <div className="text-[0.6rem] text-[#555] mt-1">BSV-21 · 1,000,000,000</div>
+        </div>
+      </div>
+
+      {/* Stacked ownership bar (visual summary of the numbers above) */}
+      <div className="mb-6">
+        <div className="flex h-2 w-full overflow-hidden border border-[#1a1a1a] bg-[#0a0a0a]">
+          {heldPct > 0 && (
+            <div className="h-full bg-[#E50914]" style={{ width: `${heldPct}%` }} title={`Held: ${heldPct.toFixed(2)}%`} />
+          )}
+          {listedOpenPct > 0 && (
+            <div className="h-full bg-[#ffc766]" style={{ width: `${listedOpenPct}%` }} title={`Listed: ${listedOpenPct.toFixed(2)}%`} />
+          )}
+          {soldPct > 0 && (
+            <div className="h-full bg-[#66aaff]" style={{ width: `${soldPct}%` }} title={`Sold: ${soldPct.toFixed(2)}%`} />
+          )}
+          {platformPct > 0 && (
+            <div className="h-full bg-[#666]" style={{ width: `${platformPct}%` }} title={`Platform: ${platformPct.toFixed(2)}%`} />
+          )}
+        </div>
+        <div className="flex justify-between mt-1 text-[0.55rem] uppercase tracking-wider text-[#555]">
+          <span>0%</span><span>50%</span><span>100%</span>
         </div>
       </div>
 
@@ -1354,6 +1430,17 @@ function ProjectCapTableView({ film }: { film: Film }) {
             {film.token_mint_txid}
           </a>
         </div>
+      )}
+
+      {/* Exchange tools — only for the commissioner */}
+      {isCommissioner && (
+        <CapTableExchangeTools
+          film={film}
+          heldPct={heldPct}
+          openListings={openListings}
+          viewerAccountId={viewerAccountId}
+          onChange={() => setReloadTick((t) => t + 1)}
+        />
       )}
 
       {/* Share sales ledger */}
@@ -1431,6 +1518,217 @@ function ProjectCapTableView({ film }: { film: Film }) {
           Secondary market
         </a>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Commissioner-only exchange tools inside the cap-table tab.
+ *
+ * Two actions wired directly to /api/feature/list-shares:
+ *   - List a new tranche (create) — peels a % off the Held bucket,
+ *     publishes it to the exchange at the chosen total price.
+ *   - Cancel an open listing (cancel) — pulls unsold shares back
+ *     off the exchange, returning them to the Held bucket.
+ *
+ * A real BSV-21 token transfer for the sold shares is settled by a
+ * downstream worker; the UI operates at the ledger level (listings
+ * rows) which is what drives the exchange surfaces.
+ */
+function CapTableExchangeTools({
+  film, heldPct, openListings, viewerAccountId, onChange,
+}: {
+  film: Film
+  heldPct: number
+  openListings: ShareListingRow[]
+  viewerAccountId: string | null
+  onChange: () => void
+}) {
+  // Sensible defaults based on what's Held. If the commissioner has
+  // 90% still held, listing 10% is unobtrusive. If they've already
+  // been aggressive, cap at the remaining float. Minimum listing is
+  // 0.01% (100K shares) per the API.
+  const defaultPct = Math.max(0.01, Math.min(10, Number(heldPct.toFixed(2))))
+  const defaultTotalUsd = film.tier === 'feature' ? 9999
+    : film.tier === 'short' ? 999
+    : film.tier === 'trailer' ? 99
+    : 9.99
+
+  const [percent, setPercent] = useState<number>(defaultPct)
+  const [totalUsd, setTotalUsd] = useState<number>(defaultTotalUsd)
+  const [submitting, setSubmitting] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [ok, setOk] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<number | null>(null)
+
+  const sharesOffered = Math.floor(percent * SHARES_PER_PERCENT_CAPTABLE)
+  const pricePerShareCents = sharesOffered > 0 ? (totalUsd * 100) / sharesOffered : 0
+  const sharesValid = sharesOffered >= MIN_LISTING_SHARES && percent <= heldPct + 0.005
+  const priceValid = pricePerShareCents > 0 && pricePerShareCents <= 100_000
+
+  async function submitListing() {
+    setErr(null); setOk(null)
+    if (!sharesValid) {
+      setErr(`Amount must be at least 0.01% and no more than ${heldPct.toFixed(2)}% (your held float).`)
+      return
+    }
+    if (!priceValid) {
+      setErr('Price per share out of range — ceiling is $1,000/share.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/feature/list-shares?action=create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: film.id,
+          sharesOffered,
+          pricePerShareCents: Math.round(pricePerShareCents * 100) / 100,
+          accountId: viewerAccountId,
+        }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`)
+      setOk(`Listed ${percent.toFixed(2)}% at $${(pricePerShareCents / 100).toFixed(6)}/share · $${totalUsd.toFixed(2)} total.`)
+      onChange()
+    } catch (e) {
+      setErr((e as Error).message || 'Failed to list.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function cancelListing(id: number) {
+    setErr(null); setOk(null); setCancellingId(id)
+    try {
+      const res = await fetch('/api/feature/list-shares?action=cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: id, accountId: viewerAccountId }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`)
+      setOk(`Listing #${id} cancelled — shares returned to your held float.`)
+      onChange()
+    } catch (e) {
+      setErr((e as Error).message || 'Failed to cancel.')
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  return (
+    <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            Exchange tools · commissioner
+          </div>
+          <h3 className="text-lg font-black text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            List shares for sale
+          </h3>
+          <p className="text-[0.7rem] text-[#888] mt-1">
+            Peel a tranche off your {heldPct.toFixed(2)}% held float and expose it on the
+            public exchange. Cancel anytime before a buyer takes it.
+          </p>
+        </div>
+      </div>
+
+      {/* List-new form */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+        <label className="block">
+          <span className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold block mb-1">
+            Percent to list
+          </span>
+          <input
+            type="number"
+            min={0.01}
+            max={heldPct}
+            step={0.01}
+            value={percent}
+            onChange={(e) => setPercent(Number(e.target.value) || 0)}
+            className="w-full bg-black border border-[#1a1a1a] px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-[#E50914]"
+          />
+          <div className="text-[0.55rem] text-[#555] mt-1 tabular-nums">
+            {sharesOffered.toLocaleString()} shares · max {heldPct.toFixed(2)}%
+          </div>
+        </label>
+        <label className="block">
+          <span className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold block mb-1">
+            Total price (USD)
+          </span>
+          <input
+            type="number"
+            min={0.01}
+            step={0.01}
+            value={totalUsd}
+            onChange={(e) => setTotalUsd(Number(e.target.value) || 0)}
+            className="w-full bg-black border border-[#1a1a1a] px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-[#E50914]"
+          />
+          <div className="text-[0.55rem] text-[#555] mt-1 tabular-nums">
+            ${(pricePerShareCents / 100).toFixed(6)}/share
+          </div>
+        </label>
+        <button
+          type="button"
+          onClick={submitListing}
+          disabled={submitting || !sharesValid || !priceValid}
+          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] disabled:bg-[#333] disabled:text-[#666] text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+        >
+          {submitting ? 'Listing…' : 'List on exchange'}
+        </button>
+      </div>
+
+      {err && <div className="mt-3 text-xs text-[#ff6b6b]">{err}</div>}
+      {ok && <div className="mt-3 text-xs text-[#6bff8a]">{ok}</div>}
+
+      {/* Open listings with cancel buttons */}
+      {openListings.length > 0 && (
+        <div className="mt-5">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+            Your open listings ({openListings.length})
+          </div>
+          <div className="border border-[#1a1a1a] bg-black">
+            <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-3 py-2 border-b border-[#1a1a1a] text-[0.55rem] uppercase tracking-[0.14em] text-[#666] font-bold">
+              <div>Listing</div>
+              <div>Size</div>
+              <div className="text-right">Per share</div>
+              <div className="text-right">Total ask</div>
+              <div className="text-right">Action</div>
+            </div>
+            {openListings.map((l) => {
+              const pct = (Number(l.shares_offered) / 1_000_000_000) * 100
+              const perShare = Number(l.price_per_share_cents) / 100
+              const total = Number(l.total_price_cents) / 100
+              return (
+                <div key={l.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-3 py-2 border-b border-[#111] last:border-b-0 items-center text-xs">
+                  <div className="text-[#888] tabular-nums">#{l.id}</div>
+                  <div className="text-white tabular-nums">
+                    {pct.toFixed(4)}% <span className="text-[#555]">· {Number(l.shares_offered).toLocaleString()} shares</span>
+                  </div>
+                  <div className="text-right text-white font-mono tabular-nums">
+                    ${perShare.toFixed(6)}
+                  </div>
+                  <div className="text-right text-[#6bff8a] font-bold tabular-nums">
+                    ${total.toFixed(2)}
+                  </div>
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => cancelListing(l.id)}
+                      disabled={cancellingId === l.id}
+                      className="px-2 py-1 border border-[#333] hover:border-[#E50914] hover:text-[#E50914] disabled:border-[#222] disabled:text-[#444] text-[#888] text-[0.55rem] font-bold uppercase tracking-wider"
+                    >
+                      {cancellingId === l.id ? 'Cancelling…' : 'Pull off market'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
