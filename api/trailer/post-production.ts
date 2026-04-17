@@ -23,9 +23,37 @@
  *   SUPABASE_URL           required
  *   SUPABASE_SERVICE_ROLE_KEY  required
  *   ELEVENLABS_API_KEY     optional — gates VO audio generation
- *   ELEVENLABS_VOICE_ID    optional (default: Rachel — bright, warm trailer voice)
+ *   ELEVENLABS_VOICE_ID    optional — default narrator voice id (see
+ *                          NARRATOR_VOICES below for curated options).
+ *                          Request body `voiceId` overrides this per-call.
  *   REPLICATE_API_TOKEN    optional — gates music-bed generation
  */
+
+// Curated ElevenLabs voices that read well as trailer narrators.
+// Listed by id so callers can pick one without touching env vars.
+// Rachel is the ElevenLabs platform default; she reads bright and
+// warm, which is wrong for most trailer registers. Adam (deep
+// cinematic American) and Daniel (UK trailer-voice) are the two
+// defaults worth reaching for.
+const NARRATOR_VOICES: Record<string, { id: string; note: string }> = {
+  adam:      { id: 'pNInz6obpgDQGcFmaJgB', note: 'Deep American narrator — best default for genre trailers' },
+  daniel:    { id: 'onwK4e9ZLuTAKqWW03F9', note: 'UK trailer / BBC-narrator register' },
+  brian:     { id: 'nPczCjzI2devNBz1zQrb', note: 'Smooth middle-aged British male' },
+  arnold:    { id: 'VR6AewLTigWG4xSOukaG', note: 'Crisp American narrator' },
+  clyde:     { id: '2EiwWnXFnvU5JabPnv8n', note: 'Grizzled war-veteran — dystopian / western' },
+  callum:    { id: 'N2lVS1w4EtoT3dr4eOWO', note: 'Hoarse male — indie drama / crime' },
+  rachel:    { id: '21m00Tcm4TlvDq8ikWAM', note: 'Bright warm female — comedy / family' },
+  bella:     { id: 'EXAVITQu4vr4xnSDxMaL', note: 'Young American female' },
+  domi:      { id: 'AZnzlk1XvdvUeBnXmlld', note: 'Strong young female — action / thriller' },
+};
+
+function resolveVoiceId(raw: string | undefined): string {
+  if (!raw) return NARRATOR_VOICES.adam.id;
+  // Accept either a name ("adam") or a raw id ("pNInz6obpgDQGcFmaJgB").
+  const key = raw.trim().toLowerCase();
+  if (NARRATOR_VOICES[key]) return NARRATOR_VOICES[key].id;
+  return raw.trim();
+}
 
 interface VercelRequest {
   method?: string;
@@ -240,13 +268,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const elevenKey = process.env.ELEVENLABS_API_KEY;
-  const elevenVoice = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'; // Rachel
+  // Default voice: Adam — deep cinematic American narrator. Override
+  // per-film by POSTing { offerId, voiceId: "daniel" } or a raw
+  // ElevenLabs voice id string.
+  const defaultVoice = resolveVoiceId(process.env.ELEVENLABS_VOICE_ID);
   const replicateToken = process.env.REPLICATE_API_TOKEN;
 
   if (!xaiKey) { res.status(500).json({ error: 'XAI_API_KEY not set' }); return; }
   if (!supabaseUrl || !supabaseKey) { res.status(500).json({ error: 'Supabase not configured' }); return; }
 
-  let body: { offerId?: string };
+  let body: { offerId?: string; voiceId?: string; force?: { voAudio?: boolean } };
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
   } catch {
@@ -255,6 +286,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
   const offerId = body.offerId?.trim();
   if (!offerId) { res.status(400).json({ error: 'offerId required' }); return; }
+
+  // Voice override: body.voiceId wins > ELEVENLABS_VOICE_ID env > Adam default.
+  // Accepts named voices (e.g. "daniel") or a raw ElevenLabs voice id.
+  const elevenVoice = body.voiceId ? resolveVoiceId(body.voiceId) : defaultVoice;
 
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
@@ -426,10 +461,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // Skip if we already have a non-superseded VO narration audio — no
     // point burning ElevenLabs credits on a second render of the same
     // script.
+    // Force-regenerate if the caller asked for a voice change — otherwise
+    // reuse the existing audio if one already exists on the offer.
     const existingVoAudio = await existingHead('vo.trailer_narration');
-    if (existingVoAudio) {
+    if (existingVoAudio && !body.force?.voAudio && !body.voiceId) {
       produced.push('vo.trailer_narration (kept)');
-    } else if (voScript && elevenKey) {
+    } else if (existingVoAudio && (body.force?.voAudio || body.voiceId)) {
+      // Mark the existing VO audio superseded so the new render becomes
+      // the head. Use a placeholder id — will be patched to the new row
+      // id below if the ElevenLabs call succeeds.
+      // (Intentionally left as a no-op here; ElevenLabs block overwrites.)
+    }
+    if ((!existingVoAudio || body.force?.voAudio || body.voiceId) && voScript && elevenKey) {
       const vo = await elevenLabsVO(elevenKey, elevenVoice, voScript);
       if (vo) {
         // Store in Supabase storage and reference by public URL.
