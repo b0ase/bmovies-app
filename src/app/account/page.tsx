@@ -3304,6 +3304,12 @@ function StudioInfoSection({
                         body: JSON.stringify({ name: studio.name, aesthetic: studio.aesthetic || '' }),
                       })
                       const data = await res.json()
+                      if (res.status === 403 && data?.reason === 'kyc_required') {
+                        if (confirm('You need to verify your identity with Veriff before creating a studio. Go to KYC now?')) {
+                          window.location.href = data.next || '/kyc.html'
+                        }
+                        return
+                      }
                       if (!res.ok) throw new Error(data.error || 'Failed')
                       if (data.checkoutUrl) window.location.href = data.checkoutUrl
                     } catch (err) {

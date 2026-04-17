@@ -2,7 +2,8 @@
 
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { isSkin, type Skin } from '@/lib/skin'
 
 // AccountToolbar calls useSearchParams(), which Next 16 requires to be
 // wrapped in a Suspense boundary. Without it, hydrating the /account
@@ -11,7 +12,33 @@ import { Suspense } from 'react'
 // "Application error: a client-side exception has occurred" screen.
 const AccountToolbar = dynamic(() => import('@/components/AccountToolbar').then(m => m.AccountToolbar), { ssr: false })
 
+// Read skin from the cookie. Runs client-side only — middleware sets
+// the cookie, so by the time this component hydrates the value is
+// available. If the cookie isn't set the shell stays on the default
+// bMovies red skin.
+function useSkin(): Skin {
+  const [skin, setSkin] = useState<Skin>('bmovies')
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)skin=([^;]+)/)
+    const v = m ? decodeURIComponent(m[1]) : null
+    if (isSkin(v)) setSkin(v)
+  }, [])
+  return skin
+}
+
 export function LayoutShell({ children }: { children: React.ReactNode }) {
+  const skin = useSkin()
+  const isBoovies = skin === 'boovies'
+  const navScript = isBoovies ? '/js/boovies-nav.js' : '/js/nav-session.js'
+
+  // Apply a body class so the same scoped pink overrides in
+  // boovies-nav.js CSS also cover server-rendered regions that existed
+  // before the script ran.
+  useEffect(() => {
+    const cls = 'boovies-theme'
+    if (isBoovies) document.body.classList.add(cls)
+    else          document.body.classList.remove(cls)
+  }, [isBoovies])
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -37,19 +64,40 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-links">
-            <a href="/about.html">About</a>
-            <a href="/commission.html">Commission</a>
-            <a href="/exchange.html">Exchange</a>
-            <a href="/productions.html">Live</a>
-            <a href="/studios.html">Studios</a>
-            <a href="/watch.html">Watch</a>
-            <a href="/privacy.html">Privacy</a>
-            <a href="/terms.html">Terms</a>
+            {isBoovies ? (
+              <>
+                <a href="/boovies.html">Drive-In</a>
+                <a href="/about.html">About</a>
+                <a href="/commission.html">Commission</a>
+                <a href="/exchange.html">Exchange</a>
+                <a href="/watch.html">Watch</a>
+                <a href="/privacy.html">Privacy</a>
+                <a href="/terms.html">Terms</a>
+              </>
+            ) : (
+              <>
+                <a href="/about.html">About</a>
+                <a href="/commission.html">Commission</a>
+                <a href="/exchange.html">Exchange</a>
+                <a href="/productions.html">Live</a>
+                <a href="/studios.html">Studios</a>
+                <a href="/watch.html">Watch</a>
+                <a href="/privacy.html">Privacy</a>
+                <a href="/terms.html">Terms</a>
+              </>
+            )}
           </div>
-          <div className="footer-copy">&copy; 2026 bMovies. All rights reserved. <a href="/boovies.html" style={{color:'#333',textDecoration:'none',fontSize:'0.55rem'}} title="You found it">bOOvies?</a></div>
+          <div className="footer-copy">
+            &copy; 2026 {isBoovies ? 'bOOvies' : 'bMovies'}. All rights reserved.{' '}
+            {isBoovies ? (
+              <a href="/?skin=bmovies" style={{color:'#333',textDecoration:'none',fontSize:'0.55rem'}} title="Back to the main feature">bMovies?</a>
+            ) : (
+              <a href="/boovies.html" style={{color:'#333',textDecoration:'none',fontSize:'0.55rem'}} title="You found it">bOOvies?</a>
+            )}
+          </div>
         </div>
       </footer>
-      <Script src="/js/nav-session.js" strategy="afterInteractive" />
+      <Script src={navScript} strategy="afterInteractive" />
     </div>
   )
 }

@@ -43,6 +43,7 @@ async function fetchPublishedFilms(): Promise<FilmRow[]> {
       .from('bct_offers')
       .select('id, updated_at, status')
       .in('status', ['published', 'auto_published', 'released'])
+      .not('is_swarm', 'is', true)
       .order('updated_at', { ascending: false })
       .limit(MAX_FILMS)
     if (error) {
@@ -77,6 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ['/deck.html', 'weekly', 0.5],
     ['/invest.html', 'weekly', 0.6],
     ['/judges.html', 'weekly', 0.5],
+    ['/research.html', 'weekly', 0.6],
     // Authed Next.js routes
     ['/account', 'daily', 0.8],
     ['/studio', 'weekly', 0.6],

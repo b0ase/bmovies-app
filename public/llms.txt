@@ -30,6 +30,7 @@ Nothing is custodial. The user connects their own BRC-100 wallet (BSV Desktop), 
 - [Boovies](https://bmovies.online/boovies.html): Parody-cinema sub-brand featuring Boobfather, Boobning, Jurassic etc.
 - [Pitch](https://bmovies.online/pitch.html): Investor one-pager.
 - [Judges](https://bmovies.online/judges.html): BSVA hackathon submission tour.
+- [Research](https://bmovies.online/research.html): State of the art in AI film production pipelines (Q1 2026). How the best AI filmmakers make convincing films — character consistency, per-shot model selection, shot-list design, editing, and the pipeline bMovies is building toward.
 
 ## Legal + compliance
 

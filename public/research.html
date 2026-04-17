@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Research: State of the Art in AI Film Production Pipelines (Q1 2026)</title>
+  <meta name="description" content="How the best AI filmmakers produce convincing films in 2026. Character consistency, shot-list design, per-model selection, prompt engineering, editing, and the concrete pipeline bMovies is building toward." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="canonical" href="https://bmovies.online/research.html" />
+  <!-- Structured data for AI search — this is a long-form research
+       article; mark it up so ChatGPT / Claude / Perplexity / Google
+       AI Overviews can quote it accurately. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "The State of the Art in AI Film Production Pipelines (Q1 2026)",
+    "description": "Practical implementation guide for building a convincing AI-generated film pipeline. Covers character consistency, scene/motion continuity, per-model selection, prompt engineering, shot-list design, editing, pipeline architecture, and quality gates.",
+    "author": { "@type": "Organization", "name": "bMovies" },
+    "publisher": { "@type": "Organization", "name": "bMovies", "url": "https://bmovies.online" },
+    "datePublished": "2026-04-17",
+    "about": [
+      "AI video generation", "Film production pipeline", "Character consistency",
+      "Google Veo", "Kling", "Runway Gen-4", "Hailuo", "Luma Ray", "xAI Grok Imagine",
+      "AI filmmaking"
+    ]
+  }
+  </script>
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://bmovies.online/research.html" />
+  <meta property="og:title" content="bMovies — Research: AI Film Production Pipelines, Q1 2026" />
+  <meta property="og:description" content="How the best AI filmmakers produce convincing films in 2026 — and the concrete pipeline bMovies is building toward." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="bMovies — Research: AI Film Production Pipelines, Q1 2026" />
+  <meta name="twitter:description" content="Character consistency, per-shot model selection, shot-list design, prompt engineering — the full playbook." />
+  <meta name="twitter:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { background: #000; color: #e5e5e5; font-family: 'Inter', -apple-system, sans-serif; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+    .eyebrow {
+      font-size: 0.6rem; color: #E50914; letter-spacing: 0.22em;
+      text-transform: uppercase; font-weight: 700;
+    }
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.6rem, 6vw, 4.4rem); color: #fff;
+      line-height: 0.94; letter-spacing: 0.005em;
+      margin: 0.6rem 0 1.2rem;
+    }
+    .lede {
+      color: #ccc; font-size: 1.05rem; line-height: 1.65;
+      max-width: 720px;
+    }
+    .lede b { color: #fff; }
+    .meta-row {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      font-size: 0.55rem; color: #666; letter-spacing: 0.12em;
+      text-transform: uppercase; font-weight: 700;
+      margin-top: 1.4rem; padding-top: 1.2rem;
+      border-top: 1px solid #1a1a1a;
+    }
+    .meta-row strong { color: #888; }
+
+    .toc {
+      border: 1px solid #222; background: #0a0a0a;
+      padding: 1.4rem 1.6rem; margin: 2.4rem 0 3rem;
+    }
+    .toc-title {
+      font-size: 0.55rem; color: #E50914; letter-spacing: 0.18em;
+      text-transform: uppercase; font-weight: 700; margin-bottom: 0.8rem;
+    }
+    .toc ol { padding-left: 1.2rem; margin: 0; }
+    .toc li {
+      color: #ccc; font-size: 0.9rem; line-height: 1.7;
+    }
+    .toc a { color: #ccc; text-decoration: none; }
+    .toc a:hover { color: #E50914; }
+
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem; color: #fff; letter-spacing: 0.01em;
+      line-height: 1; margin-top: 3.6rem; margin-bottom: 0.8rem;
+      padding-bottom: 0.6rem; border-bottom: 1px solid #222;
+      scroll-margin-top: 2rem;
+    }
+    h2 .num {
+      display: inline-block; color: #E50914; font-size: 0.8em;
+      margin-right: 0.5rem;
+    }
+    h3 {
+      font-size: 1rem; color: #fff; font-weight: 700;
+      margin-top: 2rem; margin-bottom: 0.6rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    p { color: #bbb; font-size: 0.95rem; line-height: 1.7; margin: 0 0 1rem; }
+    ul, ol { color: #bbb; font-size: 0.95rem; line-height: 1.7; padding-left: 1.4rem; margin: 0 0 1rem; }
+    li { margin-bottom: 0.35rem; }
+    strong { color: #fff; }
+    em { color: #ddd; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.82rem;
+    }
+    code { color: #ffcf8a; background: #120c05; padding: 0.08rem 0.32rem; border-radius: 2px; }
+    pre {
+      background: #0a0a0a; border: 1px solid #222;
+      padding: 1.1rem 1.3rem; overflow-x: auto;
+      color: #ddd; line-height: 1.55; margin: 0 0 1.2rem;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+
+    table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.6rem;
+      font-size: 0.85rem;
+    }
+    th, td {
+      padding: 0.6rem 0.8rem; border-bottom: 1px solid #1a1a1a;
+      text-align: left; vertical-align: top;
+    }
+    th {
+      font-size: 0.55rem; color: #E50914; letter-spacing: 0.14em;
+      text-transform: uppercase; font-weight: 700;
+      background: #0a0a0a;
+    }
+    td { color: #bbb; }
+    td strong { color: #fff; }
+
+    blockquote {
+      border-left: 3px solid #E50914; padding: 0.2rem 1rem;
+      margin: 1rem 0 1.4rem; color: #ccc; font-style: italic;
+    }
+
+    .kicker-block {
+      border: 1px solid #E50914; background: linear-gradient(135deg, #1a0003, #0a0000);
+      padding: 1.2rem 1.4rem; margin: 1.6rem 0;
+    }
+    .kicker-block .kicker {
+      font-size: 0.55rem; color: #E50914; letter-spacing: 0.18em;
+      text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;
+    }
+    .kicker-block p { margin: 0; color: #ddd; }
+
+    .footer-box {
+      margin-top: 4rem; padding: 2rem; border: 1px solid #222;
+      background: #0a0a0a; text-align: center;
+    }
+    .footer-box .line { color: #888; font-size: 0.8rem; line-height: 1.6; }
+    .footer-box .line a { color: #E50914; }
+
+    .source-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0.4rem 1.4rem;
+    }
+    .source-grid a {
+      font-size: 0.75rem; color: #aaa;
+    }
+    .source-grid a:hover { color: #E50914; }
+    @media (max-width: 680px) {
+      .source-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="eyebrow">Research · Q1 2026</div>
+    <h1>The state of the art in AI film production pipelines</h1>
+    <p class="lede">
+      Our current pipeline produces 8-second video clips that don't gel —
+      characters drift, lighting mismatches, motion doesn't carry from one
+      shot to the next. The films feel like slideshows, not films.
+      This is the research brief we compiled to fix that: <b>how the best
+      AI filmmakers in the world actually make convincing films in 2026</b>,
+      written as a practical implementation guide we can copy.
+    </p>
+
+    <div class="meta-row">
+      <span><strong>Compiled:</strong> 2026-04-17</span>
+      <span><strong>Source:</strong> Web research (Reddit, X, Medium, official docs, arXiv)</span>
+      <span><strong>Written for:</strong> bMovies engineering</span>
+      <span><a href="https://github.com/b0ase/bmovies/tree/main/docs/research">Markdown source in git</a></span>
+    </div>
+
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#s1">Character consistency across shots</a></li>
+        <li><a href="#s2">Scene, location and lighting continuity</a></li>
+        <li><a href="#s3">Motion continuity</a></li>
+        <li><a href="#s4">Model selection per shot type</a></li>
+        <li><a href="#s5">Prompt engineering for video</a></li>
+        <li><a href="#s6">Shot-list design</a></li>
+        <li><a href="#s7">Editing and post-production</a></li>
+        <li><a href="#s8">Production pipeline architecture</a></li>
+        <li><a href="#s9">Quality gates</a></li>
+        <li><a href="#s10">Real-world case studies</a></li>
+        <li><a href="#s11">Specific recommendations for bMovies</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </div>
+
+    <h2 id="s1"><span class="num">01</span>Character consistency across shots</h2>
+    <p>Character consistency is the single biggest unsolved problem in AI filmmaking. The 2025 survey <em>Generative AI for Film Creation</em> rates &ldquo;consistent character body movement&rdquo; as the top priority among AI filmmakers at 6.62/7 &mdash; but current tools deliver it at only 4.45/7. A 35% performance gap against demand. Every technique below is a workaround for that gap.</p>
+
+    <h3>Reference-image conditioning</h3>
+    <p>Every major model has converged on the same mechanism: give the model 2&ndash;5 clean reference images of your character at the start of every generation.</p>
+    <p><strong>Runway Gen-4 References</strong> is the most mature: up to 3 images (front portrait, three-quarter, full-body / wardrobe, optional style grade) memorised as a session-level identity. Attach the same references <em>every single generation</em> &mdash; no persistent state between sessions.</p>
+    <p><strong>Veo 3.1 Ingredients</strong> works similarly. Assemble 2&ndash;3 character references plus a lookbook of 8&ndash;10 frames defining lens, lighting and palette. Repeat identical vocabulary across every prompt to reduce semantic drift.</p>
+    <p><strong>Grok Imagine Video Reference-to-Video</strong> (what bMovies uses today) accepts 1&ndash;7 reference images via URL alongside the text prompt. <code>@image1</code>, <code>@image2</code> notation specifies distinct visual elements that synthesise into one scene. No built-in session state &mdash; every call re-uploads references.</p>
+    <p><strong>Kling Elements</strong> (Kling 2.5 / 3.0) lets you upload character references as reusable session elements. Kling 3.0 (Feb 2026) introduced multi-shot sequences of 3&ndash;15s with subject consistency across camera angles &mdash; the first model to solve &ldquo;same character from multiple angles&rdquo; within a single generation call.</p>
+
+    <h3>LoRA and character fine-tuning</h3>
+    <p><strong>Higgsfield Soul ID</strong> is the most purpose-built implementation: upload 20+ photos, train a Soul ID in ~3 minutes, generate unlimited visuals with that identity locked across every style, pose and lighting. Cinema Studio 2.5 integrates Soul Cast natively for up to 3 characters, placing consistent characters at the centre of the workflow before the first frame. This is the closest thing to a solved problem in character consistency as of Q1 2026.</p>
+
+    <h3>Starting-frame / ending-frame conditioning (image-to-video)</h3>
+    <p>The most practical technique. Generate a reference still of your character in the correct pose / lighting / wardrobe. Feed as the starting frame of an image-to-video model. Frame-0 character appearance is guaranteed.</p>
+    <p><strong>Kling O1</strong> accepts both start and end image and synthesises motion between them &mdash; the strongest bidirectional conditioning available.</p>
+
+    <div class="kicker-block">
+      <div class="kicker">Takeaway</div>
+      <p>Generate stills first &rarr; validate character appearance &rarr; use stills as image-to-video seed frames. Never prompt raw text-to-video for character-critical shots.</p>
+    </div>
+
+    <h3>Practical checklist for a 20+ shot film</h3>
+    <ol>
+      <li>Build a <strong>character bible</strong> &mdash; front, three-quarter, profile, full-body, two expressions. Six reference images minimum.</li>
+      <li>Build a <strong>visual lookbook</strong> &mdash; 8&ndash;10 frames defining lens focal length, lighting, palette, grain.</li>
+      <li>Write a <strong>canonical descriptor string</strong> &mdash; &ldquo;Lena, female, early 30s, shoulder-length black hair, pale complexion, red scarf, leather jacket.&rdquo; Verbatim in every prompt.</li>
+      <li>For API pipelines: upload references once per session, reference in every call.</li>
+      <li>Generate the reference still per shot first; use it as the image-to-video seed.</li>
+      <li>Apply a unified colour grade in post to paper over residual drift.</li>
+    </ol>
+
+    <h2 id="s2"><span class="num">02</span>Scene, location and lighting continuity</h2>
+
+    <h3>World-building before generating</h3>
+    <p>Establish every environment as concept art before video generation begins. For each location generate 4&ndash;6 still images covering different angles and times of day &mdash; the environment reference library. Veo 3.1 Ingredients takes character + environment in the same call; Runway Gen-4 combines character, location and style-grade frame as three separate inputs.</p>
+
+    <h3>Palette locking</h3>
+    <p>Pick a palette at the start and encode it in every prompt: &ldquo;teal&ndash;orange grade, neon magenta accent, filmic shadows, warm practical light sources.&rdquo; Repeat verbatim. Tolerate ~15% histogram drift before flagging a shot as mismatched; beyond that, regenerate.</p>
+
+    <h3>LUT-style grading in post</h3>
+    <ol>
+      <li>Designate one shot as the grade anchor &mdash; typically the first hero shot.</li>
+      <li>Use DaVinci Resolve's Color Match / Shot Match to pull all other clips to the anchor.</li>
+      <li>Apply a film LUT on top (Film Riot, Ground Control, paid packs).</li>
+      <li>Use AI colour matching (Color.io) to generate a 3D LUT from a reference frame and apply across all clips.</li>
+    </ol>
+    <p>The 2025 norm: apply an AI-adaptive LUT first (70&ndash;90% there), then finish with manual node corrections on faces and highlights.</p>
+
+    <h3>Avoiding &ldquo;every shot is a different building&rdquo;</h3>
+    <ul>
+      <li><strong>Reuse the starting still</strong> &mdash; the environment in the seed frame carries into the video.</li>
+      <li><strong>Prop anchoring</strong> &mdash; place 1&ndash;2 distinctive props in every shot from a location (&ldquo;the cracked neon sign on the left wall&rdquo;).</li>
+      <li><strong>Camera-angle vocabulary</strong> &mdash; same angle + focal-length terms across all shots in a location.</li>
+      <li><strong>Don't regenerate anchors</strong> &mdash; once a location shot is approved, lock it and build all other shots in the scene around its starting frame.</li>
+    </ul>
+
+    <h2 id="s3"><span class="num">03</span>Motion continuity</h2>
+
+    <h3>Last-frame &rarr; first-frame conditioning</h3>
+    <p>The most reliable technique. Generate shot N to a clean final frame (ideally without motion blur). Extract. Feed as starting frame for shot N+1 with a motion directive: &ldquo;continues stepping into light.&rdquo; Preserves subject orientation, clothing state, spatial position, approximate lighting. Does <em>not</em> preserve velocity &mdash; include velocity language explicitly.</p>
+    <p>Veo 3.1 supports this natively. Warning: &ldquo;image-to-video methods can produce stagnation or quality degradation when applied autoregressively&rdquo; &mdash; chain too many shots from a single starting frame and you accumulate artifacts. Recommended: hard-cut every 3&ndash;4 shots and re-anchor from a fresh keyframe.</p>
+
+    <h3>Start-frame + end-frame (Kling O1)</h3>
+    <p>Most controlled motion of any current model. Generate both frames as stills first, then use O1 to fill in the motion between them.</p>
+
+    <h3>Keyframe interpolation</h3>
+    <p>Midjourney (for keyframe stills) &rarr; Veo 3.1 interpolation is a documented 2025 workflow: generate clean start and end keyframes in Midjourney, submit to Veo's interpolation endpoint. Veo calculates the vector flow between frames, producing natural motion with predictable physics.</p>
+
+    <h3>Practical motion-continuity checklist</h3>
+    <ul>
+      <li>Respect the <strong>180-degree rule</strong> across all shots in a scene &mdash; pick an axis of action, never cross it without a bridging shot.</li>
+      <li>Maintain <strong>screen direction</strong> &mdash; if a character walks left&rarr;right in shot 4, they must continue left&rarr;right in shot 5 unless there's an explicit cut-to reason for reversal.</li>
+      <li>Match <strong>eyelines</strong> &mdash; if A looks left in close-up, B must appear on the left in the reverse.</li>
+      <li>Use <strong>match-action cues</strong> in prompts: &ldquo;mid-swing,&rdquo; &ldquo;hand reaching the doorknob,&rdquo; &ldquo;one foot already through the door.&rdquo;</li>
+      <li>Metric: measure optical flow at shot boundaries; significant directional deviation is the objective indicator of broken motion continuity.</li>
+    </ul>
+
+    <h2 id="s4"><span class="num">04</span>Model selection per shot type</h2>
+    <p>As of Q1 2026, no single model is best at everything. Average AI film productions use 3.14 different tools per film.</p>
+
+    <h3>Google Veo 3.1</h3>
+    <p><strong>Strengths:</strong> native synchronised audio (the only model that does this natively); lip-sync accuracy &lt;120ms; temporal consistency 8.9/10; best photorealism for talking heads; Ingredients references; interpolation between start / end keyframes.</p>
+    <p><strong>Weaknesses:</strong> $0.15/sec (Fast) or $0.40/sec (standard) &mdash; the most expensive major model; native audio limits post-production flexibility; complex dialogue and musical instruments still produce inconsistent results.</p>
+
+    <h3>Kling 2.5 / 3.0</h3>
+    <p><strong>Strengths:</strong> best character consistency across shots among API-accessible models; multi-shot sequences (3&ndash;15s) with subject consistency across camera angles; dual-keyframe (O1) for controlled motion arcs; mature image-to-video pipeline; ~$0.10/sec.</p>
+    <p><strong>Weaknesses:</strong> Asian-character aesthetics bias; occasional over-sharpening; motion physics less convincing than Veo / Runway for physics-heavy shots.</p>
+
+    <h3>Runway Gen-4.5</h3>
+    <p><strong>Strengths:</strong> best-in-class character consistency for multi-scene workflows via References; Director Mode that parses cinematography terminology; Motion Brush for per-pixel control of movement paths (unique); Act-Two for motion-capture-driven performance; the most complete professional editing platform.</p>
+    <p><strong>Weaknesses:</strong> subscription-based credits pricing; less photorealistic than Veo for talking heads; not optimal for audio.</p>
+
+    <h3>xAI Grok Imagine Video <em>(what bMovies uses today)</em></h3>
+    <p><strong>Strengths:</strong> native audio; xAI API with no cold-start; $0.30/6s or $0.50/10s; 1&ndash;7 reference images for identity preservation; Aurora autoregressive architecture; integrates with the rest of the xAI stack.</p>
+    <p><strong>Weaknesses:</strong> character consistency across separate generations is its documented weak point &mdash; no session state, every call re-supplies references; Morpheus benchmark found inconsistent physics simulation; warped objects, flickering lighting and unnatural movement are documented artifacts; 6&ndash;10s clip cap; no post-gen editing control. <strong>Positioned as a consumer tool, not a professional film pipeline anchor.</strong></p>
+
+    <h3>Hailuo 02 (MiniMax)</h3>
+    <p><strong>Strengths:</strong> #2 globally on Artificial Analysis (92.1); physics realism highest of any model (94/100 vs Veo 3's 83/100) &mdash; specialised physics critics trained on 120k labeled clips with PyBullet integration; native 1080p at $0.28/10s; deterministic cinematography from natural-language camera commands.</p>
+    <p><strong>Weaknesses:</strong> no audio generation or lip-sync; 10s duration cap; struggles with fine-grained details in complex prompts.</p>
+
+    <h3>Luma Ray 3</h3>
+    <p><strong>Strengths:</strong> world's first model with native HDR (16-bit EXR export); scene-level global illumination tracks highlights and shadows across frames; generation &lt;90s at 1080p.</p>
+    <p><strong>Weaknesses:</strong> less character-consistency tooling than Runway / Kling; stronger for B-roll and environment shots.</p>
+
+    <h3>Selection matrix</h3>
+    <table>
+      <thead><tr><th>Shot type</th><th>Primary</th><th>Backup</th></tr></thead>
+      <tbody>
+        <tr><td>Dialogue / talking head</td><td>Veo 3.1</td><td>Runway Act-Two</td></tr>
+        <tr><td>Character action (multi-shot)</td><td>Kling 3.0</td><td>Runway Gen-4.5</td></tr>
+        <tr><td>Physics-heavy action</td><td>Hailuo 02</td><td>Kling 3.0</td></tr>
+        <tr><td>Establishing / environment</td><td>Luma Ray 3</td><td>Hailuo 02</td></tr>
+        <tr><td>Character-consistent close-ups</td><td>Higgsfield Cinema Studio</td><td>Runway Gen-4.5</td></tr>
+        <tr><td>Motion-capture performance</td><td>Runway Act-Two</td><td>&mdash;</td></tr>
+        <tr><td>B-roll / product</td><td>Pika 2.5</td><td>Grok Imagine Video</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="s5"><span class="num">05</span>Prompt engineering for video</h2>
+
+    <h3>The universal structure</h3>
+    <p>Every prompt for every model should include these five layers, in order:</p>
+    <pre><code>[Identity] [Cinematography] [Environment] [Performance/Action] [Style]</code></pre>
+    <p><strong>Example:</strong> &ldquo;Lena, female, early 30s, black hair, red scarf &mdash; medium shot, 35mm, shallow depth of field, slow dolly push &mdash; rain-slicked alley, warm practical light from shopfront on left &mdash; turns to face camera, wide-eyed, backs against wall &mdash; cinematic, film grain, teal-orange grade, 24fps.&rdquo;</p>
+    <ul>
+      <li><strong>Identity</strong> &mdash; exact character descriptor (canonical descriptor string, copy-paste).</li>
+      <li><strong>Cinematography</strong> &mdash; shot size (ECU/CU/MS/MLS/WS), lens (24/35/50/85mm), camera movement (dolly/pan/tilt/crane/handheld/static), DoF.</li>
+      <li><strong>Environment</strong> &mdash; location, time of day, weather, lighting sources, key props.</li>
+      <li><strong>Performance</strong> &mdash; what the character does, how they move, emotional state.</li>
+      <li><strong>Style</strong> &mdash; film grain, LUT / grade direction, codec aesthetic (35mm, anamorphic, DV, 16mm).</li>
+    </ul>
+
+    <h3>Amateur vs. cinematic</h3>
+    <p><strong>Amateur:</strong> &ldquo;A woman walks down a dark street at night.&rdquo;</p>
+    <p><strong>Cinematic:</strong> &ldquo;Lena, early 30s, shoulder-length black hair, red scarf &mdash; medium shot, 50mm lens, tracking dolly alongside at hip height &mdash; rain-slicked cobblestone street, single amber streetlamp behind her casting long forward shadow, reflections fragmenting in puddles &mdash; walks with deliberate pace, head slightly bowed against rain, occasionally glances left &mdash; cinematic, 35mm film grain, desaturated cold with warm amber highlights, 24fps.&rdquo;</p>
+    <p>Difference: physical specificity, camera specification, light sources (not just &ldquo;dark&rdquo;), character physical behaviour rather than abstract mood.</p>
+
+    <h3>Model-specific tips</h3>
+    <ul>
+      <li><strong>Runway</strong> treats prompts as physics specifications. Use force / mass language. Motion Brush: paint foreground and background as separate motion vectors.</li>
+      <li><strong>Kling</strong> is an audio-visual choreographer; include timeline beat markers. Elements for reusable references. Negative prompts: &ldquo;no morphing, no floating, no jitter.&rdquo;</li>
+      <li><strong>Veo</strong> is a structured data renderer; separate cinematography, lighting, subject, environment, audio into distinct clauses to prevent concept bleed.</li>
+      <li><strong>Hailuo</strong> parses natural-language camera commands deterministically. Write &ldquo;orbit 180&deg;, dolly-zoom in, handheld shake&rdquo; as you would brief a DP.</li>
+      <li><strong>Grok</strong>: prompt motion directives over composition (the reference image handles composition). Physics negatives: &ldquo;no flickering, no warping, solid and rigid.&rdquo;</li>
+    </ul>
+
+    <h2 id="s6"><span class="num">06</span>Shot-list design</h2>
+
+    <h3>The classical structure (still applies to AI)</h3>
+    <ol>
+      <li><strong>Master shot</strong> (wide / long) &mdash; establishes characters, spatial relationships, environment. Generate first &mdash; visual bible for the scene.</li>
+      <li><strong>Coverage</strong> &mdash; medium shots of each character, individually and combined.</li>
+      <li><strong>Close-ups / extreme close-ups</strong> &mdash; faces, hands, significant props.</li>
+      <li><strong>Over-the-shoulder</strong> &mdash; A's face over B's shoulder; creates intimacy and sightline.</li>
+      <li><strong>Cutaways and inserts</strong> &mdash; details, environmental context, reaction shots.</li>
+    </ol>
+    <p>For AI: generate the master shot first; use it as the reference frame for every other shot in the scene.</p>
+
+    <h3>The Kuleshov effect and AI</h3>
+    <p>Meaning in film is created by the <em>juxtaposition</em> of shots, not the content of individual shots. A neutral face cut after a bowl of soup reads as &ldquo;hunger&rdquo;; the same face after a coffin reads as &ldquo;grief.&rdquo;</p>
+    <div class="kicker-block">
+      <div class="kicker">Takeaway</div>
+      <p>You need fewer shots than you think if your shot selection is intentional. A five-minute film needs 40&ndash;80 shots, not 200.</p>
+    </div>
+
+    <h3>Screen direction and the 180-degree rule</h3>
+    <p>Mark an imaginary axis of action before generating any shots in a dialogue scene. All camera positions must remain on one side. For AI: choose &ldquo;left&rdquo; or &ldquo;right&rdquo; facing for each character and encode it in every prompt. Bridging shots (straight-on / neutral angle close-up) allow crossing the line without disorientation.</p>
+
+    <h2 id="s7"><span class="num">07</span>Editing and post-production</h2>
+
+    <h3>Colour-grading pipeline (DaVinci Resolve)</h3>
+    <ol>
+      <li>Import all clips into one timeline.</li>
+      <li>Designate one anchor shot (usually the first hero).</li>
+      <li>Use Color Match / Shot Match to pull all clips to the anchor.</li>
+      <li>Apply a single film LUT across the entire timeline on a shared node &mdash; imposes aesthetic unity.</li>
+      <li>Shot-level corrections for faces, highlights, problem shots.</li>
+    </ol>
+    <p>For AI video the LUT does more work than in live action because model-to-model variance is higher. A desaturated, slightly pushed mid-tone look (teal shadows, warm highlights) is the standard &ldquo;cinematic AI film&rdquo; grade.</p>
+
+    <h3>Audio</h3>
+    <ul>
+      <li><strong>Music</strong> &mdash; Suno for songs with vocals; ElevenLabs Music for instrumental with precise BPM / key control and stem exports; MusicGen (Meta, open source) for background instrumental with audio conditioning.</li>
+      <li><strong>Voice / ADR</strong> &mdash; ElevenLabs cloned from 1&ndash;3 minutes of reference audio. Clone once per character; use throughout.</li>
+      <li><strong>SFX</strong> &mdash; ElevenLabs SFX (text-to-SFX) or Freesound + manual curation. Veo 3.1 native audio can supply ambient SFX as a byproduct.</li>
+    </ul>
+
+    <h3>Edit techniques that work for AI video</h3>
+    <ul>
+      <li><strong>Match cut</strong> &mdash; find a shot that ends on a shape / motion / direction that rhymes with the next shot's opening. Hides model inconsistencies.</li>
+      <li><strong>J-cut / L-cut</strong> &mdash; audio from the next / previous scene starts before / after the picture cut. Audio continuity gives the brain a bridge.</li>
+      <li><strong>Dissolve</strong> &mdash; 8&ndash;16 frame dissolves between thematically related shots mask model variance better than hard cuts.</li>
+      <li><strong>Cutaways</strong> &mdash; environmental detail shots give you breathing room to re-establish characters after a generation break.</li>
+      <li><strong>Colour continuity</strong> &mdash; the single most powerful &ldquo;gel&rdquo; in AI film is a unified colour grade. Most &ldquo;disconnected clips&rdquo; problems are ~50% colour-temperature mismatch, solvable in 30 minutes of grading.</li>
+    </ul>
+
+    <h2 id="s8"><span class="num">08</span>Production pipeline architecture</h2>
+
+    <h3>Agent roles and sequential dependencies</h3>
+    <pre><code>Script &rarr; Scene plan &rarr; Character bible &rarr; Storyboard &rarr;
+Reference stills &rarr; Video generation &rarr; Assembly &rarr;
+Audio &rarr; Colour grade &rarr; Final output</code></pre>
+
+    <table>
+      <thead><tr><th>Stage</th><th>Agent role</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Writer</td><td>Scene-by-scene script with action lines, dialogue, scene headers</td></tr>
+        <tr><td>2</td><td>Director</td><td>Shot list per scene: type, angle, duration, screen direction, axis of action</td></tr>
+        <tr><td>3</td><td>Production designer</td><td>Character bibles, location lookbooks, colour palette</td></tr>
+        <tr><td>4</td><td>Storyboard</td><td>Panels (image gen from shot list) with camera notes</td></tr>
+        <tr><td>5</td><td>DP</td><td>Reference stills (one per shot, validated for character consistency)</td></tr>
+        <tr><td>6</td><td>Camera operator</td><td>Video generation from reference stills (image-to-video)</td></tr>
+        <tr><td>7</td><td>Editor</td><td>Assembly, cut decisions, transition choices, rough cut</td></tr>
+        <tr><td>8</td><td>Composer / sound</td><td>Music, SFX, ADR / voice</td></tr>
+        <tr><td>9</td><td>Colourist</td><td>Grade, LUT application, final polish</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Text-first vs. storyboard-first vs. reference-frame-first</h3>
+    <ul>
+      <li><strong>Text-first</strong> (current bMovies approach): writer &rarr; prompts go directly to video. Problem: no reference images, character drifts immediately.</li>
+      <li><strong>Storyboard-first</strong>: writer &rarr; director generates shot list &rarr; image model generates storyboard panels (one per shot) &rarr; panels become image-to-video seeds &rarr; video generation. 2025 standard. Adds ~20% cost; delivers consistency that makes the film watchable.</li>
+      <li><strong>Reference-frame-first</strong> (Higgsfield Cinema Studio): create the character and environment first, then write the shot list around what's achievable, then generate. Most consistent but least narratively flexible.</li>
+    </ul>
+    <div class="kicker-block">
+      <div class="kicker">Recommendation for bMovies</div>
+      <p><strong>Storyboard-first.</strong> Our 28-step pipeline needs a &ldquo;generate reference stills&rdquo; step before video generation. That one architectural change is the biggest single lever.</p>
+    </div>
+
+    <h2 id="s9"><span class="num">09</span>Quality gates</h2>
+
+    <h3>Automated checks to implement</h3>
+    <ul>
+      <li><strong>Face consistency</strong> &mdash; extract a frame from each shot, run face embeddings (OpenCV dlib, DeepFace, Insightface), cosine similarity &gt;0.85 for same character. Flag &lt;0.7 for regeneration.</li>
+      <li><strong>Motion artifact detection</strong> &mdash; extract first / last frame, optical flow analysis, flag clips where flow reverses abruptly mid-clip. SSIM drops &gt;30% usually indicate a generation seam.</li>
+      <li><strong>Colour / palette consistency</strong> &mdash; compute colour histogram of dominant region, flag divergence &gt;15% from scene anchor.</li>
+      <li><strong>Audio-visual sync</strong> (Veo 3.1, Kling native audio) &mdash; detect speech onset, verify mouth-open state at corresponding frame. Flag divergence &gt;3 frames (125ms at 24fps).</li>
+      <li><strong>Duration / motion sanity</strong> &mdash; reject clips &lt;90% of requested duration or with near-zero optical flow in first / last 10% of frames.</li>
+    </ul>
+
+    <div class="kicker-block">
+      <div class="kicker">The 300:1 reality</div>
+      <p>Shy Kids used ~1 in 300 Sora generations in their final film. A reasonable production standard is generating 5&ndash;10 variations per shot and selecting 1. Budget for a 5:1 generation-to-use ratio minimum.</p>
+    </div>
+
+    <h2 id="s10"><span class="num">10</span>Real-world case studies</h2>
+
+    <h3>Shy Kids &mdash; &ldquo;Air Head&rdquo; (2024)</h3>
+    <p>Sora &rarr; manual edit &rarr; colour grade &rarr; human VO and music. <strong>What worked:</strong> designing the protagonist as an intentionally surreal character (man with balloon head) that could tolerate identity drift. Lesson: design characters around what AI can maintain, not around realism. <strong>What didn't:</strong> ~300 generations for &lt;2 minutes. 50% of shots required manual VFX.</p>
+    <blockquote>&ldquo;There isn't the feature set in place yet for full control over consistency &mdash; the closest we could get was being hyper-descriptive in prompts.&rdquo;</blockquote>
+
+    <h3>Paul Trillo &mdash; &ldquo;The Golden Record&rdquo; (2024)</h3>
+    <p>Sora &rarr; 11 clips with light colour correction &rarr; assembly. Achieved a vintage 16mm aesthetic from raw Sora output by developing specific stylistic prompt language. <strong>Transferable:</strong> invest in finding the prompt language that produces your target aesthetic, then apply it to every single shot.</p>
+
+    <h3>Don Allen Stevenson &mdash; &ldquo;Beyond Our Reality&rdquo; (2024)</h3>
+    <p>Started from random generative outputs and built narrative retroactively. When a fox crow had two legs instead of four, he kept it. <strong>Lesson:</strong> building narrative around what the AI produces well is faster than fighting the AI.</p>
+
+    <h3>The 2025 AI Film Festival (Runway)</h3>
+    <p>6,000 submissions vs. 300 in 2023. No fully automated pipeline won without human intervention. Common thread in winners: unified colour grade, intentional shot selection, audio that matched visual mood.</p>
+
+    <h3>OpenMontage (open-source)</h3>
+    <p>The most complete open-source AI film pipeline as of early 2026: 52 production tools, 7-stage workflow, 14 video providers, 10 image providers, 4 TTS providers. Key architectural decision: the agent is the orchestrator, not code. YAML pipeline manifests and Markdown stage-director instructions.</p>
+
+    <h2 id="s11"><span class="num">11</span>Specific recommendations for bMovies</h2>
+
+    <h3>The core problem</h3>
+    <p>We generate clips via Grok Imagine Video with no reference-image conditioning and no storyboard step. Each clip is a cold text-to-video call with no visual anchor. The result is guaranteed drift.</p>
+
+    <h3>The 80 / 20 fix</h3>
+    <ol>
+      <li><strong>Add a reference-still step before video generation</strong> (highest impact). Generate a still of the character in the shot's pose / lighting / environment using Grok Imagine Image. Call Grok Imagine Video with that still as a reference (1&ndash;7 accepted). Locks character appearance at frame 0. ~$0.10 per shot added.</li>
+      <li><strong>Supplement Grok with Kling for character-critical shots.</strong> Kling 2.5 image-to-video via API (kie.ai / fal.ai / piapi.ai at $0.10/sec or less). Feed the reference still from Fix 1 as source image. Keep Grok for B-roll and scenes without named characters.</li>
+      <li><strong>Apply a unified LUT in post.</strong> DaVinci Resolve (free). Pick one hero shot as anchor. Apply a cinematic LUT across the timeline. This single step gels the film more than any generation-side change.</li>
+      <li><strong>Generate 3&ndash;5 variants of each shot and select the best.</strong> Alone increases usable output quality by 40&ndash;60%.</li>
+    </ol>
+
+    <h3>The full recommended pipeline</h3>
+    <pre><code>Step 1:  Script parsing &rarr; JSON scene/shot structure (existing)
+Step 2:  Character Bible &mdash; 6 reference images per character
+Step 3:  Location Lookbook &mdash; 4 reference images per location
+Step 4:  Shot list &mdash; type, angle, action, duration, screen direction
+Step 5:  Storyboard still per shot &mdash; seeded from character / location refs
+Step 6:  Quality-check storyboard &mdash; face similarity &gt;0.85, palette &gt;85%
+Step 7:  Video generation &mdash; image-to-video from storyboard still
+         Kling 2.5 for character shots; Hailuo 02 for physics;
+         Grok Imagine Video for B-roll; Veo 3.1 for dialogue
+Step 8:  Quality-check video &mdash; motion artifact, face consistency
+         Generate 3 variants per shot, score and select best
+Step 9:  Audio &mdash; ElevenLabs voices, Suno music, SFX
+Step 10: Assembly &mdash; rough cut (DaVinci Resolve or ffmpeg)
+Step 11: Colour grade &mdash; anchor shot grade + film LUT across timeline
+Step 12: Audio mix &mdash; voice, SFX, music at correct levels
+Step 13: Export + on-chain mint</code></pre>
+
+    <h3>Model budget for a 5-minute film (~60 shots)</h3>
+    <table>
+      <thead><tr><th>Step</th><th>Model</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Character Bible (6 &times; 3 chars)</td><td>Grok Imagine Image</td><td>~$1.50</td></tr>
+        <tr><td>Location Lookbooks (4 &times; 5 locs)</td><td>Grok Imagine Image</td><td>~$2.00</td></tr>
+        <tr><td>Storyboard stills (60 &times; 3 variants)</td><td>Grok Imagine Image</td><td>~$9.00</td></tr>
+        <tr><td>Character video (30 &times; 8s, Kling)</td><td>Kling 2.5</td><td>~$24.00</td></tr>
+        <tr><td>B-roll / physics (20 &times; 8s)</td><td>Hailuo 02 / Grok</td><td>~$6.00</td></tr>
+        <tr><td>Dialogue (10 &times; 8s, Veo Fast)</td><td>Veo 3.1 Fast</td><td>~$12.00</td></tr>
+        <tr><td>Voice (3 characters)</td><td>ElevenLabs</td><td>~$5.00</td></tr>
+        <tr><td>Music</td><td>Suno</td><td>~$3.00</td></tr>
+        <tr><td><strong>Total</strong></td><td></td><td><strong>~$62.50</strong></td></tr>
+      </tbody>
+    </table>
+    <p>Current Grok-only pipeline: ~$30 for the same film, with significantly lower usable output. Delta: ~$32 for a film that has character consistency and feels like a coherent production.</p>
+
+    <h3>Key code changes</h3>
+    <ol>
+      <li>Add <code>generate_reference_still</code> step (before video generation).</li>
+      <li>Add <code>select_model_for_shot(shot)</code> &mdash; routes by shot type: character-heavy &rarr; Kling; dialogue &rarr; Veo; physics &rarr; Hailuo; B-roll &rarr; Grok.</li>
+      <li>Add face-similarity check post-generation (DeepFace / Insightface, CPU-OK).</li>
+      <li>Add a <code>color_grade</code> step in post-production that applies a canonical LUT.</li>
+      <li>Store character bibles and location lookbooks as persistent artifacts; don't regenerate per shot.</li>
+    </ol>
+
+    <h2 id="sources"><span class="num">&#8250;</span>Sources</h2>
+    <p>The full source list with grouping by topic lives at
+    <a href="https://github.com/b0ase/bmovies/blob/main/docs/research/sources.md">docs/research/sources.md</a>. Key references:</p>
+    <div class="source-grid">
+      <a href="https://www.teamday.ai/blog/best-ai-video-models-2026" target="_blank" rel="noopener">Best AI Video Models 2026 — TeamDay</a>
+      <a href="https://medium.com/@cliprise/the-state-of-ai-video-generation-in-february-2026-every-major-model-analyzed-6dbfedbe3a5c" target="_blank" rel="noopener">State of AI Video Generation Feb 2026 — Cliprise</a>
+      <a href="https://modelslab.com/blog/video-generation/kling-3-veo-3-runway-ai-video-api-comparison-2026" target="_blank" rel="noopener">Kling 3 vs Veo 3 API Comparison 2026 — ModelsLab</a>
+      <a href="https://medium.com/@dgriggsde/solving-ais-consistency-crisis-the-blueprint-for-an-automated-film-production-pipeline-644571baf99d" target="_blank" rel="noopener">Solving AI's Consistency Crisis — Damian Griggs</a>
+      <a href="https://higgsfield.ai/blog/sould-id-best-character-consistency" target="_blank" rel="noopener">Higgsfield Soul ID</a>
+      <a href="https://academy.runwayml.com/gen4/gen4-references" target="_blank" rel="noopener">Runway Gen-4 References Guide</a>
+      <a href="https://acttwo.cv/" target="_blank" rel="noopener">Runway Act-Two</a>
+      <a href="https://skywork.ai/blog/multi-prompt-multi-shot-consistency-veo-3-1-best-practices/" target="_blank" rel="noopener">Veo 3.1 Multi-Shot Best Practices</a>
+      <a href="https://fal.ai/learn/devs/kling-2-6-pro-prompt-guide" target="_blank" rel="noopener">Kling 2.6 Pro Prompt Guide — fal.ai</a>
+      <a href="https://superduperai.co/blog/hailuo-ai" target="_blank" rel="noopener">Hailuo-02 Review</a>
+      <a href="https://flowith.io/blog/luma-ray-3-dream-machine-2-0-hollywood-quality-generative-video-2026/" target="_blank" rel="noopener">Luma Ray 3 &amp; Dream Machine 2.0</a>
+      <a href="https://www.technologyreview.com/2024/03/28/1090266/how-three-filmmakers-created-soras-latest-jaw-dropping-videos/" target="_blank" rel="noopener">MIT Technology Review: Three Sora Filmmakers</a>
+      <a href="https://nofilmschool.com/sora-ai-filmmaker-interview" target="_blank" rel="noopener">How Shy Kids Made Air Head</a>
+      <a href="https://github.com/calesthio/OpenMontage" target="_blank" rel="noopener">OpenMontage</a>
+      <a href="https://arxiv.org/html/2504.08296v1" target="_blank" rel="noopener">Generative AI for Film Creation — arXiv</a>
+      <a href="https://www.audiocipher.com/post/ai-film-scoring" target="_blank" rel="noopener">AI Film Scoring with MusicGen</a>
+    </div>
+
+    <div class="footer-box">
+      <p class="line">
+        This document is regenerated as the field moves.
+        See the markdown source in
+        <a href="https://github.com/b0ase/bmovies/tree/main/docs/research">docs/research</a>
+        for the editable version and commit history.
+      </p>
+      <p class="line" style="margin-top: 0.8rem;">
+        <a href="/">Home</a> &middot;
+        <a href="/commission.html">Commission a film</a> &middot;
+        <a href="/productions.html">Live productions</a> &middot;
+        <a href="/judges.html">For BSVA judges</a>
+      </p>
+    </div>
+  </main>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>

@@ -304,6 +304,7 @@
           bct_artifacts ( id, kind, url, model, prompt, payment_txid, created_at, role )
         `)
         .in('status', ['published', 'auto_published', 'released'])
+        .not('is_swarm', 'is', true)
         .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(200);

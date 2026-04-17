@@ -1,3 +1,27 @@
+// ─── Skin cookie guard ───
+//
+// If the user has the bOOvies skin engaged (cookie set by middleware
+// when they enter via /boovies/*), defer to boovies-nav.js — the
+// pink-themed twin of this file — and bail out so we don't render
+// both navbars on top of each other.
+(function () {
+  if (typeof document === 'undefined') return;
+  const match = document.cookie.match(/(?:^|;\s*)skin=([^;]+)/);
+  if (match && decodeURIComponent(match[1]) === 'boovies') {
+    // Only swap if boovies-nav.js isn't already present.
+    if (!document.querySelector('script[src*="boovies-nav.js"]')) {
+      const s = document.createElement('script');
+      s.src = '/js/boovies-nav.js';
+      s.defer = true;
+      document.head.appendChild(s);
+    }
+    // Throw to abort the rest of this file — top-level await isn't
+    // available in a classic script, so we rely on the catch-less
+    // throw bubbling up and halting execution.
+    throw new Error('[nav] skin=boovies — handing off to boovies-nav.js');
+  }
+})();
+
 /**
  * Shared site-header + session-aware Sign In button.
  *
