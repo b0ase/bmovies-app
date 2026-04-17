@@ -200,18 +200,43 @@ export default async function handler(
   let totalCost = 0;
   const artifacts: Array<{ role: string; kind: string; costUsd: number }> = [];
 
-  async function attach(role: string, kind: string, url: string, model: string, prompt: string, costUsd: number) {
+  async function attach(role: string, kind: string, url: string, model: string, prompt: string, costUsd: number, stepId?: string) {
     totalCost += costUsd;
     artifacts.push({ role, kind, costUsd });
-    await supabase.from('bct_artifacts').insert({
-      offer_id: offerId,
-      kind,
-      url,
-      model,
-      prompt: prompt.slice(0, 500),
-      payment_txid: `short-${Date.now()}-${role}`,
-      role,
-    });
+
+    const offchainTxid = `vercel-serverless-${Date.now().toString(36)}-${role}`;
+    const { data: artRow } = await supabase
+      .from('bct_artifacts')
+      .insert({
+        offer_id: offerId,
+        kind,
+        url,
+        model,
+        prompt: prompt.slice(0, 500),
+        payment_txid: offchainTxid,
+        role,
+        step_id: stepId ?? null,
+      })
+      .select('id')
+      .single();
+
+    // Pair with a bct_step_log entry so the UI counts this as a
+    // completed pipeline step. Matches the trailer-tier pattern: the
+    // payment_txid is an off-chain marker because the short pipeline
+    // runs in Vercel serverless without wallet access.
+    if (stepId && artRow?.id) {
+      const costSats = Math.max(1, Math.round(costUsd * 1000));
+      await supabase.from('bct_step_log').insert({
+        offer_id: offerId,
+        step_id: stepId,
+        agent_id: role,
+        status: 'completed',
+        artifact_id: artRow.id,
+        payment_txid: offchainTxid,
+        payment_sats: costSats,
+        message: `${role} · ${kind} · $${costUsd.toFixed(3)} (off-chain, vercel serverless)`,
+      });
+    }
   }
 
   try {
@@ -221,13 +246,13 @@ export default async function handler(
     const treatment = await xaiChat(xaiKey, TREATMENT_PROMPT, context, 3000);
     await attach('writer', 'text',
       'data:text/plain;charset=utf-8,' + encodeURIComponent(treatment),
-      'grok-3-mini', offer.title, 0.02);
+      'grok-3-mini', offer.title, 0.02, 'writer.synopsis');
 
     // 2. Poster
     try {
       const posterPrompt = `Cinematic movie poster for the short film "${offer.title}". ${offer.synopsis} Portrait orientation, bold title typography, dramatic lighting, atmospheric color palette. Award-caliber movie poster.`;
       const poster = await xaiImage(xaiKey, posterPrompt, 'grok-imagine-image-pro');
-      await attach('poster', 'image', poster.url, 'grok-imagine-image-pro', posterPrompt, poster.costUsd);
+      await attach('poster', 'image', poster.url, 'grok-imagine-image-pro', posterPrompt, poster.costUsd, 'storyboard.poster');
     } catch (err) {
       console.error('[short] poster failed:', err);
     }
@@ -242,7 +267,7 @@ export default async function handler(
     for (let i = 0; i < Math.min(12, storyboardPrompts.length); i++) {
       try {
         const img = await xaiImage(xaiKey, storyboardPrompts[i], 'grok-imagine-image');
-        await attach('storyboard', 'image', img.url, 'grok-imagine-image', storyboardPrompts[i], img.costUsd);
+        await attach('storyboard', 'image', img.url, 'grok-imagine-image', storyboardPrompts[i], img.costUsd, 'storyboard.pack');
       } catch (err) { console.error(`[short] storyboard ${i} failed:`, err); }
     }
 
@@ -256,7 +281,7 @@ export default async function handler(
     for (let i = 0; i < Math.min(8, videoPrompts.length); i++) {
       try {
         const vid = await xaiVideo(xaiKey, videoPrompts[i]);
-        await attach('short-clip', 'video', vid.url, 'grok-imagine-video', videoPrompts[i], vid.costUsd);
+        await attach('short-clip', 'video', vid.url, 'grok-imagine-video', videoPrompts[i], vid.costUsd, 'editor.rough_cut');
         if (i === 0) {
           await supabase.from('bct_offers').update({ trailer_video_url: vid.url }).eq('id', offerId);
         }
@@ -268,7 +293,7 @@ export default async function handler(
       const dir = await xaiChat(xaiKey, DIRECTOR_PROMPT, context, 1500);
       await attach('director', 'text',
         'data:text/plain;charset=utf-8,' + encodeURIComponent(dir),
-        'grok-3-mini', offer.title, 0.015);
+        'grok-3-mini', offer.title, 0.015, 'director.vision');
     } catch (err) { console.error('[short] director failed:', err); }
 
     // 6. Editor plan
@@ -276,7 +301,7 @@ export default async function handler(
       const ed = await xaiChat(xaiKey, EDITOR_PROMPT, context, 1200);
       await attach('editor', 'text',
         'data:text/plain;charset=utf-8,' + encodeURIComponent(ed),
-        'grok-3-mini', offer.title, 0.012);
+        'grok-3-mini', offer.title, 0.012, 'editor.fine_cut');
     } catch (err) { console.error('[short] editor failed:', err); }
 
     // 7. Sound designer plan
@@ -284,7 +309,7 @@ export default async function handler(
       const sd = await xaiChat(xaiKey, SOUND_PROMPT, context, 1200);
       await attach('sound_designer', 'text',
         'data:text/plain;charset=utf-8,' + encodeURIComponent(sd),
-        'grok-3-mini', offer.title, 0.012);
+        'grok-3-mini', offer.title, 0.012, 'sound.final_mix');
     } catch (err) { console.error('[short] sound failed:', err); }
 
     await supabase.from('bct_offers').update({ status: 'released' }).eq('id', offerId);

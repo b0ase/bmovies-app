@@ -4368,40 +4368,47 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
   }, [projectId])
 
   return (
-    <div className="space-y-6">
-      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
-        Audio / Score
-      </div>
+    <div className="space-y-8">
 
-      {loading ? (
-        <div className="space-y-2 animate-pulse">
-          <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
-          <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
+      {/* ─── Music Studio ─── */}
+      <MusicStudio projectId={projectId} projectTitle={projectTitle} />
+
+      {/* ─── Audio tracks on the project ─── */}
+      <div className="space-y-3">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">
+          Audio / Score — tracks committed to this project
         </div>
-      ) : audioArtifacts.length > 0 ? (
-        <div className="space-y-3">
-          {audioArtifacts.map((a) => (
-            <div key={a.id} className="border border-[#222] bg-[#0a0a0a] p-4">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <span className="text-xs text-[#ccc] font-mono">
-                  {a.step_id || a.role || 'Audio track'}
-                </span>
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener"
-                  className="text-[0.6rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
-                >
-                  Download
-                </a>
+
+        {loading ? (
+          <div className="space-y-2 animate-pulse">
+            <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
+            <div className="h-16 bg-[#0a0a0a] border border-[#1a1a1a]" />
+          </div>
+        ) : audioArtifacts.length > 0 ? (
+          <div className="space-y-3">
+            {audioArtifacts.map((a) => (
+              <div key={a.id} className="border border-[#222] bg-[#0a0a0a] p-4">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-xs text-[#ccc] font-mono">
+                    {a.step_id || a.role || 'Audio track'}
+                  </span>
+                  <a
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-[0.6rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                  >
+                    Download
+                  </a>
+                </div>
+                <audio src={a.url} controls className="w-full h-8" preload="none" />
               </div>
-              <audio src={a.url} controls className="w-full h-8" preload="none" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-[#666] text-sm">No audio tracks generated yet.</div>
-      )}
+            ))}
+          </div>
+        ) : (
+          <div className="text-[#666] text-sm">No audio tracks generated yet. Use the Music Studio above to commission a theme.</div>
+        )}
+      </div>
 
       {/* Score brief — the composer agent's written output */}
       {scoreBrief && (
@@ -4414,16 +4421,172 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
           </div>
         </div>
       )}
+    </div>
+  )
+}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => {
-            (window as any).bmoviesChat?.open(`Compose a musical theme for "${projectTitle}". Describe the genre, tempo, mood, and key instruments.`)
-          }}
-          className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
-        >
-          Compose a theme
-        </button>
+/* ── Music Studio — cue board + freeform brief on the Score tab ── */
+
+type CueKey = 'main_theme' | 'opening_titles' | 'action' | 'tension' | 'stinger' | 'end_credits'
+
+const CUES: { key: CueKey; label: string; blurb: string; prompt: (title: string, bpm: string, key: string, mood: string) => string }[] = [
+  {
+    key: 'main_theme',
+    label: 'Main theme',
+    blurb: 'The film\'s signature melody. The one that plays over the logo.',
+    prompt: (t, bpm, k, m) => `Compose the MAIN THEME for "${t}". ~60 seconds. BPM ${bpm}, key ${k}, mood: ${m}. Hummable, memorable, suitable for the opening logo and end credits callback.`,
+  },
+  {
+    key: 'opening_titles',
+    label: 'Opening titles',
+    blurb: 'Cold-open under the title card. Sets the tone in 20 seconds.',
+    prompt: (t, bpm, k, m) => `Compose the OPENING TITLES cue for "${t}". ~20 seconds. BPM ${bpm}, key ${k}, mood: ${m}. Builds from nothing to a hit on the title card.`,
+  },
+  {
+    key: 'action',
+    label: 'Action / chase',
+    blurb: 'Propulsive bed for the set piece. Drives picture, doesn\'t fight it.',
+    prompt: (t, bpm, k, m) => `Compose an ACTION cue for "${t}". ~45 seconds, driving, relentless. BPM ${Math.max(Number(bpm) || 110, 128)}, key ${k}, mood: ${m}. Four-on-the-floor pulse, staccato strings, big percussion.`,
+  },
+  {
+    key: 'tension',
+    label: 'Tension / suspense',
+    blurb: 'Low-end bed under dialogue. Unease without melody.',
+    prompt: (t, bpm, k, m) => `Compose a TENSION cue for "${t}". ~30 seconds. Slow, low-end, no melody. BPM ${Math.min(Number(bpm) || 80, 70)}, key ${k} (minor), mood: ${m}. Sub-bass drones, metallic texture, sparse hits.`,
+  },
+  {
+    key: 'stinger',
+    label: 'Stinger',
+    blurb: 'Sharp 2-second hit. Button on a reveal or a jump cut.',
+    prompt: (t, bpm, k, m) => `Compose a STINGER for "${t}". 2 seconds. One sharp hit — brass stab or orchestral crash in key ${k}. Used on a hard cut or reveal. Mood: ${m}.`,
+  },
+  {
+    key: 'end_credits',
+    label: 'End credits',
+    blurb: 'Main theme reprise, fuller arrangement, clean fade.',
+    prompt: (t, bpm, k, m) => `Compose the END CREDITS cue for "${t}". ~90 seconds. Reprise of the main theme, fuller arrangement, BPM ${bpm}, key ${k}, mood: ${m}. Clean fade at the end.`,
+  },
+]
+
+function MusicStudio({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [bpm, setBpm] = useState('110')
+  const [key, setKey] = useState('D minor')
+  const [mood, setMood] = useState('tense, cinematic, slow-build')
+  const [freeform, setFreeform] = useState('')
+
+  function openChat(prompt: string) {
+    (window as any).bmoviesChat?.open(prompt)
+  }
+
+  function composeCue(cue: typeof CUES[number]) {
+    openChat(cue.prompt(projectTitle, bpm, key, mood))
+  }
+
+  function composeFreeform() {
+    const p = freeform.trim()
+    if (!p) return
+    openChat(`Compose a custom cue for "${projectTitle}". BPM ${bpm}, key ${key}, mood ${mood}. Brief: ${p}`)
+  }
+
+  return (
+    <div className="border border-[#1f1f1f] bg-[#0a0a0a]">
+      {/* Studio header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[#1f1f1f] bg-[#070707]">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#E50914] font-bold">Tool · Music Studio</div>
+          <div className="text-white font-black text-lg leading-none mt-1" style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '0.02em' }}>
+            {projectTitle} — Score Room
+          </div>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 text-[0.6rem] text-[#666] font-mono">
+          <span className="text-[#6bff8a]">●</span> LIVE · composer agent ready
+        </div>
+      </div>
+
+      {/* Transport / settings strip */}
+      <div className="grid grid-cols-3 gap-px bg-[#1f1f1f]">
+        <label className="bg-[#0a0a0a] p-3 flex flex-col gap-1">
+          <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">BPM</span>
+          <input
+            value={bpm}
+            onChange={(e) => setBpm(e.target.value)}
+            inputMode="numeric"
+            className="bg-transparent text-white text-base font-bold outline-none tabular-nums"
+            style={{ fontFamily: 'var(--font-mono), monospace' }}
+          />
+        </label>
+        <label className="bg-[#0a0a0a] p-3 flex flex-col gap-1">
+          <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">Key</span>
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="bg-transparent text-white text-base font-bold outline-none"
+            style={{ fontFamily: 'var(--font-mono), monospace' }}
+          />
+        </label>
+        <label className="bg-[#0a0a0a] p-3 flex flex-col gap-1">
+          <span className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold">Mood / genre</span>
+          <input
+            value={mood}
+            onChange={(e) => setMood(e.target.value)}
+            className="bg-transparent text-white text-sm font-bold outline-none"
+            style={{ fontFamily: 'var(--font-mono), monospace' }}
+          />
+        </label>
+      </div>
+
+      {/* Cue board */}
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[0.55rem] uppercase tracking-[0.14em] text-[#888] font-bold">Cue board</div>
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-mono">6 standard cues · tap to commission</div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {CUES.map((cue, i) => (
+            <button
+              key={cue.key}
+              type="button"
+              onClick={() => composeCue(cue)}
+              className="group text-left border border-[#1a1a1a] bg-[#070707] hover:border-[#E50914] hover:bg-[#120000] transition-colors p-4"
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold">
+                  Cue {String(i + 1).padStart(2, '0')} · {cue.label}
+                </div>
+                <span className="text-[0.55rem] uppercase tracking-wider text-[#555] group-hover:text-[#E50914]">
+                  Compose →
+                </span>
+              </div>
+              <p className="text-[#9a9a9a] text-xs leading-snug">{cue.blurb}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Freeform compose */}
+      <div className="px-5 pb-5">
+        <div className="text-[0.55rem] uppercase tracking-[0.14em] text-[#888] font-bold mb-2">Freeform brief</div>
+        <div className="flex gap-2">
+          <input
+            value={freeform}
+            onChange={(e) => setFreeform(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') composeFreeform() }}
+            placeholder={`e.g. "lo-fi piano under the diner scene, ~40 seconds"`}
+            className="flex-1 bg-[#070707] border border-[#1a1a1a] focus:border-[#E50914] outline-none px-3 py-2 text-white text-sm"
+            style={{ fontFamily: 'var(--font-mono), monospace' }}
+          />
+          <button
+            type="button"
+            onClick={composeFreeform}
+            disabled={!freeform.trim()}
+            className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] disabled:bg-[#1a1a1a] disabled:text-[#444] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+          >
+            Compose
+          </button>
+        </div>
+        <p className="text-[#555] text-[0.65rem] mt-2 leading-relaxed">
+          Cue briefs open a chat with the composer agent pre-filled with your BPM, key and mood settings. Output lands in <b className="text-[#888]">Audio / Score</b> below once the agent finishes.
+        </p>
       </div>
     </div>
   )
