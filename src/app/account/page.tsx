@@ -862,6 +862,11 @@ function ProjectOverviewView({ film }: { film: Film }) {
             <StatCard label="On chain" value={onChain ? 'Yes' : 'No'} accent={!!onChain} />
           </div>
 
+          {/* Deep metrics strip — loads async from share_sales, ticket_sales,
+              and royalty_withdrawals. Renders below the poster so the hero
+              block isn't blocked on the fetch. */}
+          <ProjectMetricsStrip film={film} />
+
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
             {currentStatus === 'draft' && (
@@ -928,6 +933,225 @@ function ProjectOverviewView({ film }: { film: Film }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ─── Overview metrics strip — the "dashboard" row ─── */
+
+// Tier → cost to commission. Kept in one place so the brochure and the
+// account page can't drift on pricing.
+const TIER_COST_USD: Record<string, number> = {
+  pitch:   0.99,
+  trailer: 9.99,
+  short:   99,
+  feature: 999,
+}
+
+interface ProjectMetrics {
+  loading: boolean
+  cost: number              // what the commissioner paid
+  raised: number            // sum of share_sales.price_usd
+  investors: number         // distinct buyers in share_sales
+  ticketCount: number
+  salesRevenue: number      // sum of ticket_sales.price_usd
+  royaltiesEarned: number   // commissioner's share of ticket revenue
+  royaltiesPaid: number     // from bct_royalty_withdrawals (status=sent)
+  royaltiesPending: number  // from bct_royalty_withdrawals (status=pending)
+  currentPricePerPct: number | null  // USD per 1% share, from latest sale
+  athPricePerPct: number | null      // max USD per 1% share across all sales
+}
+
+function ProjectMetricsStrip({ film }: { film: Film }) {
+  const [m, setM] = useState<ProjectMetrics>({
+    loading: true,
+    cost: 0, raised: 0, investors: 0,
+    ticketCount: 0, salesRevenue: 0,
+    royaltiesEarned: 0, royaltiesPaid: 0, royaltiesPending: 0,
+    currentPricePerPct: null, athPricePerPct: null,
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const [salesRes, tixRes, wdRes] = await Promise.all([
+          bmovies
+            .from('bct_share_sales')
+            .select('buyer_account, percent_bought, price_usd, created_at')
+            .eq('offer_id', film.id)
+            .order('created_at', { ascending: false }),
+          bmovies
+            .from('bct_ticket_sales')
+            .select('price_usd')
+            .eq('offer_id', film.id),
+          bmovies
+            .from('bct_royalty_withdrawals')
+            .select('amount_usd, status')
+            .eq('offer_id', film.id),
+        ])
+        if (cancelled) return
+
+        const sales = (salesRes.data || []) as {
+          buyer_account: string | null
+          percent_bought: number
+          price_usd: number
+          created_at: string
+        }[]
+        const tix = (tixRes.data || []) as { price_usd: number }[]
+        const wds = (wdRes.data || []) as { amount_usd: number; status: string }[]
+
+        const raised = sales.reduce((s, r) => s + Number(r.price_usd ?? 0), 0)
+        const investors = new Set(sales.map((r) => r.buyer_account).filter(Boolean)).size
+        const salesRevenue = tix.reduce((s, t) => s + Number(t.price_usd ?? 0), 0)
+        const royaltiesEarned = salesRevenue * (Number(film.commissioner_percent ?? 99) / 100)
+        const royaltiesPaid = wds.filter((w) => w.status === 'sent').reduce((s, w) => s + Number(w.amount_usd ?? 0), 0)
+        const royaltiesPending = wds.filter((w) => w.status === 'pending').reduce((s, w) => s + Number(w.amount_usd ?? 0), 0)
+
+        // Price per 1% share. sales[] is already sorted DESC by created_at.
+        // Defend against zero/bad data by filtering.
+        const perPctPrices = sales
+          .map((r) => {
+            const pct = Number(r.percent_bought ?? 0)
+            const usd = Number(r.price_usd ?? 0)
+            return pct > 0 ? usd / pct : null
+          })
+          .filter((v): v is number => v !== null && Number.isFinite(v) && v > 0)
+
+        const currentPricePerPct = perPctPrices[0] ?? null
+        const athPricePerPct = perPctPrices.length > 0 ? Math.max(...perPctPrices) : null
+
+        setM({
+          loading: false,
+          cost: TIER_COST_USD[film.tier] ?? 0,
+          raised,
+          investors,
+          ticketCount: tix.length,
+          salesRevenue,
+          royaltiesEarned,
+          royaltiesPaid,
+          royaltiesPending,
+          currentPricePerPct,
+          athPricePerPct,
+        })
+      } catch (err) {
+        console.warn('[overview-metrics] load error:', err)
+        if (!cancelled) setM((prev) => ({ ...prev, loading: false }))
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [film.id, film.tier, film.commissioner_percent])
+
+  const fmtUsd = (n: number) => `$${(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const fmtPrice = (n: number | null) => n === null ? '—' : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  // ATH delta vs current, if both exist.
+  const athDelta = m.currentPricePerPct !== null && m.athPricePerPct !== null && m.athPricePerPct > 0
+    ? ((m.currentPricePerPct - m.athPricePerPct) / m.athPricePerPct) * 100
+    : null
+
+  return (
+    <div className="mb-6 max-w-3xl">
+      <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">
+        Dashboard
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <MetricCard
+          label="Commission cost"
+          value={fmtUsd(m.cost)}
+          sub={`${film.tier} tier`}
+          loading={m.loading}
+        />
+        <MetricCard
+          label="Amount raised"
+          value={fmtUsd(m.raised)}
+          sub={`from ${m.investors} investor${m.investors === 1 ? '' : 's'}`}
+          loading={m.loading}
+          accent={m.raised > 0 ? 'blue' : undefined}
+        />
+        <MetricCard
+          label="Sales revenue"
+          value={fmtUsd(m.salesRevenue)}
+          sub={`${m.ticketCount} ticket${m.ticketCount === 1 ? '' : 's'}`}
+          loading={m.loading}
+          accent={m.salesRevenue > 0 ? 'green' : undefined}
+        />
+        <MetricCard
+          label="Royalties earned"
+          value={fmtUsd(m.royaltiesEarned)}
+          sub={m.royaltiesPaid > 0 || m.royaltiesPending > 0
+            ? `${fmtUsd(m.royaltiesPaid)} paid · ${fmtUsd(m.royaltiesPending)} pending`
+            : 'accrues from ticket sales'
+          }
+          loading={m.loading}
+          accent={m.royaltiesEarned > 0 ? 'green' : undefined}
+        />
+        <MetricCard
+          label="Tickets sold"
+          value={m.ticketCount.toLocaleString()}
+          sub={`@ $2.99 per watch`}
+          loading={m.loading}
+        />
+        <MetricCard
+          label="Investors"
+          value={m.investors.toLocaleString()}
+          sub={m.investors > 0 ? `avg ${fmtUsd(m.raised / m.investors)} each` : 'no investor sales'}
+          loading={m.loading}
+          accent={m.investors > 0 ? 'blue' : undefined}
+        />
+        <MetricCard
+          label="Current price"
+          value={fmtPrice(m.currentPricePerPct)}
+          sub="per 1% share"
+          loading={m.loading}
+        />
+        <MetricCard
+          label="All-time high"
+          value={fmtPrice(m.athPricePerPct)}
+          sub={athDelta === null ? 'per 1% share' : `${athDelta >= 0 ? '+' : ''}${athDelta.toFixed(1)}% vs now`}
+          loading={m.loading}
+          accent={m.athPricePerPct && m.athPricePerPct > 0 ? 'green' : undefined}
+        />
+      </div>
+    </div>
+  )
+}
+
+function MetricCard({
+  label, value, sub, loading, accent,
+}: {
+  label: string
+  value: string
+  sub?: string
+  loading: boolean
+  accent?: 'red' | 'green' | 'blue'
+}) {
+  const accentColor =
+    accent === 'green' ? '#6bff8a' :
+    accent === 'blue' ? '#66aaff' :
+    accent === 'red' ? '#E50914' :
+    '#fff'
+  return (
+    <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-3">
+      <div className="text-[0.5rem] uppercase tracking-[0.14em] text-[#666] font-bold mb-1.5">
+        {label}
+      </div>
+      {loading ? (
+        <div className="h-6 w-20 bg-[#1a1a1a] animate-pulse" />
+      ) : (
+        <div
+          className="text-xl font-black leading-none tabular-nums"
+          style={{ fontFamily: 'var(--font-bebas)', color: accentColor }}
+        >
+          {value}
+        </div>
+      )}
+      {sub && !loading && (
+        <div className="text-[0.55rem] text-[#555] mt-1 truncate" title={sub}>
+          {sub}
+        </div>
+      )}
     </div>
   )
 }
