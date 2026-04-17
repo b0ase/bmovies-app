@@ -453,6 +453,72 @@
       delivery:      { num: '04', name: 'Delivery & draft' },
     };
 
+    // ─── Canonical poster override ──────────────────────────────
+    //
+    // Many offers on the site are demo rows with no DB artifacts, or have
+    // DB artifacts whose URLs point at the xAI temp CDN (expires in hours).
+    // POSTER_MAP is the commissioner-curated static poster set under
+    // /img/films/ and always wins over DB artifacts so we can fix a dead
+    // poster without a migration.
+    //
+    // Keep this map in sync with public/productions.html and public/film.html.
+    const POSTER_MAP = {
+      // Legacy marketplace / test films
+      'echoes of the last signal':           'img/films/echoes-of-the-last-signal.jpg',
+      'the fold':                            'img/films/the-fold.jpg',
+      'the weight of water':                 'img/films/the-weight-of-water.jpg',
+      'the lantern that forgot its flame':   'img/films/the-lantern-that-forgot-its-flame.jpg',
+      'the mirror protocol':                 'img/films/the-mirror-protocol.jpg',
+      'off-key heroes':                      'img/films/off-key-heroes.jpg',
+      'midnight swarm':                      'img/films/midnight-swarm.jpg',
+      'the last piece':                      'img/films/the-last-piece.jpg',
+      'star wars episode 1000':              'img/films/episode-1000.jpg',
+      // Current slate (generated via batch-posters.ts, 2026-04-15)
+      "that weirdo isn't satoshi":           'img/films/that-weirdo-isnt-satoshi.jpg',
+      'spoon from space':                    'img/films/spoon-from-space.jpg',
+      'silverfish in the cathedral':         'img/films/silverfish-in-the-cathedral.jpg',
+      'the clockmakers daughter':            'img/films/the-clockmakers-daughter.jpg',
+      'the cartographer who mapped dreams':  'img/films/the-cartographer-who-mapped-dreams.jpg',
+      'the coffee machine':                  'img/films/the-coffee-machine.jpg',
+      // Judge coupon DEFAULT_TITLES + older demo rows (2026-04-16)
+      'the last lighthouse':                 'img/films/the-last-lighthouse.jpg',
+      'cipher of the drowned city':          'img/films/cipher-of-the-drowned-city.jpg',
+      'echoes beneath glacier 9':            'img/films/echoes-beneath-glacier-9.jpg',
+      'the cartographer of empty rooms':     'img/films/the-cartographer-of-empty-rooms.jpg',
+      'pale horse, iron sky':                'img/films/pale-horse-iron-sky.jpg',
+      'sub-orbital lullaby':                 'img/films/sub-orbital-lullaby.jpg',
+      'glasshouse':                          'img/films/glasshouse.jpg',
+      'the last transmission':               'img/films/the-last-transmission.jpg',
+      'crypto whistleblow':                  'img/films/crypto-whistleblow.jpg',
+    };
+
+    // xAI temp CDN URLs expire after a few hours — don't trust them.
+    const isEphemeralUrl = (url) =>
+      typeof url === 'string' && /imgen\.x\.ai\/xai-imgen\/xai-tmp/.test(url);
+
+    // Priority chain for the public-teaser poster.
+    //   1. POSTER_MAP override (commissioner-curated, permanent)
+    //   2. role='poster' or step_id='storyboard.poster*' with non-ephemeral URL
+    //   3. any non-ephemeral storyboard image
+    //   4. any non-ephemeral image
+    //   5. ephemeral poster (last resort — may be dead)
+    //   6. null → caller shows the bMovies placeholder card
+    function pickPoster(artifacts, title) {
+      const override = POSTER_MAP[(title || '').toLowerCase()];
+      if (override) return { url: override };
+      const images = (artifacts || []).filter((a) => a.kind === 'image');
+      const isPoster = (a) => a.role === 'poster' || (a.step_id || '').startsWith('storyboard.poster');
+      const isStoryboard = (a) => a.role === 'storyboard' || (a.step_id || '').startsWith('storyboard.');
+      const live = images.filter((a) => !isEphemeralUrl(a.url));
+      return (
+        live.find(isPoster) ||
+        live.find(isStoryboard) ||
+        live[0] ||
+        images.find(isPoster) ||
+        null
+      );
+    }
+
     function getOfferId() {
       const params = new URLSearchParams(window.location.search);
       return params.get('id') || params.get('offerId') || '';
@@ -1399,9 +1465,7 @@
     // artifacts, rough-cut player, and audit trail. Drops a "buy a
     // share" CTA in place of the pipeline.
     function renderPublicTeaser(offer, log, artifacts) {
-      const poster = artifacts.find(a =>
-        a.kind === 'image' && (a.role === 'poster' || (a.step_id || '').startsWith('storyboard.poster'))
-      );
+      const poster = pickPoster(artifacts, offer.title);
       const trailer = artifacts.find(a =>
         a.kind === 'video' && (a.role === 'trailer' || (a.step_id || '').startsWith('editor.trailer_cut'))
       );
