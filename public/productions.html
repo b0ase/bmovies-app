@@ -295,11 +295,11 @@
       // newly generated content bubbles to the top.
       // Only show published/released films — NOT drafts, producing, or funded.
       // User commissions stay private in their /account until they click Publish.
-      const { data: offers, error: offersErr } = await supabase
+      const { data: offersRaw, error: offersErr } = await supabase
         .from('bct_offers')
         .select(`
           id, producer_id, producer_address, title, synopsis,
-          status, token_ticker, tier,
+          status, token_ticker, tier, parent_offer_id,
           production_phase, current_step, created_at,
           bct_artifacts ( id, kind, url, model, prompt, payment_txid, created_at, role )
         `)
@@ -314,6 +314,18 @@
           '<div class="empty"><h3>Error</h3><p>' + esc(offersErr.message) + '</p></div>';
         return;
       }
+
+      // Dedupe lineage: when a trailer/short/feature offer has a
+      // parent_offer_id pointing at an earlier pitch in this same list,
+      // drop the parent so only the most-evolved version of a movie
+      // shows on the grid. "That Weirdo Isn't Satoshi" appeared twice
+      // (pitch + trailer) before this filter.
+      const parentIds = new Set(
+        (offersRaw || [])
+          .map(o => o.parent_offer_id)
+          .filter(Boolean)
+      );
+      const offers = (offersRaw || []).filter(o => !parentIds.has(o.id));
 
       const hash = fingerprint(offers);
       if (hash === lastDataHash) return; // nothing changed — no re-render, no flicker
@@ -472,7 +484,18 @@
           return `<span class="rd ${done ? 'done' : 'pending'}" title="${role.replace('_',' ')}${done ? ' · delivered' : ' · pending'}">${short}</span>`;
         }).join('');
 
-        const synopsis = o.synopsis ? esc(o.synopsis) : '<em style="color:#666;">Synopsis pending</em>';
+        // Card synopses must stay bounded — a long one (eg the full
+        // Weirdo plot) blows out the grid row height. Truncate at a
+        // soft-sentence boundary around 180 chars with an ellipsis.
+        function shortSynopsis(s) {
+          if (!s) return '';
+          const max = 180;
+          if (s.length <= max) return s;
+          const cut = s.slice(0, max);
+          const lastBreak = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(', '), cut.lastIndexOf(' '));
+          return (lastBreak > 120 ? cut.slice(0, lastBreak) : cut).replace(/[\s,;:.]+$/, '') + '…';
+        }
+        const synopsis = o.synopsis ? esc(shortSynopsis(o.synopsis)) : '<em style="color:#666;">Synopsis pending</em>';
         // Feature productions in flight go to the live timeline view;
         // everything else goes to the regular film page.
         // Differentiate three states for features:
@@ -510,7 +533,7 @@
               ${liveBadge}
               <div class="title"><a href="${filmHref}" style="color:#fff;text-decoration:none;">${esc(o.title)}</a></div>
               <div style="font-family:monospace;font-size:0.65rem;color:#E50914;margin-top:0.3rem;">$${esc(o.token_ticker)} · ${esc(o.status)}${o.tier === 'feature' ? ' · feature' : ''}</div>
-              <div style="font-size:0.78rem;color:#aaa;line-height:1.55;margin-top:0.8rem;">${synopsis}</div>
+              <div style="font-size:0.78rem;color:#aaa;line-height:1.55;margin-top:0.8rem;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;">${synopsis}</div>
 
               <div style="margin-top:1rem;">
                 <div style="display:flex;gap:0.25rem;margin-bottom:0.5rem;">${roleDots}</div>
