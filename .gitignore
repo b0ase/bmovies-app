@@ -238,3 +238,11 @@ workspace/
 /music/
 /prompts/
 /online
+
+# BSVA submission artefacts (too big for git; lived at project root during submission)
+/bmovies.tar.gz
+/bmovies-app.tar.gz
+/BSVA-SUBMISSION.pdf
+/BSVA-CFO-Swarm-Report.pdf
+/bmovies_og.jpg
+/SUBMISSION-EMAIL.md

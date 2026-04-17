@@ -117,18 +117,22 @@ export default async function handler(
     auth: { persistSession: false },
   });
 
-  // Rate limit: one commission per IP per 24h
-  const oneDayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  // Lifted the 24h/IP rate limit for the BSVA judging window so judges
+  // can commission as many trailers as they like while reviewing. A
+  // short 10-second anti-duplicate window is still enforced to catch
+  // double-clicks and browser-retry spam. bct_judge_commissions still
+  // records every trigger for audit.
+  const tenSecondsAgo = new Date(Date.now() - 10 * 1000).toISOString();
   const { data: recent } = await supabase
     .from('bct_judge_commissions')
     .select('id, offer_id, created_at')
     .eq('ip_address', ip)
-    .gte('created_at', oneDayAgo)
+    .gte('created_at', tenSecondsAgo)
     .limit(1);
   if (recent && recent.length > 0) {
     res.status(429).json({
-      error: 'rate limited',
-      message: 'one judge commission per IP per 24 hours',
+      error: 'duplicate',
+      message: 'please wait ~10 seconds between commissions',
       existingOfferId: recent[0].offer_id,
       productionUrl: `https://bmovies.online/production.html?id=${encodeURIComponent(recent[0].offer_id || '')}`,
     });
