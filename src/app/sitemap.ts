@@ -32,11 +32,19 @@ type FilmRow = {
 
 async function fetchPublishedFilms(): Promise<FilmRow[]> {
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://api.b0ase.com'
-  const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!ANON) return []
+  // Prefer the service role key — sitemap.ts runs server-side at build
+  // + revalidation time only, never shipped to the client, so using
+  // the service role here is safe and bypasses the anon RLS policies
+  // that were previously rejecting the build with "Invalid
+  // authentication credentials". Fall back to the anon key for local
+  // dev when the service role isn't wired up.
+  const KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!KEY) return []
 
   try {
-    const client = createClient(SUPABASE_URL, ANON, {
+    const client = createClient(SUPABASE_URL, KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
     const { data, error } = await client
