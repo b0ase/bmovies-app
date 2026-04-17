@@ -163,7 +163,14 @@ export default async function handler(
     const tier = ((offer as any).tier as string || 'film').toLowerCase();
 
     // Resolve poster URL via the same priority chain film.html uses.
-    let posterUrl = POSTER_MAP[title.toLowerCase()] || '';
+    // Normalize title for the POSTER_MAP lookup the same way
+    // public/film.html does (strip trailing !?. + trim) so a cosmetic
+    // edit like adding '!' to a title doesn't silently drop the
+    // commissioner-curated static JPG override. This MUST match the
+    // logic in public/film.html (posterKey construction) or the
+    // social card will show a different poster than the page itself.
+    const posterKey = title.toLowerCase().replace(/[!?.]+$/, '').trim();
+    let posterUrl = POSTER_MAP[posterKey] || POSTER_MAP[title.toLowerCase()] || '';
     if (!posterUrl) {
       const arts = ((offer as any).bct_artifacts || []) as Array<{
         kind: string; role: string | null; url: string; step_id: string | null; superseded_by: number | null;
