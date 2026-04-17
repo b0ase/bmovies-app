@@ -328,7 +328,7 @@ function AccountContent() {
 
   // ═══ TOOLS LEVEL ═══
   if (tool && projectId) {
-    if (['script', 'storyboard', 'editor', 'titles', 'score'].includes(tool)) {
+    if (['script', 'storyboard', 'editor', 'titles', 'score', 'preview', 'publish'].includes(tool)) {
       return (
         <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-8">
           <ToolView
