@@ -268,6 +268,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     .maybeSingle();
   if (loadErr || !offer) { res.status(404).json({ error: 'Offer not found' }); return; }
 
+  // Load the director's style bible if one exists — lets titles,
+  // VO, and the music prompt borrow the tone references, palette,
+  // and character anchors rather than re-guessing them from the
+  // raw synopsis. Big cohesion win on cast cards especially.
+  const { data: bibleArts } = await supabase
+    .from('bct_artifacts')
+    .select('url')
+    .eq('offer_id', offerId)
+    .eq('step_id', 'director.style_bible')
+    .is('superseded_by', null)
+    .limit(1);
+  let bibleContext = '';
+  if (bibleArts && bibleArts[0]?.url?.startsWith('data:')) {
+    try {
+      const decoded = decodeURIComponent(bibleArts[0].url.split(',')[1] || '');
+      const parsed = JSON.parse(decoded);
+      bibleContext = `\n\nSTYLE BIBLE (use for palette / tone / cast names):\n${JSON.stringify(parsed, null, 2)}`;
+    } catch { /* ignore bad JSON, fall back to plain context */ }
+  }
+
   // Load cast list if it exists so the Starring card uses real names.
   const { data: castArts } = await supabase
     .from('bct_artifacts')
@@ -284,7 +304,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } catch { /* skip */ }
   }
 
-  const context = `Title: ${offer.title}\nTicker: $${offer.token_ticker || ''}\n\nSynopsis: ${offer.synopsis}\n\n${castText ? 'Cast:\n' + castText : ''}`;
+  const context = `Title: ${offer.title}\nTicker: $${offer.token_ticker || ''}\n\nSynopsis: ${offer.synopsis}\n\n${castText ? 'Cast:\n' + castText : ''}${bibleContext}`;
   const produced: string[] = [];
   const skipped: string[] = [];
   let totalCost = 0;
