@@ -400,7 +400,11 @@
     }
     .trailer-overlay.has-card .tint { opacity: 1; }
 
-    /* Sound toggle pill — floats over the player */
+    /* Sound toggle pill — floats over the player.
+       Starts LARGE + CENTRED over the video when audio is available
+       but autoplay-blocked, so users can't miss the "click for sound"
+       affordance. After the first click it shrinks to a small pill
+       in the bottom-left so it stops covering the picture. */
     .trailer-sound-toggle {
       position: absolute;
       bottom: 0.8rem;
@@ -418,9 +422,26 @@
       display: flex;
       align-items: center;
       gap: 0.4rem;
+      transition: all 0.25s ease;
     }
     .trailer-sound-toggle:hover { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
-    .trailer-sound-toggle.on { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
+    .trailer-sound-toggle.on    { background: rgba(229, 9, 20, 0.85); border-color: #E50914; }
+    .trailer-sound-toggle.prompt {
+      top: 50%; left: 50%; bottom: auto;
+      transform: translate(-50%, -50%);
+      padding: 1rem 1.6rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.14em;
+      background: rgba(229, 9, 20, 0.92);
+      border: 2px solid #fff;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+      animation: trailer-sound-pulse 1.6s ease-in-out infinite;
+    }
+    .trailer-sound-toggle.prompt:hover { background: #E50914; }
+    @keyframes trailer-sound-pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50%      { transform: translate(-50%, -50%) scale(1.06); }
+    }
 
     /* Studio card */
     .studio-card {
@@ -1448,36 +1469,58 @@
         }
         renderCards();
 
-        // Wire music + VO audio sources. We do NOT autoplay until the
-        // user toggles sound on — browsers reject autoplay-with-audio
-        // and the sequential video is already autoplaying muted.
+        // Wire music + VO audio sources. Grok's video clips carry
+        // their own ambient audio which clashes with the music bed
+        // and voiceover, so the <video> element is held permanently
+        // muted — only the <audio> elements carry the trailer's
+        // final mix.
         if (musicArt?.url) musicEl.src = musicArt.url;
         if (voArt?.url)    voEl.src    = voArt.url;
 
-        // Sound toggle — mutes/unmutes the main video AND starts the
-        // music + VO tracks in lockstep.
+        // Force the video element muted for the lifetime of the page
+        // and keep fighting it if something else (native controls,
+        // browser UX, previous state) unmutes it.
+        player.muted = true;
+        player.volume = 0;
+        player.addEventListener('volumechange', () => {
+          if (!player.muted) player.muted = true;
+          if (player.volume > 0) player.volume = 0;
+        });
+        // Hide the native mute/volume controls so users can't fight
+        // with us. "controlsList" is honoured by Chromium; Firefox
+        // still shows them but respects the forced-muted state.
+        player.setAttribute('controlslist', 'nodownload nofullscreen noplaybackrate novolume');
+        player.disablePictureInPicture = true;
+
+        // Sound state — whether music + VO tracks are playing. The
+        // video is always muted; "soundOn" only governs our audio
+        // elements.
+        const hasAudioTracks = !!(musicEl.src || voEl.src);
         let soundOn = false;
+
         function updateSoundButton() {
           if (!soundBtn) return;
           soundBtn.classList.toggle('on', soundOn);
+          soundBtn.classList.toggle('prompt', hasAudioTracks && !soundOn);
           const icon = document.getElementById('trailer-sound-icon');
           const label = document.getElementById('trailer-sound-label');
-          if (icon)  icon.textContent  = soundOn ? '🔊' : '🔇';
-          if (label) label.textContent = soundOn ? 'Sound on' : 'Sound off';
+          if (icon)  icon.textContent  = soundOn ? '🔊' : '🔈';
+          if (label) label.textContent = soundOn ? 'Sound on' : 'Click for sound';
+          soundBtn.style.display = hasAudioTracks ? 'flex' : 'none';
         }
         function syncSound() {
-          player.muted = !soundOn;
           if (musicEl) {
-            musicEl.volume = 0.35;  // music bed, ducks under VO
+            musicEl.muted = !soundOn;
+            musicEl.volume = soundOn ? 0.35 : 0;
             if (soundOn && musicEl.src) {
-              musicEl.currentTime = Math.min(musicEl.currentTime || 0, (musicEl.duration || 32) - 0.1);
               musicEl.play().catch(() => {});
             } else {
               musicEl.pause();
             }
           }
           if (voEl) {
-            voEl.volume = 1.0;
+            voEl.muted = !soundOn;
+            voEl.volume = soundOn ? 1.0 : 0;
             if (soundOn && voEl.src) {
               voEl.play().catch(() => {});
             } else {
@@ -1486,20 +1529,44 @@
           }
         }
         updateSoundButton();
-        soundBtn?.addEventListener('click', () => {
+
+        // Try autoplay-with-sound on first video play event. If the
+        // browser allows it (because the user clicked through from
+        // elsewhere, giving us engagement credit) we just… start.
+        // If rejected, the prompt pill stays big and centred until
+        // the user clicks it.
+        let autoplayAttempted = false;
+        async function attemptAutoplay() {
+          if (autoplayAttempted || !hasAudioTracks) return;
+          autoplayAttempted = true;
+          try {
+            const plays = [];
+            if (musicEl.src) { musicEl.muted = false; musicEl.volume = 0.35; plays.push(musicEl.play()); }
+            if (voEl.src)    { voEl.muted    = false; voEl.volume    = 1.0;  plays.push(voEl.play()); }
+            await Promise.all(plays);
+            soundOn = true;
+            updateSoundButton();
+          } catch {
+            // Autoplay rejected — reset tracks to silent and keep the
+            // prompt pill visible. The click handler below will do the
+            // second attempt with full user engagement.
+            soundOn = false;
+            if (musicEl) { musicEl.muted = true; musicEl.volume = 0; musicEl.pause(); }
+            if (voEl)    { voEl.muted    = true; voEl.volume    = 0; voEl.pause(); }
+            updateSoundButton();
+          }
+        }
+        player.addEventListener('play', attemptAutoplay);
+        // Also try on first document interaction — covers the case
+        // where the video was already playing when the compositor
+        // mounted.
+        document.addEventListener('click', attemptAutoplay, { once: true, capture: true });
+
+        soundBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
           soundOn = !soundOn;
           updateSoundButton();
           syncSound();
-        });
-        // When the user manually unmutes via the native video controls,
-        // keep music + VO in sync.
-        player.addEventListener('volumechange', () => {
-          const shouldBeOn = !player.muted && player.volume > 0;
-          if (shouldBeOn !== soundOn) {
-            soundOn = shouldBeOn;
-            updateSoundButton();
-            syncSound();
-          }
         });
 
         // ─── Timeline-driven overlay loop ───
