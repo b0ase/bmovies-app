@@ -198,6 +198,28 @@ const COMMANDS: Record<string, () => Promise<void>> = {
     });
     console.log(`\n${data.reply}\n`);
   },
+
+  'post-production': async () => {
+    const id = args[1];
+    if (!id) die('usage: bmovies post-production <offer-id>');
+    console.log(`\n  \x1b[1mProducer coordinator\x1b[0m · ${id}`);
+    console.log('  Running titles + music + VO + plan via /api/trailer/post-production …\n');
+    const data = await http<{ ok: boolean; produced: string[]; skipped: string[]; costUsd: number }>(
+      '/api/trailer/post-production',
+      { method: 'POST', body: JSON.stringify({ offerId: id }) },
+    );
+    if (data.produced?.length) {
+      console.log('  \x1b[32mProduced:\x1b[0m');
+      for (const s of data.produced) console.log(`    ● ${s}`);
+    }
+    if (data.skipped?.length) {
+      console.log('\n  \x1b[33mSkipped:\x1b[0m');
+      for (const s of data.skipped) console.log(`    ○ ${s}`);
+    }
+    console.log(`\n  est. cost: $${(data.costUsd || 0).toFixed(3)}`);
+    const base = BASE_URL.includes('localhost') ? 'https://bmovies.online' : BASE_URL;
+    console.log(`  film page: ${base}/film.html?id=${encodeURIComponent(id)}\n`);
+  },
 };
 
 // ── Dispatch ─────────────────────────────────────────────────────

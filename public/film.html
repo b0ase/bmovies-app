@@ -686,7 +686,7 @@
     async function load(offerId) {
       const { data: offer, error } = await supabase
         .from('bct_offers')
-        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, trailer_video_url, parent_offer_id, bct_artifacts(id, kind, url, model, role, agent_id, prompt)')
+        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, trailer_video_url, parent_offer_id, bct_artifacts(id, kind, url, model, role, agent_id, prompt, step_id)')
         .eq('id', offerId)
         .maybeSingle();
       if (error) throw error;
