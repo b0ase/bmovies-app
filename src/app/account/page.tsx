@@ -5748,7 +5748,10 @@ type PreviewClip = { id: number; url: string; step_id: string | null; role: stri
 function PreviewView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [tier, setTier] = useState<string>('pitch')
   const [clips, setClips] = useState<PreviewClip[]>([])
+  const [frames, setFrames] = useState<string[]>([])        // image URLs for slideshow fallback
+  const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [activeIdx, setActiveIdx] = useState(0)
+  const [slideIdx, setSlideIdx] = useState(0)
   const [loading, setLoading] = useState(true)
   const [autoplayErr, setAutoplayErr] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -5759,25 +5762,31 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
     async function load() {
       setLoading(true)
       const offerP = bmovies.from('bct_offers').select('tier').eq('id', projectId).maybeSingle()
+      // Load EVERY artifact — we'll partition into videos / frames /
+      // poster client-side so the single fetch covers all three
+      // render paths.
       const artsP = bmovies.from('bct_artifacts')
         .select('id, kind, url, step_id, role, created_at')
         .eq('offer_id', projectId)
-        .eq('kind', 'video')
+        .in('kind', ['video', 'image'])
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
       const [offerRes, artsRes] = await Promise.all([offerP, artsP])
       if (cancelled) return
       const t = (offerRes.data as { tier?: string } | null)?.tier || 'pitch'
-      const arts = ((artsRes.data as any[]) || []) as PreviewClip[]
+      const arts = ((artsRes.data as any[]) || []) as (PreviewClip & { kind: string })[]
 
-      // Dedupe — legacy rows share mirror filenames.
-      const deduped = Array.from(new Map(arts.map((a) => [a.url, a])).values())
+      const videos = arts.filter((a) => a.kind === 'video')
+      const images = arts.filter((a) => a.kind === 'image')
 
-      // Priority picker: find the single "hero cut" for short/feature,
-      // or every trailer clip for trailer.
+      const dedupe = <T extends { url: string }>(xs: T[]) =>
+        Array.from(new Map(xs.map((x) => [x.url, x])).values())
+
+      // ── Videos: tier-aware priority picker ─────────────────────
+      const videosDeduped = dedupe(videos)
       const pick = (steps: string[]) => {
         for (const step of steps) {
-          const match = deduped.filter((a) => (a.step_id || '') === step)
+          const match = videosDeduped.filter((a) => (a.step_id || '') === step)
           if (match.length > 0) return match
         }
         return []
@@ -5786,10 +5795,9 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
       if (t === 'feature')      picked = pick(['editor.picture_lock', 'editor.fine_cut'])
       else if (t === 'short')   picked = pick(['editor.picture_lock', 'editor.rough_cut'])
       else if (t === 'trailer') picked = pick(['editor.trailer_cut'])
-
-      // Fallback: if no hero cut yet, play scene clips in order.
       if (picked.length === 0) {
-        const scenes = deduped
+        // Fall back to any scene clips we find.
+        const scenes = videosDeduped
           .filter((a) => (a.step_id || '').startsWith('scene.'))
           .sort((a, b) => {
             const nA = Number((a.step_id || '').match(/scene\.(\d+)/)?.[1] ?? 0)
@@ -5798,15 +5806,51 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
           })
         picked = scenes
       }
+      // If still empty, just play whatever video we do have.
+      if (picked.length === 0 && videosDeduped.length > 0) picked = videosDeduped
+
+      // ── Frames: teaser/storyboard slideshow fallback ──────────
+      const frameRows = images.filter((a) => {
+        const s = a.step_id || ''
+        return (
+          (s.startsWith('storyboard.') && s !== 'storyboard.poster') ||
+          s.startsWith('pitch.teaser_frame_')
+        )
+      })
+      const frameUrls = dedupe(frameRows)
+        .sort((a, b) => {
+          const nA = Number((a.step_id || '').match(/_(\d+)$/)?.[1] ?? 0)
+          const nB = Number((b.step_id || '').match(/_(\d+)$/)?.[1] ?? 0)
+          return nA - nB
+        })
+        .map((r) => r.url)
+
+      // ── Poster: final fallback ────────────────────────────────
+      const poster =
+        images.find((a) => (a.step_id || '') === 'storyboard.poster' || a.role === 'poster')
+          ?.url || null
 
       setTier(t)
       setClips(picked)
+      setFrames(frameUrls)
+      setPosterUrl(poster)
       setActiveIdx(0)
+      setSlideIdx(0)
       setLoading(false)
     }
     load()
     return () => { cancelled = true }
   }, [projectId])
+
+  // Slideshow ticker — only runs when we're in slideshow mode (no
+  // videos, but we have frames to cycle through).
+  useEffect(() => {
+    if (clips.length > 0 || frames.length < 2) return
+    const id = window.setInterval(() => {
+      setSlideIdx((i) => (i + 1) % frames.length)
+    }, 3200)
+    return () => window.clearInterval(id)
+  }, [clips.length, frames.length])
 
   function onClipEnd() {
     if (activeIdx < clips.length - 1) setActiveIdx((i) => i + 1)
@@ -5818,8 +5862,8 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
     try {
       if (el.requestFullscreen) await el.requestFullscreen()
       else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen()
-      // Kick off playback once we're in fullscreen so the presenter
-      // doesn't have to click Play separately.
+      // Kick playback on video previews; slideshows keep cycling via
+      // the existing interval.
       if (videoRef.current) {
         try { await videoRef.current.play() } catch { setAutoplayErr(true) }
       }
@@ -5828,42 +5872,16 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
-        <div className="h-10 bg-[#0a0a0a] border border-[#1a1a1a]" />
-      </div>
-    )
-  }
-
-  if (clips.length === 0) {
-    return (
-      <div>
-        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
-          Preview
-        </div>
-        <h2 className="text-3xl font-black leading-none text-white mb-3" style={{ fontFamily: 'var(--font-bebas)' }}>
-          Nothing to <span className="text-[#E50914]">play</span> yet
-        </h2>
-        <div className="border border-dashed border-[#222] bg-[#050505] p-6 max-w-xl">
-          <p className="text-[#888] text-sm leading-relaxed mb-2">
-            {tier === 'pitch'
-              ? 'Pitches are text + a poster. Upgrade to a trailer to generate the first playable cut.'
-              : 'No video clips yet. The pipeline will drop them here as each scene finishes.'}
-          </p>
-          {tier === 'pitch' && (
-            <a
-              href={`/offer.html?id=${encodeURIComponent(projectId)}`}
-              className="inline-block mt-2 text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white"
-            >
-              Upgrade this pitch →
-            </a>
-          )}
-        </div>
-      </div>
-    )
-  }
+  // ── Decide the render mode ONCE — the screen itself always renders.
+  //      video     → real video playback (trailer/short/feature hero cut)
+  //      slideshow → cycling teaser/storyboard frames (pitch pseudo-preview)
+  //      poster    → static poster with overlay
+  //      empty     → dark screen with "No preview yet" message
+  const mode: 'video' | 'slideshow' | 'poster' | 'empty' =
+    clips.length > 0 ? 'video' :
+    frames.length > 0 ? 'slideshow' :
+    posterUrl ? 'poster' :
+    'empty'
 
   const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1)
 
@@ -5881,33 +5899,95 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
         <button
           type="button"
           onClick={enterFullscreen}
-          className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white shrink-0"
+          disabled={mode === 'empty'}
+          className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ▢ Present fullscreen
         </button>
       </div>
 
+      {/* The preview SCREEN — always renders, even when there's no
+          content. That way the tab delivers on its name: you always
+          see a 16:9 preview surface. */}
       <div
         ref={wrapperRef}
-        className="relative border border-[#E50914] bg-black group"
+        className="relative border border-[#E50914] bg-black overflow-hidden"
       >
-        <video
-          ref={videoRef}
-          key={clips[activeIdx]?.url}
-          src={clips[activeIdx]?.url}
-          controls
-          playsInline
-          onEnded={onClipEnd}
-          className="w-full aspect-video bg-black"
-        />
-        {autoplayErr && (
+        {loading ? (
+          <div className="w-full aspect-video bg-[#0a0a0a] animate-pulse" />
+        ) : mode === 'video' ? (
+          <video
+            ref={videoRef}
+            key={clips[activeIdx]?.url}
+            src={clips[activeIdx]?.url}
+            controls
+            playsInline
+            onEnded={onClipEnd}
+            className="w-full aspect-video bg-black"
+          />
+        ) : mode === 'slideshow' ? (
+          <div className="w-full aspect-video bg-black relative">
+            {frames.map((url, i) => (
+              <img
+                key={url}
+                src={url}
+                alt={`Teaser frame ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{ opacity: i === slideIdx ? 1 : 0 }}
+              />
+            ))}
+            {/* Subtle vignette so text overlays read well in fullscreen */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.7) 100%)',
+            }} />
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[0.55rem] font-mono uppercase tracking-wider text-white/70 pointer-events-none">
+              <span>Teaser reel · {slideIdx + 1} / {frames.length}</span>
+              <span>pitch slideshow</span>
+            </div>
+          </div>
+        ) : mode === 'poster' ? (
+          <div className="w-full aspect-video bg-black relative">
+            <img
+              src={posterUrl!}
+              alt={`${projectTitle} poster`}
+              className="w-full h-full object-contain"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
+              <div className="text-center">
+                <div className="text-[0.55rem] uppercase tracking-[0.25em] text-white/60 font-bold mb-1">
+                  No cut yet
+                </div>
+                <div className="text-white font-black text-2xl" style={{ fontFamily: 'var(--font-bebas)' }}>
+                  Upgrade to generate <span className="text-[#E50914]">a trailer</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full aspect-video bg-black relative flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="text-5xl text-[#333] mb-4">&#9654;</div>
+              <div className="text-[0.55rem] uppercase tracking-[0.25em] text-[#666] font-bold mb-1">
+                Preview
+              </div>
+              <div className="text-white font-black text-2xl leading-tight" style={{ fontFamily: 'var(--font-bebas)' }}>
+                Nothing to <span className="text-[#E50914]">play</span> yet
+              </div>
+              <div className="text-[#888] text-xs mt-2 max-w-md mx-auto">
+                Videos, teaser frames, or the poster will appear here as the pipeline produces them.
+              </div>
+            </div>
+          </div>
+        )}
+        {autoplayErr && mode === 'video' && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/70 pointer-events-none">
             <div className="text-white text-sm">Click play — autoplay was blocked.</div>
           </div>
         )}
       </div>
 
-      {clips.length > 1 && (
+      {/* Clip picker — only shown for multi-clip videos (trailer reels). */}
+      {mode === 'video' && clips.length > 1 && (
         <div className="mt-3 flex gap-2 flex-wrap">
           {clips.map((c, i) => (
             <button
@@ -5926,9 +6006,41 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
         </div>
       )}
 
+      {/* Frame picker — jump around the teaser slideshow manually. */}
+      {mode === 'slideshow' && frames.length > 1 && (
+        <div className="mt-3 flex gap-2 flex-wrap">
+          {frames.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setSlideIdx(i)}
+              className={`px-3 py-1.5 text-[0.55rem] font-mono uppercase tracking-wider border ${
+                i === slideIdx
+                  ? 'bg-[#E50914] border-[#E50914] text-white'
+                  : 'bg-transparent border-[#333] text-[#888] hover:border-[#E50914]'
+              }`}
+            >
+              F{i + 1}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mt-4 text-[0.6rem] text-[#666] font-mono">
-        {clips.length} clip{clips.length === 1 ? '' : 's'} · tier: {tier}
+        {mode === 'video'     && `${clips.length} clip${clips.length === 1 ? '' : 's'} · tier: ${tier}`}
+        {mode === 'slideshow' && `${frames.length} teaser frame${frames.length === 1 ? '' : 's'} · tier: ${tier} · auto-cycles every 3s`}
+        {mode === 'poster'    && `Poster only · tier: ${tier}`}
+        {mode === 'empty'     && `No content yet · tier: ${tier}`}
       </div>
+
+      {tier === 'pitch' && mode !== 'video' && (
+        <a
+          href={`/offer.html?id=${encodeURIComponent(projectId)}`}
+          className="inline-block mt-4 text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white"
+        >
+          Upgrade this pitch →
+        </a>
+      )}
     </div>
   )
 }
