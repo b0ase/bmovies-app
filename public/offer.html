@@ -171,36 +171,48 @@
       font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem;
       color: #E50914; text-align: right; font-weight: 700;
     }
+    /* Every unsold % is open for investment regardless of tranche —
+       the commissioner keeps 99% equity from the cap table but is
+       happy to take capital from any investor at any tier (the money
+       flows to them anyway). Sold = muted grey; everything else =
+       red BUY tile. */
     .sq {
-      aspect-ratio: 1; border: 1px solid #222;
-      background: transparent;
-      cursor: default;
+      aspect-ratio: 1; border: 1px solid #E50914;
+      background: rgba(229, 9, 20, 0.15);
+      cursor: pointer;
       position: relative;
       transition: all 0.15s;
     }
     .sq.sold {
       background: #333; border-color: #333;
+      cursor: not-allowed;
     }
     .sq.current {
-      background: rgba(229,9,20,0.15);
+      background: rgba(229, 9, 20, 0.35);
       border-color: #E50914;
     }
-    .sq.current.clickable {
-      cursor: pointer;
+    .sq.future {
+      background: rgba(229, 9, 20, 0.12);
+      border-color: #E50914;
     }
-    .sq.current.clickable:hover {
+    .sq.clickable { cursor: pointer; }
+    .sq:not(.sold):hover {
       background: #E50914;
       transform: scale(1.1);
     }
-    .sq.future {
-      border-color: #222; background: #050505;
-    }
-    .sq.current::after {
-      content: '$'; position: absolute;
+    .sq:not(.sold)::after {
+      content: 'BUY'; position: absolute;
       inset: 0; display: flex; align-items: center; justify-content: center;
-      font-size: 0.5rem; color: #E50914; font-weight: 900;
+      font-size: 0.42rem; color: #E50914; font-weight: 900;
+      letter-spacing: 0.08em;
     }
-    .sq.current.clickable:hover::after { color: #fff; }
+    .sq.current::after { color: #fff; }
+    .sq:not(.sold):hover::after { color: #fff; }
+    .sq.sold::after {
+      content: '✓'; position: absolute;
+      inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; color: #666; font-weight: 700;
+    }
     .tg-legend {
       display: flex; gap: 1.2rem; margin-top: 1.2rem;
       font-size: 0.6rem; color: #666; text-transform: uppercase;
@@ -408,6 +420,9 @@
     let pendingPurchase = null;
 
     function renderTrancheGrid(pctSold) {
+      // Every unsold % is clickable — no artificial "current tranche"
+      // gate. The commissioner's cap-table allocation is still 99%,
+      // but investment capital from any tranche is welcome.
       let html = '';
       for (let tier = 0; tier < 10; tier++) {
         const price = TRANCHES[tier].pricePerPercent;
@@ -419,11 +434,17 @@
         for (let i = 0; i < 10; i++) {
           const squareIdx = minPct + i;
           let cls = 'sq';
-          if (squareIdx < pctSold) cls += ' sold';
-          else if (isCurrentTier && squareIdx === Math.floor(pctSold)) cls += ' current clickable';
-          else if (isCurrentTier) cls += ' current clickable';
-          else cls += ' future';
-          html += `<div class="${cls}" data-tier="${tier + 1}" data-pct="${squareIdx}" title="${squareIdx}% — ${formatUsd(price)}"></div>`;
+          if (squareIdx < pctSold) {
+            cls += ' sold';
+          } else {
+            // Unsold — always clickable; highlight the active tranche
+            // so buyers see the 'cheapest' entry at a glance.
+            cls += ' clickable';
+            if (isCurrentTier && squareIdx === Math.floor(pctSold)) cls += ' current';
+            else if (isCurrentTier) cls += ' current';
+            else cls += ' future';
+          }
+          html += `<div class="${cls}" data-tier="${tier + 1}" data-pct="${squareIdx}" title="Buy ${squareIdx}-${squareIdx + 1}% for ${formatUsd(price)}"></div>`;
         }
         html += `<div class="tr-price">${formatUsd(price)}</div>`;
         html += `</div>`;
