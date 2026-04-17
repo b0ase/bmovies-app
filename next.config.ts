@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       { source: '/', destination: '/index.html' },
+      { source: '/marketing-ideas',     destination: '/marketing-ideas.html' },
+      { source: '/pump-fun-for-movies', destination: '/pump-fun-for-movies.html' },
     ];
   },
   // Allow captable.html to be embedded in an iframe on the same origin

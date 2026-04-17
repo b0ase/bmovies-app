@@ -123,8 +123,10 @@ export default async function handler(
       offerId?: string;
       percentBought?: string;
       priceUsd?: string;
+      supabaseUserId?: string;
     };
     customer_email?: string;
+    customer_details?: { email?: string | null; name?: string | null };
     amount_total?: number;
     payment_status?: string;
   };
@@ -140,45 +142,95 @@ export default async function handler(
   });
 
   const meta = session.metadata || {};
-  const customerEmail = session.customer_email || '';
+  // Stripe delivers the email in TWO places depending on how the session
+  // was created: `customer_email` is only populated when the caller
+  // pre-set it on session creation, while `customer_details.email` is
+  // populated after Stripe's own email-collection step during checkout.
+  // We need to read both or we end up with anonymous offers even when
+  // the buyer typed their email straight into Stripe.
+  const customerEmail =
+    session.customer_email ||
+    session.customer_details?.email ||
+    '';
 
   // Find or create the user's bct_accounts row.
-  // If an auth.users row exists for this email, link auth_user_id so
-  // the account page can find the user's films after Google sign-in.
-  async function resolveAccountId(email: string): Promise<string | null> {
-    if (!email) return null;
-
-    // Look up matching auth.users row by email via DB function
-    const { data: authRow } = await supabase
-      .rpc('get_auth_user_by_email', { lookup_email: email })
-      .maybeSingle() as { data: { id: string } | null }
-    const authUserId: string | null = authRow?.id ?? null
-
-    const { data: existing } = await supabase
-      .from('bct_accounts')
-      .select('id, auth_user_id')
-      .eq('email', email)
-      .maybeSingle();
-    if (existing) {
-      // Backfill auth_user_id if missing
-      if (!existing.auth_user_id && authUserId) {
-        await supabase.from('bct_accounts').update({ auth_user_id: authUserId }).eq('id', existing.id)
+  //
+  // Three paths, tried in order:
+  //   1. If metadata.supabaseUserId is present (user was signed in when
+  //      they clicked Commission), match bct_accounts.auth_user_id.
+  //      Most reliable — no ambiguity about which email.
+  //   2. If we have an email, match bct_accounts.email. Backfill
+  //      auth_user_id via get_auth_user_by_email() if we can.
+  //   3. If we only have auth_user_id and no row matches, fall back to
+  //      creating one with whatever email we have (or email from auth).
+  //
+  // Any of these returning a non-null id means the new offer will show
+  // up in the buyer's /account studio view after sign-in.
+  async function resolveAccountId(email: string, supabaseUserId?: string | null): Promise<string | null> {
+    // ── Path 1: signed-in Supabase user id was passed through metadata
+    if (supabaseUserId) {
+      const { data: existingByAuth } = await supabase
+        .from('bct_accounts')
+        .select('id, email')
+        .eq('auth_user_id', supabaseUserId)
+        .maybeSingle();
+      if (existingByAuth) {
+        // Backfill email if we now have one and the row didn't
+        if (email && !existingByAuth.email) {
+          await supabase.from('bct_accounts').update({ email }).eq('id', existingByAuth.id)
+        }
+        return existingByAuth.id as string;
       }
-      return existing.id;
     }
-    const { data: created } = await supabase
-      .from('bct_accounts')
-      .insert({
-        email,
-        display_name: email.split('@')[0],
-        ...(authUserId ? { auth_user_id: authUserId } : {}),
-      })
-      .select('id')
-      .single();
-    return created?.id ?? null;
+
+    // ── Path 2: email match
+    if (email) {
+      const { data: authRow } = await supabase
+        .rpc('get_auth_user_by_email', { lookup_email: email })
+        .maybeSingle() as { data: { id: string } | null }
+      const authUserId: string | null = authRow?.id ?? supabaseUserId ?? null
+
+      const { data: existing } = await supabase
+        .from('bct_accounts')
+        .select('id, auth_user_id')
+        .eq('email', email)
+        .maybeSingle();
+      if (existing) {
+        if (!existing.auth_user_id && authUserId) {
+          await supabase.from('bct_accounts').update({ auth_user_id: authUserId }).eq('id', existing.id)
+        }
+        return existing.id;
+      }
+      const { data: created } = await supabase
+        .from('bct_accounts')
+        .insert({
+          email,
+          display_name: email.split('@')[0],
+          ...(authUserId ? { auth_user_id: authUserId } : {}),
+        })
+        .select('id')
+        .single();
+      return created?.id ?? null;
+    }
+
+    // ── Path 3: no email but a supabaseUserId — create a stub row so
+    // the offer isn't orphaned; email can be backfilled at first sign-in.
+    if (supabaseUserId) {
+      const { data: created } = await supabase
+        .from('bct_accounts')
+        .insert({
+          display_name: 'user-' + supabaseUserId.slice(0, 8),
+          auth_user_id: supabaseUserId,
+        })
+        .select('id')
+        .single();
+      return created?.id ?? null;
+    }
+
+    return null;
   }
 
-  const accountId = await resolveAccountId(customerEmail);
+  const accountId = await resolveAccountId(customerEmail, meta.supabaseUserId);
 
   // Branch by checkout type
   const checkoutType = meta.type || 'commission';
