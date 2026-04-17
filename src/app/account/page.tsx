@@ -3125,7 +3125,10 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
               fontFamily: 'var(--font-bebas), "Bebas Neue", sans-serif',
               fontSize: '0.95rem',
               letterSpacing: '0.1em',
-              color: i === activeTab ? '#fff' : (tab.content ? '#E50914' : '#333'),
+              // alwaysShow tabs (Logline, Synopsis, Script, Screenplay) stay
+              // red even when empty — they're the primary writing surface and
+              // should read as "here's where you start," not as dimmed.
+              color: i === activeTab ? '#fff' : (tab.content || tab.alwaysShow ? '#E50914' : '#333'),
               borderBottom: i === activeTab ? '3px solid #E50914' : '3px solid transparent',
               background: i === activeTab ? 'rgba(229, 9, 20, 0.1)' : 'transparent',
             }}
