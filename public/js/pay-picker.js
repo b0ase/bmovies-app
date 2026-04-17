@@ -76,7 +76,7 @@ const MODAL_HTML = `
         <div class="pp-option-icon">${LOGOS.metamask}</div>
         <div class="pp-option-body">
           <div class="pp-option-name">MetaMask</div>
-          <div class="pp-option-sub">Pay in ETH · cross-chain via x402</div>
+          <div class="pp-option-sub">Pay in USDC on Base · cross-chain via x402</div>
         </div>
         <div class="pp-option-arrow">→</div>
       </button>
@@ -84,7 +84,7 @@ const MODAL_HTML = `
         <div class="pp-option-icon">${LOGOS.phantom}</div>
         <div class="pp-option-body">
           <div class="pp-option-name">Phantom</div>
-          <div class="pp-option-sub">Pay in SOL · cross-chain via x402</div>
+          <div class="pp-option-sub">Pay in USDC on Solana · cross-chain via x402</div>
         </div>
         <div class="pp-option-arrow">→</div>
       </button>
@@ -503,7 +503,53 @@ function promptBsvDeliveryAddress(type) {
   return trimmed;
 }
 
-// ───────── MetaMask (Ethereum) ─────────
+// ───────── MetaMask (USDC on Base) ─────────
+//
+// x402-style cross-chain: user pays USDC on Base (Coinbase L2).
+// USDC is a stablecoin so we don't need a price oracle — priceUsd
+// maps 1:1 to USDC at 6 decimals. Base is ~$0.01 gas and settles
+// in <5 seconds. If the user's wallet isn't on Base we ask them
+// to switch first.
+const BASE_CHAIN_ID_HEX  = '0x2105';  // 8453
+const USDC_BASE_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const USDC_DECIMALS      = 6;
+
+async function ensureBaseChain() {
+  const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (currentChainId === BASE_CHAIN_ID_HEX) return;
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: BASE_CHAIN_ID_HEX }],
+    });
+  } catch (err) {
+    // 4902 = chain not added. Prompt user to add Base.
+    if (err && err.code === 4902) {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: BASE_CHAIN_ID_HEX,
+          chainName: 'Base',
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://mainnet.base.org'],
+          blockExplorerUrls: ['https://basescan.org'],
+        }],
+      });
+    } else {
+      throw err;
+    }
+  }
+}
+
+// Build ERC-20 transfer(address,uint256) calldata. Function selector
+// is the first 4 bytes of keccak256("transfer(address,uint256)") =
+// 0xa9059cbb. Each arg is padded to 32 bytes.
+function erc20TransferCalldata(toAddress, amount) {
+  const to = toAddress.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+  const amt = BigInt(amount).toString(16).padStart(64, '0');
+  return '0xa9059cbb' + to + amt;
+}
+
 async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }) {
   if (!window.ethereum) {
     throw new Error('MetaMask not detected. Install MetaMask extension first.');
@@ -526,24 +572,29 @@ async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }
   const from = accounts[0];
   if (!from) throw new Error('No MetaMask account');
 
-  setStatus('Fetching platform wallet...', 'info');
-  const payoutRes = await fetch('/api/payout-addresses?offerId=' + encodeURIComponent(offerId) + '&chain=eth');
-  if (!payoutRes.ok) throw new Error('Failed to fetch ETH payout address');
+  setStatus('Switching wallet to Base…', 'info');
+  await ensureBaseChain();
+
+  setStatus('Fetching platform USDC address…', 'info');
+  const payoutRes = await fetch('/api/payout-addresses?offerId=' + encodeURIComponent(offerId) + '&chain=base');
+  if (!payoutRes.ok) throw new Error('Failed to fetch Base payout address');
   const payout = await payoutRes.json();
+  if (!payout.address || !/^0x[a-fA-F0-9]{40}$/.test(payout.address)) {
+    throw new Error('Platform Base address not configured (PLATFORM_ETH_ADDRESS env var).');
+  }
 
-  // Convert USD → wei at roughly $2500/ETH
-  // (production needs a real oracle; this is a demo-safe approximation)
-  const ethPerUsd = 1 / 2500;
-  const ethAmount = priceUsd * ethPerUsd;
-  const weiHex = '0x' + Math.floor(ethAmount * 1e18).toString(16);
+  // USDC amount in smallest unit (6 decimals).
+  const usdcAmount = Math.floor(priceUsd * 10 ** USDC_DECIMALS);
+  const data = erc20TransferCalldata(payout.address, usdcAmount);
 
-  setStatus(`Sending ${ethAmount.toFixed(6)} ETH from ${from.slice(0, 6)}...${from.slice(-4)}`, 'info');
+  setStatus(`Sending ${priceUsd.toFixed(2)} USDC on Base from ${from.slice(0, 6)}…${from.slice(-4)}`, 'info');
   const txHash = await window.ethereum.request({
     method: 'eth_sendTransaction',
     params: [{
       from,
-      to: payout.address,
-      value: weiHex,
+      to: USDC_BASE_CONTRACT,
+      data,
+      value: '0x0',
     }],
   });
 
@@ -555,7 +606,7 @@ async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }
       priceUsd,
       provider: 'metamask',
       txid: txHash,
-      chain: 'eth',
+      chain: 'base-usdc',
       fromAddress: from,
       bsvDeliveryAddress,
       email,
@@ -568,17 +619,26 @@ async function payWithMetaMask({ type, offerId, title, ticker, priceUsd, email }
 
   if (type === 'shares' && bsvDeliveryAddress) {
     setStatus(
-      `Paid on Ethereum — tx ${txHash.slice(0, 10)}…. ` +
+      `Paid ${priceUsd.toFixed(2)} USDC on Base — tx ${txHash.slice(0, 10)}…. ` +
       `1sat BSV-21 share settling to ${bsvDeliveryAddress.slice(0, 6)}…${bsvDeliveryAddress.slice(-4)} within ~5 min.`,
       'success',
     );
   } else {
-    setStatus(`Paid on Ethereum · tx ${txHash.slice(0, 12)}...`, 'success');
+    setStatus(`Paid ${priceUsd.toFixed(2)} USDC on Base · tx ${txHash.slice(0, 12)}…`, 'success');
   }
   return { provider: 'metamask', success: true, txid: txHash };
 }
 
-// ───────── Phantom (Solana) ─────────
+// ───────── Phantom (USDC on Solana) ─────────
+//
+// Matches the MetaMask flow: pay in USDC (the circle-issued SPL token,
+// mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v, 6 decimals) so
+// the dollar amount is what the user actually sends — no SOL price
+// oracle required. Solana mainnet settles in <1s and the fee is
+// ~0.00005 SOL, paid in native lamports by the buyer.
+const USDC_SOL_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const USDC_SOL_DECIMALS = 6;
+
 async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email }) {
   const phantom = window?.phantom?.solana;
   if (!phantom || !phantom.isPhantom) {
@@ -600,31 +660,61 @@ async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email })
   const resp = await phantom.connect();
   const publicKey = resp.publicKey.toString();
 
-  setStatus('Fetching platform wallet...', 'info');
-  const payoutRes = await fetch('/api/payout-addresses?offerId=' + encodeURIComponent(offerId) + '&chain=sol');
-  if (!payoutRes.ok) throw new Error('Failed to fetch SOL payout address');
+  setStatus('Fetching platform USDC recipient…', 'info');
+  const payoutRes = await fetch('/api/payout-addresses?offerId=' + encodeURIComponent(offerId) + '&chain=solana-usdc');
+  if (!payoutRes.ok) throw new Error('Failed to fetch Solana payout address');
   const payout = await payoutRes.json();
+  if (!payout.address) throw new Error('Platform Solana address not configured (PLATFORM_SOL_ADDRESS env var).');
 
-  // Load Solana web3 for transaction building
-  const solanaWeb3 = await import('https://esm.sh/@solana/web3.js@1.95.0');
-  const { Connection, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = solanaWeb3;
+  // Load Solana web3 + SPL token helpers via esm.sh. We pin versions
+  // to keep the bundle deterministic; the `deps` query forces spl-token
+  // to share the same @solana/web3.js instance (different versions of
+  // PublicKey are not interchangeable and instanceof checks fail).
+  const web3 = await import('https://esm.sh/@solana/web3.js@1.95.0');
+  const splToken = await import('https://esm.sh/@solana/spl-token@0.4.8?deps=@solana/web3.js@1.95.0');
+  const { Connection, Transaction, PublicKey } = web3;
+  const {
+    getAssociatedTokenAddressSync,
+    createAssociatedTokenAccountInstruction,
+    createTransferCheckedInstruction,
+  } = splToken;
 
+  const USDC_MINT = new PublicKey(USDC_SOL_MINT);
+  const buyer = new PublicKey(publicKey);
+  const recipient = new PublicKey(payout.address);
   const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-  const solPerUsd = 1 / 150; // ~$150 SOL
-  const lamports = Math.floor(priceUsd * solPerUsd * LAMPORTS_PER_SOL);
 
-  const tx = new Transaction().add(
-    SystemProgram.transfer({
-      fromPubkey: new PublicKey(publicKey),
-      toPubkey: new PublicKey(payout.address),
-      lamports,
-    })
-  );
-  tx.feePayer = new PublicKey(publicKey);
+  const buyerAta = getAssociatedTokenAddressSync(USDC_MINT, buyer);
+  const recipientAta = getAssociatedTokenAddressSync(USDC_MINT, recipient);
+
+  // USDC amount in smallest units (6 decimals).
+  const usdcAmount = BigInt(Math.floor(priceUsd * 10 ** USDC_SOL_DECIMALS));
+
+  const tx = new Transaction();
+
+  // If the platform recipient has never received USDC before its ATA
+  // won't exist yet; creating it costs the buyer ~0.002 SOL in rent
+  // but means subsequent buyers skip this step. Checking first saves
+  // the rent whenever the account already exists.
+  const recipientAtaInfo = await connection.getAccountInfo(recipientAta);
+  if (!recipientAtaInfo) {
+    tx.add(createAssociatedTokenAccountInstruction(buyer, recipientAta, recipient, USDC_MINT));
+  }
+
+  tx.add(createTransferCheckedInstruction(
+    buyerAta,
+    USDC_MINT,
+    recipientAta,
+    buyer,
+    usdcAmount,
+    USDC_SOL_DECIMALS,
+  ));
+
+  tx.feePayer = buyer;
   const { blockhash } = await connection.getLatestBlockhash();
   tx.recentBlockhash = blockhash;
 
-  setStatus(`Signing ${(lamports / LAMPORTS_PER_SOL).toFixed(6)} SOL transaction...`, 'info');
+  setStatus(`Signing ${priceUsd.toFixed(2)} USDC transfer on Solana...`, 'info');
   const { signature } = await phantom.signAndSendTransaction(tx);
 
   const recordRes = await fetch('/api/record-wallet-payment', {
@@ -635,7 +725,7 @@ async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email })
       priceUsd,
       provider: 'phantom',
       txid: signature,
-      chain: 'sol',
+      chain: 'solana-usdc',
       fromAddress: publicKey,
       bsvDeliveryAddress,
       email,
@@ -648,12 +738,12 @@ async function payWithPhantom({ type, offerId, title, ticker, priceUsd, email })
 
   if (type === 'shares' && bsvDeliveryAddress) {
     setStatus(
-      `Paid on Solana — tx ${signature.slice(0, 10)}…. ` +
+      `Paid ${priceUsd.toFixed(2)} USDC on Solana — tx ${signature.slice(0, 10)}…. ` +
       `1sat BSV-21 share settling to ${bsvDeliveryAddress.slice(0, 6)}…${bsvDeliveryAddress.slice(-4)} within ~5 min.`,
       'success',
     );
   } else {
-    setStatus(`Paid on Solana · tx ${signature.slice(0, 12)}...`, 'success');
+    setStatus(`Paid ${priceUsd.toFixed(2)} USDC on Solana · tx ${signature.slice(0, 12)}...`, 'success');
   }
   return { provider: 'phantom', success: true, txid: signature };
 }

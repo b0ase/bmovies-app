@@ -130,11 +130,13 @@ export default async function handler(
   }
 
   if (body.type === 'shares') {
-    // Cross-chain purchases (ETH/SOL) require a BSV delivery address
-    // so the settlement worker knows where to send the 1sat BSV-21
-    // share. BSV-native payments (BRC-100 / HandCash) settle to the
-    // paying address automatically, so the field stays optional there.
-    const isCrossChain = body.chain === 'eth' || body.chain === 'sol';
+    // Cross-chain purchases (ETH/Base/Solana, native or USDC) require
+    // a BSV delivery address so the settlement worker knows where to
+    // send the 1sat BSV-21 share. BSV-native payments (BRC-100 /
+    // HandCash) settle to the paying address automatically, so the
+    // field stays optional there.
+    const crossChainNames = new Set(['eth', 'base', 'base-usdc', 'sol', 'solana-usdc']);
+    const isCrossChain = crossChainNames.has(body.chain || '');
     if (isCrossChain && !body.bsvDeliveryAddress) {
       res.status(400).json({ error: 'bsvDeliveryAddress required for cross-chain share purchases' });
       return;

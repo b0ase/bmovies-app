@@ -1,11 +1,20 @@
 /**
- * GET /api/payout-addresses?offerId=X&chain=bsv|eth|sol
+ * GET /api/payout-addresses?offerId=X&chain=bsv|eth|base|base-usdc|sol|solana-usdc
  *
  * Returns a platform payout address for the requested chain.
- * For BSV, we return the offer's token mint address (ticket revenue
- * fans out to token holders on-chain). For ETH/SOL we return a
- * platform custodial address that accepts cross-chain payments
- * which are later bridged via x402.
+ *
+ * - bsv: platform's receive address (revenue fans out to token holders on-chain)
+ * - eth / base / base-usdc: platform EOA on Ethereum/Base — same address is
+ *   used for native ETH or for USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+ *   on Base) since ERC-20 transfers land at the owner EOA, not a sub-account.
+ * - sol / solana-usdc: platform owner pubkey on Solana. For USDC transfers
+ *   the client derives the recipient's associated token account (ATA) from
+ *   this owner + the USDC mint and creates it if it doesn't exist.
+ *
+ * Cross-chain payments (base-usdc / solana-usdc) are recorded with
+ * settlement_status='pending' by /api/record-wallet-payment; a later
+ * settlement worker transfers the 1sat BSV-21 royalty share to the
+ * buyer's bsvDeliveryAddress on BSV mainnet.
  */
 
 interface VercelRequest {
@@ -58,12 +67,18 @@ export default async function handler(
   }
 
   let address = '';
+  let token: string | null = null;
   if (chain === 'bsv') {
     address = PLATFORM_BSV_ADDRESS;
-  } else if (chain === 'eth') {
+  } else if (chain === 'eth' || chain === 'base' || chain === 'base-usdc') {
+    // Same EOA works for native ETH and for ERC-20 USDC on Base. For
+    // base-usdc we also return the USDC contract address so the client
+    // knows which token to transfer.
     address = PLATFORM_ETH_ADDRESS;
-  } else if (chain === 'sol') {
+    if (chain === 'base-usdc') token = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+  } else if (chain === 'sol' || chain === 'solana-usdc') {
     address = PLATFORM_SOL_ADDRESS;
+    if (chain === 'solana-usdc') token = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   } else {
     res.status(400).json({ error: 'Unknown chain' });
     return;
@@ -73,6 +88,7 @@ export default async function handler(
     offerId,
     chain,
     address,
+    ...(token ? { tokenMint: token } : {}),
     note: 'Platform custody. 99% of ticket revenue settles to token holders via on-chain cascade; 1% to studio.',
   });
 }
