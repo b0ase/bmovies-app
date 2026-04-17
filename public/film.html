@@ -695,19 +695,27 @@
       const byTier = {};
       for (const d of derivatives) byTier[d.tier] = d;
 
-      // Two-row layout per unproduced tier:
-      //   Row 1 (tier-row, primary) — state button:
-      //     ✓ Current  |  ▶ Watch existing derivative  |  Fund TIER · BSV
-      //     (BSV path routes to /offer.html — investors buy royalty
-      //      shares against the parent, crowdfunding the next tier)
-      //   Row 2 (fund-row, secondary) — the Stripe alternative:
-      //     Fund TIER · STRIPE
-      //     Routes the commissioner (or anyone willing to pay USD) to
-      //     /commission.html in the parent-derived flow. The resulting
-      //     offer lands in the funder's /account workbench as a draft.
-      //     KYC is NOT required to commission — it's required to
-      //     publish or list shares, enforced server-side on
-      //     api/feature/publish + api/feature/list-shares.
+      // Two actions, two verbs (these are NOT the same thing):
+      //
+      //   Row 1 (tier-row, primary) — "Make TIER · $9.99"
+      //     Stripe → /commission.html in the parent-derived flow.
+      //     You pay, the swarm produces the film, the offer lands
+      //     in YOUR workbench as a draft. You own the token (99%
+      //     of 1B supply). KYC is NOT required to commission;
+      //     it's required to list shares or flip status→published.
+      //     This is the e-commerce path: buy a service, get a film.
+      //
+      //   Row 2 (fund-row, secondary) — "Buy shares · BSV"
+      //     BSV → /offer.html where you buy royalty shares in the
+      //     PARENT pitch from the commissioner's float. You don't
+      //     own the new film — you own a fractional claim on the
+      //     existing one. Proceeds go to the commissioner who
+      //     chooses when to spend them on the next tier. This is
+      //     the investment path.
+      //
+      // 'Fund' was the same word for both actions until 2026-04-17;
+      // users couldn't tell whether they were buying a movie or
+      // buying equity in a pitch. Explicit verbs solve that.
       const tierTitle = encodeURIComponent(offer.title || '');
       const tierTicker = encodeURIComponent(offer.token_ticker || '');
       const tierRowButtons = TIER_ORDER.map(t => {
@@ -1519,11 +1527,17 @@
           if (current < clips.length - 1) {
             loadClip(current + 1);
           } else {
-            // Final clip finished. Stop playback, show the REPLAY gate,
-            // and let wireCompositor's "onTrailerStop" hook pause music
-            // and VO so the page goes clean-silent instead of holding
-            // on a paused-with-music state.
+            // Final clip finished. Stop playback and do a belt-and-braces
+            // silence: pause the audio elements directly here in addition
+            // to calling _onTrailerStop, so if either hook is racing with
+            // the other we still end up quiet.
             player.pause();
+            try {
+              const m = document.getElementById('trailer-music');
+              const v = document.getElementById('trailer-vo');
+              if (m) { m.pause(); m.currentTime = 0; m.loop = false; }
+              if (v) { v.pause(); v.currentTime = 0; }
+            } catch {}
             window._onTrailerStop?.();
           }
         });
