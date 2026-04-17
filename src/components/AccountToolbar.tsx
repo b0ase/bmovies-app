@@ -218,10 +218,13 @@ export function AccountToolbar() {
     fontWeight: 400,
     letterSpacing: '0.12em',
     textTransform: 'uppercase' as const,
-    color: '#E50914',
-    background: isActive ? 'rgba(229, 9, 20, 0.15)' : 'transparent',
+    // Solid red fills so Studio/Wallet read as primary actions, not
+    // muted tabs. Active stays darker so you can still see which
+    // section you're on at a glance.
+    color: '#fff',
+    background: isActive ? '#b00610' : '#E50914',
     border: 'none',
-    borderBottom: isActive ? '3px solid #E50914' : '3px solid transparent',
+    borderBottom: isActive ? '3px solid #fff' : '3px solid transparent',
     whiteSpace: 'nowrap' as const,
     cursor: 'pointer',
     transition: 'color 150ms, background 150ms',
@@ -278,8 +281,8 @@ export function AccountToolbar() {
               key={tab.id}
               onClick={() => navigateTo(href)}
               style={tabStyle(isActive)}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#E50914' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#b00610' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = isActive ? '#b00610' : '#E50914' }}
             >
               {tab.label}
             </button>
