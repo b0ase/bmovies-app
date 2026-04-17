@@ -114,8 +114,109 @@
       background: #111; border: 1px solid #333; color: #fff;
       font-family: inherit; font-size: 0.9rem; resize: vertical;
     }
-    textarea { min-height: 80px; }
     textarea:focus, input:focus { outline: 1px solid #E50914; border-color: #E50914; }
+
+    /* ─── Writing canvas ───
+       The Film idea textarea is the single most important input on the
+       page — writers and artists arrive here with a real story in mind
+       and bounce if the form feels like a "quick order" box. Override
+       the generic textarea to read as a writing canvas: tall, roomy,
+       serif-ish, paper-dark background, subtle inset shadow. */
+    .canvas-wrap {
+      margin-top: 0.6rem;
+      border: 1px solid #333;
+      background: #0a0a0a;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                  inset 0 0 40px rgba(0, 0, 0, 0.6);
+      transition: border-color 0.15s;
+    }
+    .canvas-wrap:focus-within {
+      border-color: #E50914;
+      box-shadow: inset 0 1px 0 rgba(229, 9, 20, 0.12),
+                  0 0 0 3px rgba(229, 9, 20, 0.08);
+    }
+
+    /* Toolbar above the canvas — tone selector + writing helpers. */
+    .canvas-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid #1a1a1a;
+      background: #070707;
+      flex-wrap: wrap;
+    }
+    .canvas-toolbar .label {
+      font-size: 0.55rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #666;
+      font-weight: 700;
+      margin: 0;
+    }
+    .canvas-toolbar select,
+    .canvas-toolbar button.tool {
+      padding: 0.45rem 0.7rem;
+      background: #111;
+      color: #ccc;
+      border: 1px solid #2a2a2a;
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .canvas-toolbar select:hover,
+    .canvas-toolbar button.tool:hover {
+      border-color: #E50914;
+      color: #fff;
+    }
+    .canvas-toolbar .spacer { flex: 1; }
+
+    /* The textarea itself. Overrides the base textarea rule for height,
+       padding, font, and border. */
+    #idea.canvas-field {
+      width: 100%;
+      min-height: 340px;
+      margin-top: 0;
+      padding: 1.6rem 1.8rem;
+      background: transparent;
+      border: 0;
+      color: #f0f0f0;
+      font-family: 'Georgia', 'Iowan Old Style', 'Palatino', serif;
+      font-size: 1.08rem;
+      line-height: 1.7;
+      resize: vertical;
+      outline: none !important;
+    }
+    #idea.canvas-field::placeholder {
+      color: #555;
+      font-style: italic;
+    }
+
+    /* Stats footer: word count + autosave indicator. */
+    .canvas-footer {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      padding: 0.55rem 0.9rem;
+      border-top: 1px solid #1a1a1a;
+      background: #070707;
+      font-size: 0.65rem;
+      color: #666;
+      font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+      letter-spacing: 0.06em;
+    }
+    .canvas-footer .wc b { color: #ccc; font-weight: 700; }
+    .canvas-footer .save { margin-left: auto; color: #6bff8a; opacity: 0; transition: opacity 0.3s; }
+    .canvas-footer .save.visible { opacity: 1; }
+
+    @media (max-width: 720px) {
+      #idea.canvas-field { padding: 1.2rem; font-size: 1rem; min-height: 260px; }
+      .canvas-toolbar { padding: 0.5rem; }
+    }
 
     /* Preview */
     .preview {
@@ -391,7 +492,34 @@
       </p>
 
       <label for="idea">Film idea</label>
-      <textarea id="idea" placeholder="A retired astronaut discovers her greenhouse on Mars has been growing sentient flowers that communicate through bioluminescence…"></textarea>
+      <div class="canvas-wrap">
+        <div class="canvas-toolbar">
+          <span class="label">Tone</span>
+          <select id="canvas-tone" title="Optional tone tag prepended to the refine prompt">
+            <option value="">— pick one —</option>
+            <option value="indie drama">Indie drama</option>
+            <option value="neo-noir thriller">Neo-noir thriller</option>
+            <option value="cosmic horror">Cosmic horror</option>
+            <option value="60s pulp">60s pulp</option>
+            <option value="slow sci-fi">Slow sci-fi</option>
+            <option value="absurd comedy">Absurd comedy</option>
+            <option value="romance">Romance</option>
+            <option value="documentary">Documentary</option>
+          </select>
+          <button type="button" class="tool" id="canvas-sample" title="Drop in a sample idea you can rewrite">Sample idea</button>
+          <button type="button" class="tool" id="canvas-clear" title="Clear the canvas">Clear</button>
+          <span class="spacer"></span>
+          <span class="label" id="canvas-save-label">Drafts autosave locally</span>
+        </div>
+        <textarea id="idea" class="canvas-field"
+          placeholder="Open on a wide shot. A retired astronaut tends a greenhouse on Mars — row after row of sentient flowers communicating through bioluminescence. She has not spoken to another human in three years.&#10;&#10;Then one of the blooms starts saying her name…&#10;&#10;Write freely. One paragraph or fifteen. The agent team refines whatever you give them."></textarea>
+        <div class="canvas-footer">
+          <span class="wc"><b id="canvas-wc-words">0</b> words</span>
+          <span class="wc"><b id="canvas-wc-chars">0</b> characters</span>
+          <span class="wc"><b id="canvas-wc-mins">&lt;1</b> min read</span>
+          <span class="save" id="canvas-save-flash">✓ Saved</span>
+        </div>
+      </div>
 
       <label for="email">Email (for your receipt)</label>
       <input type="email" id="email" placeholder="you@example.com" />
@@ -630,13 +758,89 @@
       ideaEl.value = urlTitle + (urlParams.get('synopsis') ? '\n\n' + urlParams.get('synopsis') : '');
     }
 
+    // ─── Writing canvas — word/char count, autosave, toolbar ───
+    const DRAFT_KEY = 'bmovies-commission-draft';
+    const toneEl = document.getElementById('canvas-tone');
+    const wcWordsEl = document.getElementById('canvas-wc-words');
+    const wcCharsEl = document.getElementById('canvas-wc-chars');
+    const wcMinsEl = document.getElementById('canvas-wc-mins');
+    const saveFlashEl = document.getElementById('canvas-save-flash');
+    const sampleBtn = document.getElementById('canvas-sample');
+    const clearBtn = document.getElementById('canvas-clear');
+
+    function updateCounts() {
+      const text = ideaEl.value || '';
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      const chars = text.length;
+      const mins = words < 200 ? '<1' : String(Math.round(words / 200));
+      if (wcWordsEl) wcWordsEl.textContent = String(words);
+      if (wcCharsEl) wcCharsEl.textContent = String(chars);
+      if (wcMinsEl) wcMinsEl.textContent = mins;
+    }
+
+    let saveTimer = null;
+    function scheduleSave() {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        try {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({
+            text: ideaEl.value || '',
+            tone: toneEl?.value || '',
+            ts: Date.now(),
+          }));
+          if (saveFlashEl) {
+            saveFlashEl.classList.add('visible');
+            setTimeout(() => saveFlashEl.classList.remove('visible'), 900);
+          }
+        } catch { /* ignore quota / private mode */ }
+      }, 400);
+    }
+
+    // Restore previous draft on load (but never overwrite a url-param
+    // prefill — that's explicit intent from the linking page).
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw && !ideaEl.value) {
+        const saved = JSON.parse(raw);
+        if (saved?.text) ideaEl.value = saved.text;
+        if (saved?.tone && toneEl) toneEl.value = saved.tone;
+      }
+    } catch { /* ignore */ }
+    updateCounts();
+
+    ideaEl.addEventListener('input', () => { updateCounts(); scheduleSave(); });
+    toneEl?.addEventListener('change', scheduleSave);
+
+    sampleBtn?.addEventListener('click', () => {
+      if (ideaEl.value.trim() && !confirm('Replace what you have with a sample?')) return;
+      ideaEl.value = ideaEl.placeholder.replace(/\n{2,}/g, '\n\n');
+      updateCounts();
+      scheduleSave();
+      ideaEl.focus();
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      if (!ideaEl.value.trim()) return;
+      if (!confirm('Clear the canvas? Your draft will be removed.')) return;
+      ideaEl.value = '';
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      updateCounts();
+      ideaEl.focus();
+    });
+
     // ─── Refine ───
     btnRefine.addEventListener('click', async () => {
-      const idea = ideaEl.value.trim();
+      let idea = ideaEl.value.trim();
       if (idea.length < 8) {
         setStatus('Write a bit more — at least a sentence.', 'error');
         return;
       }
+      // Prepend tone context if the user picked one. The refine API
+      // treats the whole body as free text and honours instructions
+      // at the top, so a single-line tone hint steers the logline
+      // without API changes.
+      const tone = toneEl?.value?.trim();
+      if (tone) idea = `Tone: ${tone}.\n\n${idea}`;
       btnRefine.disabled = true;
       setStatus('Refining your idea with AI…');
       try {
