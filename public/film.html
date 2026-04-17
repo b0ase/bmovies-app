@@ -1837,26 +1837,44 @@
           soundBtn.classList.remove('prompt');
           soundBtn.style.display = 'none';
         }
+        // Per-element "finished" latches. Once an audio stream has ended
+        // naturally (VO is ~26s, shorter than the 32s video reel; music
+        // is ~30s), we DO NOT restart it. Without these latches every
+        // clip-transition 'play' event on the main video was calling
+        // syncSound → voEl.play() → which on an ended element restarts
+        // it from currentTime=0 → "looping VO" bug.
+        let voFinished = false;
+        let musicFinished = false;
+        voEl?.addEventListener('ended',    () => { voFinished    = true; try { voEl.pause();    } catch {} });
+        musicEl?.addEventListener('ended', () => { musicFinished = true; try { musicEl.pause(); } catch {} });
+
         function syncSound() {
           if (musicEl) {
             musicEl.muted = !soundOn;
             musicEl.volume = soundOn ? 0.35 : 0;
-            if (soundOn && musicEl.src) {
+            if (soundOn && musicEl.src && !musicFinished && !musicEl.ended) {
               musicEl.play().catch(() => {});
-            } else {
+            } else if (!soundOn) {
               musicEl.pause();
             }
           }
           if (voEl) {
             voEl.muted = !soundOn;
             voEl.volume = soundOn ? 1.0 : 0;
-            if (soundOn && voEl.src) {
+            if (soundOn && voEl.src && !voFinished && !voEl.ended) {
               voEl.play().catch(() => {});
-            } else {
+            } else if (!soundOn) {
               voEl.pause();
             }
           }
         }
+
+        // Expose a reset so the REPLAY path can clear the latches and
+        // play the VO / music a second time on deliberate replay.
+        window._trailerResetAudioLatches = () => {
+          voFinished = false;
+          musicFinished = false;
+        };
         updateSoundButton();
 
         // ─── PLAY gate ───
@@ -1885,6 +1903,7 @@
             window._trailerWasFinished = false;
             if (isReplay) {
               if (window._trailerReset) window._trailerReset();
+              if (window._trailerResetAudioLatches) window._trailerResetAudioLatches();
               try { player.currentTime = 0; } catch {}
               if (musicEl?.src) { try { musicEl.currentTime = 0; } catch {} }
               if (voEl?.src)    { try { voEl.currentTime    = 0; } catch {} }
