@@ -4140,8 +4140,20 @@ function ScriptEditorView({ projectId, projectTitle }: { projectId: string; proj
 /* ── Storyboard ── */
 
 function StoryboardView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const [frames, setFrames] = useState<{ id: number; url: string; step_id: string | null; role: string | null }[]>([])
+  // Frames now include the `prompt` field — the director's line that
+  // fed the AI generation. That's the "what's happening in this shot"
+  // caption that turns four pictures into an actual storyboard.
+  type StoryboardFrame = {
+    id: number
+    url: string
+    step_id: string | null
+    role: string | null
+    prompt: string | null
+    created_at?: string
+  }
+  const [frames, setFrames] = useState<StoryboardFrame[]>([])
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
+  const [synopsis, setSynopsis] = useState<string>('')
   const [tier, setTier] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
@@ -4152,25 +4164,28 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
       setLoading(true)
       const { data: offer } = await bmovies
         .from('bct_offers')
-        .select('tier, title')
+        .select('tier, title, synopsis')
         .eq('id', projectId)
         .maybeSingle()
-      if (!cancelled && offer) setTier(offer.tier || '')
+      if (!cancelled && offer) {
+        setTier(offer.tier || '')
+        if (offer.synopsis) setSynopsis(offer.synopsis)
+      }
 
       const { data } = await bmovies
         .from('bct_artifacts')
-        .select('id, url, step_id, role')
+        .select('id, url, step_id, role, prompt, created_at')
         .eq('offer_id', projectId)
         .eq('kind', 'image')
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
       if (cancelled) return
-      const allImages = (data as any[]) || []
-      const storyboardFrames = allImages.filter(a =>
+      const allImages = (data as StoryboardFrame[]) || []
+      const storyboardFrames = allImages.filter((a) =>
         (a.step_id && a.step_id.startsWith('storyboard.') && a.step_id !== 'storyboard.poster') ||
         (a.role === 'storyboard' && a.step_id !== 'storyboard.poster')
       )
-      const posterArt = allImages.find(a => a.role === 'poster' || a.step_id === 'storyboard.poster')
+      const posterArt = allImages.find((a) => a.role === 'poster' || a.step_id === 'storyboard.poster')
       const titleLower = (offer?.title || '').toLowerCase()
       const mapUrl = POSTER_MAP[titleLower]
       if (mapUrl) {
@@ -4185,12 +4200,66 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
     return () => { cancelled = true }
   }, [projectId])
 
+  // Shot type guess from the prompt text — lets each panel have a
+  // shot-list style tag (WIDE / CU etc.) even when the writer didn't
+  // provide a formal breakdown.
+  function shotTypeFor(prompt: string | null | undefined): string {
+    if (!prompt) return 'SHOT'
+    const p = prompt.toLowerCase()
+    if (/\b(close[- ]?up|extreme close|\bcu\b)/.test(p)) return 'CLOSE-UP'
+    if (/\b(wide shot|establishing|wide angle|long shot|panoramic|aerial)/.test(p)) return 'WIDE'
+    if (/\b(medium shot|\bms\b|mid shot)/.test(p)) return 'MEDIUM'
+    if (/\b(over[- ]the[- ]shoulder|\bots\b|\bpov\b|point of view)/.test(p)) return 'OTS'
+    if (/\b(tracking|dolly|crane|pan)/.test(p)) return 'MOVING'
+    return 'SHOT'
+  }
+
+  const renderHeader = () => (
+    <header className="mb-6 pb-4 border-b border-[#E50914]/30">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.25em] text-[#E50914] font-bold">
+            Storyboard · {tier || 'production'} tier
+          </div>
+          <h2
+            className="text-3xl font-black text-white leading-none mt-1"
+            style={{ fontFamily: 'var(--font-bebas)' }}
+          >
+            {projectTitle}
+          </h2>
+          {synopsis && (
+            <p className="text-[#999] text-sm leading-relaxed mt-2 max-w-2xl">
+              {synopsis.length > 240 ? synopsis.slice(0, 240).trimEnd() + '…' : synopsis}
+            </p>
+          )}
+        </div>
+        {posterUrl && (
+          <div className="flex-shrink-0">
+            <div className="w-24 aspect-[2/3] border border-[#222] bg-[#0a0a0a] overflow-hidden">
+              <img src={posterUrl} alt={projectTitle} className="w-full h-full object-cover" loading="lazy" />
+            </div>
+          </div>
+        )}
+      </div>
+    </header>
+  )
+
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-pulse">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="aspect-video bg-[#0a0a0a] border border-[#1a1a1a]" />
-        ))}
+      <div>
+        <div className="h-24 mb-6 bg-[#0a0a0a] border-b border-[#1a1a1a] animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a]">
+              <div className="aspect-video bg-[#0e0e0e]" />
+              <div className="p-4 space-y-2">
+                <div className="h-3 w-24 bg-[#1a1a1a]" />
+                <div className="h-3 w-full bg-[#1a1a1a]" />
+                <div className="h-3 w-3/4 bg-[#1a1a1a]" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -4198,16 +4267,7 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
   if (frames.length === 0) {
     return (
       <div>
-        {posterUrl && (
-          <div className="mb-6">
-            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-2">
-              Poster
-            </div>
-            <div className="max-w-xs border border-[#222] bg-[#0a0a0a] overflow-hidden">
-              <img src={posterUrl} alt={projectTitle} className="w-full" />
-            </div>
-          </div>
-        )}
+        {renderHeader()}
         <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8">
           <div
             className="text-xl font-black mb-2 leading-none"
@@ -4217,12 +4277,14 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
           </div>
           <p className="text-[#888] text-sm leading-relaxed mb-4">
             {tier === 'pitch'
-              ? 'Pitches include a poster but no storyboard frames. Publish your pitch and sell 10% to fund a trailer -- trailers include 6 storyboard frames + video clips.'
+              ? 'Pitches include a poster but no storyboard frames. Publish your pitch and sell 10% to fund a trailer — trailers include 6 storyboard frames + video clips.'
               : 'Generate storyboard frames using the AI agent, or wait for the production pipeline to create them.'}
           </p>
           <button
             onClick={() => {
-              (window as any).bmoviesChat?.open(`Generate a 6-frame storyboard for "${projectTitle}". Use the synopsis and any existing script material.`)
+              (window as unknown as { bmoviesChat?: { open: (s: string) => void } }).bmoviesChat?.open(
+                `Generate a 6-frame storyboard for "${projectTitle}". Use the synopsis and any existing script material.`,
+              )
             }}
             className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider"
           >
@@ -4235,44 +4297,106 @@ function StoryboardView({ projectId, projectTitle }: { projectId: string; projec
 
   return (
     <div>
-      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-3">
-        {frames.length} frame{frames.length === 1 ? '' : 's'}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {frames.map((frame, i) => (
-          <button
-            key={frame.id}
-            type="button"
-            onClick={() => setLightboxIndex(i)}
-            className="block text-left border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden"
-            aria-label={`Open frame ${i + 1} full-size`}
-          >
-            <div className="aspect-video bg-[#050505]">
-              <img
-                src={frame.url}
-                alt={frame.step_id || 'Storyboard frame'}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            {frame.step_id && (
-              <div className="px-2 py-1.5 text-[0.55rem] text-[#666] font-mono truncate">
-                {frame.step_id}
+      {renderHeader()}
+
+      {/* Panel grid — each panel has a big numbered label, the image
+          framed with an aspect-video crop, and a caption with the
+          shot type + prompt. Two columns on desktop so panels feel
+          substantial (the old 4-across grid made each one thumbnail-
+          sized and read like a grid of stock photos). */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {frames.map((frame, i) => {
+          const caption = frame.prompt?.trim() || null
+          const displayCaption = caption
+            ? (caption.length > 320 ? caption.slice(0, 320).trimEnd() + '…' : caption)
+            : 'No description captured — this frame was generated without a saved prompt.'
+          return (
+            <article
+              key={frame.id}
+              className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914]/60 transition-colors group"
+            >
+              {/* Panel header — big number, shot tag */}
+              <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-[#1a1a1a]">
+                <div className="flex items-baseline gap-3">
+                  <span
+                    className="text-2xl font-black text-[#E50914] leading-none"
+                    style={{ fontFamily: 'var(--font-bebas)' }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span
+                    className="text-[0.6rem] uppercase tracking-[0.2em] text-[#888] font-bold"
+                    style={{ fontFamily: 'var(--font-bebas)' }}
+                  >
+                    Panel {i + 1} of {frames.length}
+                  </span>
+                </div>
+                <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a0a0a] text-[#E50914] border border-[#5a1a1a]">
+                  {shotTypeFor(frame.prompt)}
+                </span>
               </div>
-            )}
-          </button>
-        ))}
+
+              {/* Image */}
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(i)}
+                className="block w-full aspect-video bg-[#050505] relative overflow-hidden"
+                aria-label={`Open panel ${i + 1} full-size`}
+              >
+                <img
+                  src={frame.url}
+                  alt={caption || `Panel ${i + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                  loading="lazy"
+                />
+                {/* Subtle scan-line overlay for the storyboard feel */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-20"
+                  style={{
+                    background:
+                      'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 3px)',
+                  }}
+                />
+              </button>
+
+              {/* Caption — the actual story beat */}
+              <div className="px-4 py-3">
+                <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#666] font-bold mb-1.5">
+                  Action
+                </div>
+                <p className="text-[#ccc] text-sm leading-relaxed">
+                  {displayCaption}
+                </p>
+              </div>
+            </article>
+          )
+        })}
       </div>
-      <div className="mt-4">
+
+      {/* Regenerate / extend */}
+      <div className="mt-6 flex gap-2 flex-wrap">
         <button
           onClick={() => {
-            (window as any).bmoviesChat?.open(`Generate one additional storyboard frame for "${projectTitle}". Make it a key dramatic moment.`)
+            (window as unknown as { bmoviesChat?: { open: (s: string) => void } }).bmoviesChat?.open(
+              `Generate one additional storyboard frame for "${projectTitle}". Make it a key dramatic moment.`,
+            )
           }}
           className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
         >
-          Generate new frame
+          Add panel
+        </button>
+        <button
+          onClick={() => {
+            (window as unknown as { bmoviesChat?: { open: (s: string) => void } }).bmoviesChat?.open(
+              `Rewrite the storyboard for "${projectTitle}" — regenerate all ${frames.length} panels with fresh compositions.`,
+            )
+          }}
+          className="px-4 py-2 border border-[#333] hover:border-[#E50914] text-[#888] hover:text-white text-[0.65rem] font-bold uppercase tracking-wider transition-colors"
+        >
+          Regenerate all
         </button>
       </div>
+
       <ImageLightbox
         items={frames}
         index={lightboxIndex}
