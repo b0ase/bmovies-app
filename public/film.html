@@ -283,12 +283,12 @@
       align-items: center;
       text-align: center;
     }
-    /* Fullscreen lightbox mode — applied when the "Play trailer" tier
-       button opens the trailer as an immersive overlay. The trailer
-       section becomes position:fixed covering the viewport; everything
-       else gets hidden behind a solid black background. The existing
-       compositor / PLAY-gate wiring continues to work because we move
-       the same DOM node rather than cloning it. */
+    /* Lightbox mode — applied when the "Play trailer" tier button
+       opens the trailer as an overlay. The page behind is dimmed
+       (semi-transparent black + blur) while the trailer section is
+       centred in the middle of the screen at a cinema-frame size.
+       We operate on the live DOM node rather than cloning so the
+       existing compositor / PLAY-gate wiring continues to work. */
     body.trailer-lightbox {
       overflow: hidden;
     }
@@ -296,22 +296,42 @@
       content: '';
       position: fixed;
       inset: 0;
-      background: #000;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 9998;
+      animation: trailer-lightbox-fade 0.25s ease-out;
+    }
+    @keyframes trailer-lightbox-fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
     body.trailer-lightbox .trailer-section {
       position: fixed;
-      inset: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       z-index: 9999;
-      background: #000;
+      background: transparent;
       margin: 0;
-      padding: 2rem 1rem;
+      padding: 0;
+      max-height: 92vh;
+      max-width: 92vw;
+      width: min(92vw, calc(82vh * 16/9));
+      overflow: visible;
+      display: flex;
+      align-items: center;
       justify-content: center;
-      overflow-y: auto;
+    }
+    body.trailer-lightbox .trailer-section .trailer-head,
+    body.trailer-lightbox .trailer-section .trailer-strip {
+      display: none;
     }
     body.trailer-lightbox .trailer-section .trailer-player {
-      max-width: min(92vw, calc(92vh * 16/9));
       width: 100%;
+      max-width: none;
+      aspect-ratio: 16 / 9;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
     }
     .trailer-lightbox-close {
       position: fixed;
@@ -2219,15 +2239,24 @@
         // Reveal the gate if we were in REPLAY state.
         const gate = document.getElementById('trailer-play-gate');
         if (gate) gate.classList.remove('hidden');
-        // Scroll the lightbox to top.
         requestAnimationFrame(() => {
-          const section = document.querySelector('.trailer-section');
-          if (section) section.scrollTop = 0;
           // Auto-click PLAY to kick off playback in the same gesture.
           const playBtn = document.getElementById('trailer-play-button');
           if (playBtn) playBtn.click();
         });
       };
+
+      // Click on the dimmed backdrop (anywhere outside the centred
+      // trailer section) closes the lightbox. We use mousedown on the
+      // document and check whether the target is inside the trailer
+      // section — if not, treat as a backdrop click.
+      document.addEventListener('mousedown', (e) => {
+        if (!document.body.classList.contains('trailer-lightbox')) return;
+        const section = document.querySelector('.trailer-section');
+        if (section && !section.contains(e.target) && !e.target.closest('.trailer-lightbox-close')) {
+          closeLightbox();
+        }
+      });
 
       document.addEventListener('keydown', (e) => {
         if (document.body.classList.contains('trailer-lightbox') && e.key === 'Escape') {
