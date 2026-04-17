@@ -826,7 +826,7 @@
     async function load(offerId) {
       const { data: offer, error } = await supabase
         .from('bct_offers')
-        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, trailer_video_url, parent_offer_id, bct_artifacts(id, kind, url, model, role, agent_id, prompt, step_id)')
+        .select('id, title, synopsis, status, token_ticker, tier, commissioner_percent, trailer_video_url, parent_offer_id, bct_artifacts(id, kind, url, model, role, agent_id, prompt, step_id, superseded_by, created_at)')
         .eq('id', offerId)
         .maybeSingle();
       if (error) throw error;
@@ -891,7 +891,12 @@
       // have been rewritten by the sweep to api.b0ase.com/bmovies-assets.
       const isEphemeralUrl = (u) => typeof u === 'string' && /(imgen|vidgen|videos)\.x\.ai/.test(u);
       const rawArts = offer.bct_artifacts || [];
-      const arts = rawArts.filter((a) => !isEphemeralUrl(a.url));
+      // Drop superseded artifacts — when a reshoot or regeneration
+      // happens, old rows are marked superseded_by=<new_id>. If we
+      // include them here, the film page renders a reel of mixed old
+      // + new clips (this is why the Weirdo trailer was ending with
+      // shots from the first run).
+      const arts = rawArts.filter((a) => !isEphemeralUrl(a.url) && !a.superseded_by);
       const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
       const storyboard = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
       const writer = rawArts.find(a => a.role === 'writer' && a.kind === 'text');
@@ -1365,9 +1370,18 @@
       const soundText = stripMeta(soundDesigner ? decodeDataUrl(soundDesigner.url) : null);
       const cleanedWriterText = stripMeta(writerText);
 
-      // Collect ALL video clips and storyboard frames (trailers have
-      // multiple of each, not just one)
-      const videoClips = arts.filter(a => a.kind === 'video');
+      // Collect ALL video clips. Sort deterministically: reshoot output
+      // uses step_id editor.trailer_cut_0..3 so we can sort on the
+      // trailing index; older single-name rows (editor.trailer_cut)
+      // fall through to creation-time order as a tie-breaker.
+      const videoClips = arts
+        .filter(a => a.kind === 'video')
+        .sort((a, b) => {
+          const ai = parseInt((a.step_id || '').match(/_(\d+)$/)?.[1] || '99', 10);
+          const bi = parseInt((b.step_id || '').match(/_(\d+)$/)?.[1] || '99', 10);
+          if (ai !== bi) return ai - bi;
+          return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+        });
       // Dedupe by URL — see storyboard gallery above for rationale.
       const storyboardFrames = Array.from(
         new Map(
