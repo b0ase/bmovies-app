@@ -63,6 +63,8 @@ const PROJECT_ALL_TABS = [
   { id: 'overview',    label: 'Overview',   type: 'tab' as const },
   { id: 'captable',    label: 'Cap Table',  type: 'tab' as const },
   { id: 'crew',        label: 'Crew',       type: 'tab' as const },
+  { id: 'cast',        label: 'Cast',       type: 'tab' as const },
+  { id: 'documents',   label: 'Documents',  type: 'tab' as const },
   { id: 'deck',        label: 'Deck',       type: 'tab' as const },
   { id: 'room',        label: 'Room',       type: 'tab' as const },
   { id: 'script',      label: 'Script',     type: 'tool' as const },

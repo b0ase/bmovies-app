@@ -747,6 +747,10 @@ function ProjectView({
 
     case 'crew':
       return <ProjectCrewView projectId={projectId} accountId={accountId} />
+    case 'cast':
+      return <ProjectCastView projectId={projectId} accountId={accountId} />
+    case 'documents':
+      return <ProjectDocumentsView film={currentFilm} />
     case 'deck':
       return <ProjectDeckView film={currentFilm} />
     case 'room':
@@ -1406,122 +1410,511 @@ function ProjectCapTableView({ film }: { film: Film }) {
   )
 }
 
-function ProjectCrewView({ projectId, accountId }: { projectId: string; accountId: string | null }) {
-  const [agents, setAgents] = useState<AgentData[]>([])
-  const [agentsLoading, setAgentsLoading] = useState(true)
+// Roles that belong to "Crew" (production side) vs "Cast" (performers).
+const CREW_ROLES = [
+  'writer', 'director', 'cinematographer', 'editor', 'composer',
+  'storyboard', 'sound_designer', 'producer', 'production_designer',
+  'publicist', 'casting_director', 'financier',
+]
+const CAST_ROLES = ['voice_actor']
+
+function ProjectCrewView(props: { projectId: string; accountId: string | null }) {
+  return (
+    <AgentRosterView
+      {...props}
+      kind="crew"
+      title="Project crew"
+      blurb="The agents who actually make the film. Those who contributed to this project are highlighted in red. Click any card to open the agent's profile page."
+      roles={CREW_ROLES}
+      emptyExampleMsg="No crew hired yet. Generate a writer or director to get started."
+    />
+  )
+}
+
+function ProjectCastView(props: { projectId: string; accountId: string | null }) {
+  return (
+    <AgentRosterView
+      {...props}
+      kind="cast"
+      title="Project cast"
+      blurb="The performing talent — voice actors, on-camera stars. Post-hackathon each cast member gets their own royalty token; for now they're hired and credited on-screen."
+      roles={CAST_ROLES}
+      emptyExampleMsg="No cast hired yet. Generate a voice actor to bring your script to life."
+    />
+  )
+}
+
+/* ─── Shared roster UI for Crew + Cast ─── */
+
+function AgentRosterView({
+  projectId, accountId, kind, title, blurb, roles, emptyExampleMsg,
+}: {
+  projectId: string
+  accountId: string | null
+  kind: 'crew' | 'cast'
+  title: string
+  blurb: string
+  roles: string[]
+  emptyExampleMsg: string
+}) {
+  const [myAgents, setMyAgents] = useState<AgentData[]>([])
+  const [exampleAgents, setExampleAgents] = useState<AgentData[]>([])
   const [projectAgentIds, setProjectAgentIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
-  useEffect(() => {
-    if (!accountId) { setAgentsLoading(false); return }
-    let cancelled = false
-    async function loadData() {
-      setAgentsLoading(true)
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      // User's agents in this kind's roles
+      const mineP = accountId
+        ? bmovies.from('bct_agents')
+            .select('*')
+            .eq('owner_account_id', accountId)
+            .in('role', roles)
+            .order('role')
+        : Promise.resolve({ data: [] as AgentData[], error: null })
 
-      // Load all agents belonging to this account
-      const { data: agentData, error: agentErr } = await bmovies
+      // Public examples — a few top-rep agents across the allowed roles.
+      // Shown when the user hasn't hired anyone yet, AND as a "meet the
+      // roster" strip below the user's own agents.
+      const examplesP = bmovies
         .from('bct_agents')
         .select('*')
-        .eq('owner_account_id', accountId)
-        .order('role')
-      if (!cancelled && !agentErr) {
-        setAgents((agentData as AgentData[]) || [])
-      }
+        .in('role', roles)
+        .order('reputation', { ascending: false })
+        .limit(8)
 
-      // Load which agents have artifacts on this project
-      const { data: artifactData } = await bmovies
+      // Which of this project's artifacts were made by which agent
+      const artifactsP = bmovies
         .from('bct_artifacts')
         .select('agent_id')
         .eq('offer_id', projectId)
         .not('agent_id', 'is', null)
-      if (!cancelled && artifactData) {
-        const ids = new Set(artifactData.map((a: any) => a.agent_id as string).filter(Boolean))
-        setProjectAgentIds(ids)
-      }
 
-      if (!cancelled) setAgentsLoading(false)
+      const [mineRes, exRes, artRes] = await Promise.all([mineP, examplesP, artifactsP])
+      const mine = (mineRes.data || []) as AgentData[]
+      const examples = ((exRes.data || []) as AgentData[]).filter(
+        (a) => !mine.some((m) => m.id === a.id),
+      )
+      const ids = new Set(
+        ((artRes.data || []) as { agent_id: string }[])
+          .map((r) => r.agent_id)
+          .filter(Boolean),
+      )
+      setMyAgents(mine)
+      setExampleAgents(examples)
+      setProjectAgentIds(ids)
+    } catch (err) {
+      console.warn('[roster] load error:', err)
+    } finally {
+      setLoading(false)
     }
-    loadData()
-    return () => { cancelled = true }
-  }, [accountId, projectId])
+  }, [accountId, projectId, roles])
 
-  if (agentsLoading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
-            <div className="h-3 w-20 bg-[#1a1a1a] mb-3" />
-            <div className="h-6 w-28 bg-[#151515]" />
+  useEffect(() => { load() }, [load])
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            {kind === 'crew' ? 'Production side' : 'Performing talent'}
           </div>
-        ))}
+          <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {title.split(' ')[0]} <span className="text-[#E50914]">{title.split(' ').slice(1).join(' ')}</span>
+          </h2>
+        </div>
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white shrink-0"
+        >
+          + Generate {kind === 'crew' ? 'crew' : 'cast'} member · $0.99
+        </button>
       </div>
-    )
+      <p className="text-[#888] text-sm max-w-xl mb-6">{blurb}</p>
+
+      {/* User's agents */}
+      <div className="mb-8">
+        <h3 className="text-[0.6rem] uppercase tracking-[0.2em] text-[#888] font-bold mb-3">
+          Your {kind} ({myAgents.length})
+        </h3>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-pulse">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="border border-[#1a1a1a] bg-[#0a0a0a] p-5">
+                <div className="h-3 w-20 bg-[#1a1a1a] mb-3" />
+                <div className="h-6 w-28 bg-[#151515]" />
+              </div>
+            ))}
+          </div>
+        ) : myAgents.length === 0 ? (
+          <div className="border border-dashed border-[#222] bg-[#050505] p-6">
+            <p className="text-[#888] text-sm mb-3">{emptyExampleMsg}</p>
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
+            >
+              Generate your first {kind === 'crew' ? 'crew member' : 'cast member'} →
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {myAgents.map((a) => (
+              <AgentCard
+                key={a.id}
+                agent={a}
+                active={projectAgentIds.has(a.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Public roster examples */}
+      {exampleAgents.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-[0.6rem] uppercase tracking-[0.2em] text-[#888] font-bold mb-1">
+            Featured {kind} across the platform
+          </h3>
+          <p className="text-[0.6rem] text-[#555] mb-3">
+            Established agents available for hire on future projects. Click a card to see their work.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {exampleAgents.map((a) => (
+              <AgentCard key={a.id} agent={a} active={false} muted />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dialogOpen && (
+        <GenerateAgentDialog
+          kind={kind}
+          roles={roles}
+          onClose={() => setDialogOpen(false)}
+          onCreated={() => { setDialogOpen(false); load() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AgentCard({ agent, active, muted }: { agent: AgentData; active: boolean; muted?: boolean }) {
+  return (
+    <a
+      href={`/agent.html?id=${encodeURIComponent(agent.id)}`}
+      className={`block border p-5 transition-colors no-underline ${
+        active ? 'border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0a0a]'
+        : muted ? 'border-[#1a1a1a] bg-[#050505] hover:border-[#333]'
+        : 'border-[#222] bg-[#0a0a0a] hover:border-[#E50914]'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className={`text-[0.55rem] uppercase tracking-wider font-bold ${muted ? 'text-[#666]' : 'text-[#E50914]'}`}>
+          {agent.role.replace(/_/g, ' ')}
+        </div>
+        {active && (
+          <span className="text-[0.5rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#E50914] text-white">
+            Active
+          </span>
+        )}
+      </div>
+      <h4
+        className="text-lg font-black text-white mb-1 leading-tight"
+        style={{ fontFamily: 'var(--font-bebas)' }}
+      >
+        {agent.name}
+      </h4>
+      <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
+        {agent.persona || 'No persona yet.'}
+      </p>
+      <div className="flex items-center justify-between text-[0.5rem] text-[#666]">
+        <span>Rep: {agent.reputation.toFixed(1)}</span>
+        <span>{agent.jobs_completed} jobs</span>
+        <span className={muted ? 'text-[#555]' : 'text-[#E50914]'}>View →</span>
+      </div>
+    </a>
+  )
+}
+
+function GenerateAgentDialog({
+  kind, roles, onClose, onCreated,
+}: {
+  kind: 'crew' | 'cast'
+  roles: string[]
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [role, setRole] = useState(roles[0])
+  const [name, setName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setError(null)
+    setSubmitting(true)
+    try {
+      const { data: session } = await bmovies.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) {
+        setError('Not signed in')
+        setSubmitting(false)
+        return
+      }
+      const res = await fetch('/api/agents/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role, name: name.trim() || undefined }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        setError(body?.error || `HTTP ${res.status}`)
+        setSubmitting(false)
+        return
+      }
+      onCreated()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setSubmitting(false)
+    }
   }
 
-  if (agents.length === 0) {
-    return (
-      <div className="border border-dashed border-[#222] bg-[#0a0a0a] p-8">
-        <p className="text-[#888] text-sm leading-relaxed mb-3">
-          Create a studio to get your own team of 8 specialist agents. Each
-          agent has a unique name, persona, wallet address, and token ticker.
+  return (
+    <div
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0a0a0a] border border-[#E50914] max-w-md w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-2xl font-black text-white mb-1" style={{ fontFamily: 'var(--font-bebas)' }}>
+          Generate new {kind === 'crew' ? 'crew' : 'cast'} member
+        </h3>
+        <p className="text-xs text-[#888] mb-4">
+          Spin up a new AI {kind === 'crew' ? 'crew member' : 'performer'} with a persona, wallet, and token ticker.
+          One-time fee: <span className="text-[#E50914] font-bold">$0.99</span> (billing wires up post-hackathon — free during the BSVA submission window).
         </p>
-        <a
-          href="/agents.html"
-          className="text-[0.65rem] font-bold uppercase tracking-wider text-[#E50914] border-b border-[#E50914]"
+
+        <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+          Role
+        </label>
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          className="w-full bg-[#111] border border-[#333] text-white px-3 py-2 mb-4 focus:outline-none focus:border-[#E50914]"
         >
-          Browse the public roster
-        </a>
+          {roles.map((r) => (
+            <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
+
+        <label className="block text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-1">
+          Name <span className="text-[#555] normal-case">(optional — we'll pick one)</span>
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Atlas Rivers"
+          className="w-full bg-[#111] border border-[#333] text-white px-3 py-2 mb-4 focus:outline-none focus:border-[#E50914]"
+        />
+
+        {error && (
+          <div className="mb-4 p-2 border border-[#5a1a1a] bg-[#3a0e0e] text-[#ff6b7a] text-xs">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 border border-[#333] text-[#888] hover:bg-[#151515]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white disabled:opacity-50"
+          >
+            {submitting ? 'Generating…' : 'Generate · $0.99 →'}
+          </button>
+        </div>
       </div>
-    )
+    </div>
+  )
+}
+
+/* ─── Documents tab — download every artifact attached to the project ─── */
+
+type ArtifactRow = {
+  id: number
+  kind: string
+  role: string | null
+  step_id: string | null
+  url: string
+  superseded_by: number | null
+  created_at?: string
+}
+
+function ProjectDocumentsView({ film }: { film: Film }) {
+  const [docs, setDocs] = useState<ArtifactRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data } = await bmovies
+        .from('bct_artifacts')
+        .select('id, kind, role, step_id, url, superseded_by, created_at')
+        .eq('offer_id', film.id)
+        .is('superseded_by', null)
+        .order('step_id', { ascending: true })
+      if (!cancelled) {
+        setDocs((data || []) as ArtifactRow[])
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [film.id])
+
+  // Friendly labels per step_id prefix — judges shouldn't have to
+  // decode "writer.treatment" themselves.
+  const labelFor = (d: ArtifactRow): string => {
+    const step = d.step_id || ''
+    const known: Record<string, string> = {
+      'writer.logline':        'Logline',
+      'writer.synopsis':       'Synopsis',
+      'writer.treatment':      'Treatment',
+      'writer.beat_sheet':     'Beat sheet',
+      'writer.screenplay':     'Screenplay',
+      'director.vision':       "Director's vision",
+      'casting.cast_list':     'Cast list',
+      'production.lookbook':   'Lookbook',
+      'dp.shot_plan':          'Shot plan',
+      'storyboard.pack':       'Storyboard pack',
+      'storyboard.poster':     'Poster',
+      'composer.themes':       'Score brief',
+      'composer.final_score':  'Final score',
+      'sound.final_mix':       'Final sound mix',
+      'producer.bible':        'Production bible',
+      'producer.investor_deck':'Investor deck',
+      'editor.rough_cut':      'Rough cut',
+      'editor.fine_cut':       'Fine cut',
+      'editor.picture_lock':   'Picture lock',
+      'editor.trailer_cut':    'Trailer',
+      'publicist.epk':         'Electronic press kit',
+    }
+    for (const [prefix, lbl] of Object.entries(known)) {
+      if (step.startsWith(prefix)) return lbl
+    }
+    if (step.startsWith('scene.')) return `Scene clip (${step})`
+    return d.role ? `${d.role} · ${d.kind}` : d.kind
+  }
+
+  const extensionFor = (d: ArtifactRow): string => {
+    if (d.kind === 'video') return 'mp4'
+    if (d.kind === 'image') return 'png'
+    if (d.kind === 'audio') return 'mp3'
+    return 'txt'
+  }
+
+  const dlName = (d: ArtifactRow) => {
+    const safeTitle = film.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+    const safeLabel = labelFor(d).replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+    return `${safeTitle}-${safeLabel}.${extensionFor(d)}`
   }
 
   return (
     <div>
-      <h2
-        className="text-3xl font-black mb-2 leading-none"
-        style={{ fontFamily: 'var(--font-bebas)' }}
-      >
-        Project <span className="text-[#E50914]">crew</span>
-      </h2>
-      <p className="text-[#888] text-sm mb-4">
-        Your studio agents. Those who contributed to this project are highlighted.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {agents.map((agent) => {
-          const contributed = projectAgentIds.has(agent.id)
-          return (
-            <div
-              key={agent.id}
-              className={`border bg-[#0a0a0a] p-5 transition-colors ${
-                contributed ? 'border-[#E50914]' : 'border-[#222]'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-[0.55rem] uppercase tracking-wider font-bold text-[#E50914]">
-                  {agent.role.replace(/_/g, ' ')}
-                </div>
-                {contributed && (
-                  <span className="text-[0.5rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#E50914] text-white">
-                    Active
-                  </span>
-                )}
-              </div>
-              <h4
-                className="text-lg font-black text-white mb-1 leading-tight"
-                style={{ fontFamily: 'var(--font-bebas)' }}
-              >
-                {agent.name}
-              </h4>
-              <p className="text-[#888] text-xs leading-relaxed mb-3 line-clamp-2">
-                {agent.persona || 'No persona generated.'}
-              </p>
-              <div className="flex items-center justify-between text-[0.5rem] text-[#666]">
-                <span>Rep: {agent.reputation.toFixed(1)}</span>
-                <span>{agent.jobs_completed} jobs</span>
-              </div>
-            </div>
-          )
-        })}
+      <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            Deliverables
+          </div>
+          <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            Project <span className="text-[#E50914]">documents</span>
+          </h2>
+          <p className="text-[#888] text-xs mt-1">
+            Every artifact the swarm has produced for &quot;{film.title}&quot;, current head version only.
+            Click any row to download.
+          </p>
+        </div>
       </div>
+
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          {[0,1,2,3,4].map((i) => (
+            <div key={i} className="h-12 bg-[#0a0a0a] border border-[#1a1a1a]" />
+          ))}
+        </div>
+      ) : docs.length === 0 ? (
+        <div className="border border-dashed border-[#222] bg-[#050505] p-6 text-center">
+          <div className="text-[#666] text-sm">No artifacts produced yet.</div>
+          <div className="text-[#444] text-xs mt-1">
+            Documents appear here as the pipeline completes each step.
+          </div>
+        </div>
+      ) : (
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
+          <div className="grid grid-cols-[auto_2fr_1fr_auto] gap-3 px-4 py-2 border-b border-[#1a1a1a] text-[0.55rem] uppercase tracking-[0.14em] text-[#666] font-bold">
+            <div>Kind</div>
+            <div>Document</div>
+            <div>Step</div>
+            <div></div>
+          </div>
+          {docs.map((d) => {
+            const isDataUrl = d.url.startsWith('data:')
+            return (
+              <div
+                key={d.id}
+                className="grid grid-cols-[auto_2fr_1fr_auto] gap-3 px-4 py-3 border-b border-[#111] last:border-b-0 items-center"
+              >
+                <div className="text-[0.55rem] uppercase tracking-wider font-bold px-1.5 py-0.5 bg-[#1a1a1a] text-[#888]">
+                  {d.kind}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-white text-sm truncate">{labelFor(d)}</div>
+                  {d.role && (
+                    <div className="text-[#555] text-[0.55rem] uppercase tracking-wider mt-0.5">
+                      {d.role}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[#666] text-[0.65rem] font-mono truncate">
+                  {d.step_id || '—'}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-[0.55rem] font-bold uppercase tracking-wider text-[#888] hover:text-white"
+                  >
+                    View
+                  </a>
+                  <a
+                    href={d.url}
+                    download={dlName(d)}
+                    className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                  >
+                    {isDataUrl ? 'Save' : 'Download'} ↓
+                  </a>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
