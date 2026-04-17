@@ -1612,15 +1612,16 @@
         });
 
         // When the trailer loops back to clip 1 (after all clips played),
-        // reset audio tracks so music + VO restart with the video.
+        // restart the music bed but NOT the VO narration. Voiceover is
+        // a one-shot script — starting it on every loop makes the
+        // narrator repeat themselves over the returning music. The
+        // music bed is built to loop; the VO is not.
         player.addEventListener('ended', () => {
-          // wireSequentialPlayer handles the next-clip switch; we rewind
-          // both audio tracks here when we loop back to clip 0.
           setTimeout(() => {
             const idx = currentClipIndex();
-            if (idx === 0) {
-              if (musicEl) { musicEl.currentTime = 0; if (soundOn) musicEl.play().catch(() => {}); }
-              if (voEl)    { voEl.currentTime = 0;    if (soundOn) voEl.play().catch(() => {}); }
+            if (idx === 0 && musicEl) {
+              musicEl.currentTime = 0;
+              if (soundOn) musicEl.play().catch(() => {});
             }
           }, 350);
         });
