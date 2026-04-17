@@ -124,6 +124,19 @@ export function renderCascade(offer, opts = {}) {
   const cascade = computeCascade(offer);
   const { outputs, total } = cascade;
 
+  // Ticket price in USD (the headline figure shown on /watch). The
+  // on-chain settlement uses satoshis internally (WATCH_PRICE_SATS)
+  // but end-user copy should be in dollars and cents — the sats/USD
+  // ratio shifts with BSV's price and showing '100 sats' next to a
+  // '$2.99 ticket' reads as a unit mismatch to viewers.
+  const TICKET_USD = 2.99;
+  const fmtUsd = (pct) => {
+    const v = TICKET_USD * pct / 100;
+    if (v >= 0.01) return '$' + v.toFixed(2);
+    if (v >= 0.001) return '$' + v.toFixed(3);
+    return '<$0.001';
+  };
+
   // Build the bar segments
   const segments = outputs.map((o) => {
     const pct = total > 0 ? (o.satoshis / total) * 100 : 0;
@@ -136,10 +149,10 @@ export function renderCascade(offer, opts = {}) {
     const bg = isProducer
       ? '#000'
       : `hsl(0, 0%, ${85 - (i * 8) % 30}%)`;
-    return `<div class="cas-seg" style="width:${seg.pct.toFixed(2)}%;background:${bg};" title="${esc(seg.label)} — ${seg.satoshis} sats"></div>`;
+    return `<div class="cas-seg" style="width:${seg.pct.toFixed(2)}%;background:${bg};" title="${esc(seg.label)} — ${fmtUsd(seg.pct)}"></div>`;
   }).join('');
 
-  // Below the bar — labelled rows with the math
+  // Below the bar — labelled rows with the math (shown in USD)
   const rowHtml = segments.map((seg) => {
     const isProducer = seg.role === 'producer';
     const swatchBg = isProducer ? '#000' : '#666';
@@ -148,7 +161,7 @@ export function renderCascade(offer, opts = {}) {
         <div class="cas-swatch" style="background:${swatchBg};"></div>
         <div class="cas-label">${esc(seg.label)}</div>
         <div class="cas-pct">${seg.pct.toFixed(0)}%</div>
-        <div class="cas-sats">${seg.satoshis} sats</div>
+        <div class="cas-sats">${fmtUsd(seg.pct)}</div>
       </div>
     `;
   }).join('');
