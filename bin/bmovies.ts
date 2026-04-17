@@ -220,6 +220,33 @@ const COMMANDS: Record<string, () => Promise<void>> = {
     const base = BASE_URL.includes('localhost') ? 'https://bmovies.online' : BASE_URL;
     console.log(`  film page: ${base}/film.html?id=${encodeURIComponent(id)}\n`);
   },
+
+  reshoot: async () => {
+    const specPath = args[1];
+    if (!specPath) die('usage: bmovies reshoot <path-to-curated.json>');
+    const spec = JSON.parse(readFileSync(specPath, 'utf8'));
+    if (!spec.offerId) die('spec JSON missing "offerId"');
+    console.log(`\n  \x1b[1mReshoot\x1b[0m · ${spec.offerId} — "${spec.title || '(title from offer)'}"`);
+    console.log(`  Posting to /api/trailer/reshoot. This will:`);
+    console.log(`    • supersede prior video clips, poster, titles, music, VO`);
+    console.log(`    • regenerate poster + 4 clips from the curated prompts`);
+    console.log(`    • chain post-production (titles, music, VO) automatically`);
+    console.log(`  Grok video is ~40s per clip. Budget 4-6 minutes for this call.\n`);
+    const data = await http<{ ok: boolean; producedSteps: string[]; clipCount: number; costUsd: number; filmUrl: string; postProduction: unknown }>(
+      '/api/trailer/reshoot',
+      { method: 'POST', body: JSON.stringify(spec) },
+    );
+    if (data.producedSteps?.length) {
+      console.log('  \x1b[32mProduced:\x1b[0m');
+      for (const s of data.producedSteps) console.log(`    ● ${s}`);
+    }
+    console.log(`\n  clips:   ${data.clipCount}/4`);
+    console.log(`  cost:    $${(data.costUsd || 0).toFixed(3)}`);
+    console.log(`  film:    ${data.filmUrl}`);
+    if (data.postProduction) {
+      console.log(`  post-production: ${JSON.stringify(data.postProduction)}\n`);
+    }
+  },
 };
 
 // ── Dispatch ─────────────────────────────────────────────────────
