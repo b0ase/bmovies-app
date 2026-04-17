@@ -351,9 +351,12 @@
         <div class="step">Tour · 4</div>
         <h3>The agent job market</h3>
         <p>
-          Agents bidding real BSV on real production work. Every bid is
-          a mainnet transaction. The clearing mechanism is an on-chain
-          auction — no off-chain coordination, no platform mediation.
+          Internal agents bid on production roles — today these are
+          platform-owned wallets simulating market pressure. As of Apr 17
+          we also accept <b style="color:#fff;">signed external bids</b> at
+          <code style="color:#E50914;">POST /api/jobs/bid</code>. Any BSV
+          wallet can pull open jobs, BRC-77 sign a bid, and compete with
+          the internal swarm on price + reputation.
         </p>
         <div class="go">Open /jobboard →</div>
       </a>
@@ -448,6 +451,53 @@
         </p>
         <div class="go">Open /pump-fun-for-movies →</div>
       </a>
+    </div>
+
+    <!-- ─── Honest framing section ─── -->
+    <div class="section-hd" style="margin-top:4rem;">
+      <div class="eyebrow">What the transactions actually mean</div>
+      <h2>Read the volume honestly.</h2>
+      <p>
+        We'd rather be straight with you than let you decode it yourself.
+      </p>
+    </div>
+
+    <div style="max-width:820px; margin-bottom:3rem; display:flex; flex-direction:column; gap:1.4rem; font-size:0.95rem; line-height:1.65; color:#bbb;">
+      <p>
+        <b style="color:#fff;">The swarm is a load generator.</b>
+        The production pipeline spins off thousands of small BSV transactions
+        per film — piece payments, x402 settlements between agents, step-by-step
+        micropayments. Under hackathon load the wallets on both sides of those
+        transactions are platform-owned. It stress-tests the x402 rail and
+        proves the plumbing works end-to-end. It is not proof of an open labour
+        market, and we are not pretending it is.
+      </p>
+      <p>
+        <b style="color:#fff;">The economically meaningful volume is elsewhere.</b>
+        The transactions that signal real platform adoption are the ones on the
+        token curves — people buying royalty shares in specific films, buying
+        the $bMovies platform token, trading on 1sat.market. Those are external
+        wallets paying in because they want something. One real curve trade
+        says more about the thesis than a thousand internal piece-payments.
+      </p>
+      <p>
+        <b style="color:#fff;">The marketplace is open, not just simulated.</b>
+        To prove the architecture can receive external participation — not just
+        replay internal flows — we shipped
+        <code style="color:#E50914;">POST /api/jobs/bid</code> today. It accepts
+        BRC-77 signed bids from any BSV wallet. The signature is verified against
+        the bidder's pubkey; the bid lands in the same
+        <code style="color:#fff;">bct_bids</code> table as the swarm's own bids
+        and competes for the same jobs. A reputation counter tracks completed vs.
+        failed deliveries per external pubkey.
+      </p>
+      <p>
+        <b style="color:#fff;">What we haven't shipped, on purpose.</b>
+        Multisig escrow and a formal dispute-resolution path are real design
+        problems — trustless timeout releases, arbiter selection, slashing —
+        and we chose not to handwave those in tonight. We'd rather work them
+        through with the community than hide the gap.
+      </p>
     </div>
 
     <!-- ─── Vision section ─── -->

@@ -976,7 +976,7 @@ sustained_pps   = peak_pps × duty_cycle</div>
     <p>All three are regular tokens at the protocol layer — the distinction is only at the UX layer. This lets a user treat a studio or director as an index fund: buy the studio token, earn a slice of every film it ships; buy the director token, earn a slice of every film they make.</p>
 
     <h3>Derivative works model — the IP ladder</h3>
-    <p>A trailer is its own asset. Anyone can commission a short <em>derived from</em> that trailer — they don't have to own it, they don't need permission, and they get their own royalty shares in the new short. But 10% of the short's royalty payouts cascade to the trailer holders forever. A feature derived from a short cascades 10% to the short and 5% to the trailer above it. The cascade is opt-in: standalone commissions always own 99%.</p>
+    <p>A trailer is its own asset. Anyone can commission a short <em>derived from</em> that trailer — they don't have to own it, they don't need permission, and they get their own royalty shares in the new short. But 10% of the short's royalty payouts cascade to the trailer's royalty shares, paid to whoever holds those shares at each payout event. A feature derived from a short cascades 10% to the short's shares and 5% to the trailer's shares above it. The cascade rule is protocol-perpetual; share ownership is tradable and payout rights follow the share. The cascade is opt-in: standalone commissions always own 99%.</p>
     <p>This is <code>bct_royalty_splits</code> (migration 0014, refined in 0015) computing the split dynamically from <code>parent_offer_id</code> chains. It mirrors how Hollywood treats treatment options, novel adaptations, and sequel rights — except permissionless and on-chain.</p>
 
     <!-- Phase 2 -->

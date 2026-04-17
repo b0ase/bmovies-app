@@ -95,17 +95,41 @@ async function xaiImage(
   return { url, costUsd: (body.usage?.cost_in_usd_ticks || 0) / 1e10 };
 }
 
+/**
+ * Submit an xAI grok-imagine-video job and poll for the result.
+ *
+ * @param referenceImages — up to 7 public HTTPS URLs (or data URIs).
+ *   When provided, the API runs in reference-to-video mode: the text
+ *   prompt should reference each image as <IMAGE_1>, <IMAGE_2>, etc.
+ *   This is the single biggest lever we have for character and scene
+ *   continuity — without it, each clip is a cold text-to-video call
+ *   with no visual anchor and drifts immediately. See
+ *   docs/research/ai-film-pipeline.md §11.
+ */
 async function xaiVideo(
   apiKey: string,
   prompt: string,
+  referenceImages?: string[],
 ): Promise<{ url: string; duration: number; costUsd: number }> {
+  const refs = (referenceImages ?? [])
+    .filter((u): u is string => typeof u === 'string' && u.length > 0)
+    .slice(0, 7);
+
+  const requestBody: Record<string, unknown> = {
+    model: 'grok-imagine-video',
+    prompt,
+  };
+  if (refs.length > 0) {
+    requestBody.reference_images = refs.map((url) => ({ url }));
+  }
+
   const submit = await fetch(`${XAI_BASE}/videos/generations`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ model: 'grok-imagine-video', prompt }),
+    body: JSON.stringify(requestBody),
     signal: AbortSignal.timeout(20_000),
   });
   if (!submit.ok) throw new Error(`xAI video submit failed (${submit.status}): ${await submit.text()}`);
@@ -270,10 +294,20 @@ export default async function handler(
     // progress count wrong.
     await attach('writer', 'text', treatmentDataUrl, 'grok-3-mini', offer.title, 0.01, 'writer.synopsis');
 
+    // ── Reference-image library ──────────────────────────────────
+    // Track the URLs of the poster and storyboard stills we generate
+    // below so we can feed them back into every video-clip call as
+    // reference images. This is the single biggest lever we have for
+    // cross-shot character + scene continuity — see
+    // docs/research/ai-film-pipeline.md §11 "The 80/20 fix."
+    let posterUrl: string | null = null;
+    const storyboardUrls: string[] = [];
+
     // 2. Poster (Grok Imagine Image Pro)
     const posterPrompt = `Cinematic movie poster for the film "${offer.title}". ${offer.synopsis} Portrait orientation, bold title typography, dramatic lighting, atmospheric color palette. Movie poster aesthetic.`;
     try {
       const poster = await xaiImage(xaiKey, posterPrompt, 'grok-imagine-image-pro');
+      posterUrl = poster.url;
       await attach('poster', 'image', poster.url, 'grok-imagine-image-pro', posterPrompt, poster.costUsd, 'storyboard.poster');
     } catch (err) {
       console.error('[trailer] poster failed:', err);
@@ -298,6 +332,7 @@ export default async function handler(
       const prompt = storyboardPrompts[i];
       try {
         const img = await xaiImage(xaiKey, prompt, 'grok-imagine-image');
+        storyboardUrls.push(img.url);
         // Unique step_id per frame. Previously every frame was tagged
         // 'storyboard.pack' which made mirrorAsset collide on a single
         // file and film.html rendered N identical tiles. Matches the
@@ -327,10 +362,32 @@ export default async function handler(
 
     // Run 4 videos sequentially — they're fast (~25s each) and
     // running in parallel risks rate limits.
+    //
+    // Each clip gets two reference images: the poster (for overall
+    // aesthetic / character look) and a storyboard frame (for this
+    // shot's specific composition). We prepend an explicit "use
+    // <IMAGE_1> and <IMAGE_2>" clause to the prompt so Grok actually
+    // conditions on them — the xAI API ignores references if the
+    // prompt doesn't reference them by name. Without this change
+    // every clip is a cold text-to-video call and the character
+    // drifts between every cut — the #1 issue flagged in our
+    // research doc (docs/research/ai-film-pipeline.md §1, §11).
     for (let i = 0; i < Math.min(4, videoPrompts.length); i++) {
-      const prompt = videoPrompts[i];
+      const userPrompt = videoPrompts[i];
+      const shotStoryboard = storyboardUrls[i % Math.max(1, storyboardUrls.length)] ?? null;
+      const refs = [posterUrl, shotStoryboard].filter((u): u is string => !!u);
+
+      // Prepend reference directives only when we actually have
+      // references to point at — otherwise the <IMAGE_N> tokens are
+      // dead weight in the prompt.
+      const prompt = refs.length === 2
+        ? `Character appearance and aesthetic tone match <IMAGE_1>. Composition and scene staging follow <IMAGE_2>. ${userPrompt}`
+        : refs.length === 1
+          ? `Character appearance, aesthetic tone, and composition match <IMAGE_1>. ${userPrompt}`
+          : userPrompt;
+
       try {
-        const vid = await xaiVideo(xaiKey, prompt);
+        const vid = await xaiVideo(xaiKey, prompt, refs.length > 0 ? refs : undefined);
         await attach('trailer-clip', 'video', vid.url, 'grok-imagine-video', prompt, vid.costUsd, 'editor.trailer_cut');
 
         // Save the first clip as the "hero" trailer video on the offer

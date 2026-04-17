@@ -298,7 +298,7 @@
           .maybeSingle();
         if (parent) {
           const cascadePct = offer.tier === 'feature' ? 10 : 10;
-          parentLine = `This film is derived from <a href="captable.html?id=${encodeURIComponent(parent.id)}" style="color:#E50914;">${esc(parent.title)}</a> ($${esc(parent.token_ticker || '')}, ${esc(parent.tier || '')}). ${cascadePct}% of this film's royalty payouts cascade to ${esc(parent.token_ticker || 'the parent')} holders forever.`;
+          parentLine = `This film is derived from <a href="captable.html?id=${encodeURIComponent(parent.id)}" style="color:#E50914;">${esc(parent.title)}</a> ($${esc(parent.token_ticker || '')}, ${esc(parent.tier || '')}). ${cascadePct}% of this film's royalty payouts cascade to ${esc(parent.token_ticker || 'the parent')} royalty shares (paid pro-rata to whoever holds those shares at each payout event).`;
         }
       }
 
