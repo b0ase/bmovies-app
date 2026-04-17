@@ -258,16 +258,31 @@ export default async function handler(
     }
 
     // 3. Storyboard — 12 frames
+    //
+    // Feed the treatment we just wrote into the prompt context. The
+    // storyboard artist draws from the full treatment, not just a
+    // one-line synopsis — boosts cohesion across frames.
     let storyboardPrompts: string[] = [];
     try {
-      const raw = await xaiChat(xaiKey, STORYBOARD_PROMPT_PROMPT, context, 1500);
+      const storyboardContext =
+        `${context}\n\nTreatment:\n${treatment.slice(0, 5000)}`;
+      const raw = await xaiChat(xaiKey, STORYBOARD_PROMPT_PROMPT, storyboardContext, 1800);
       storyboardPrompts = JSON.parse(stripFences(raw)) as string[];
     } catch (err) { console.error('[short] storyboard prompts failed:', err); }
 
     for (let i = 0; i < Math.min(12, storyboardPrompts.length); i++) {
       try {
         const img = await xaiImage(xaiKey, storyboardPrompts[i], 'grok-imagine-image');
-        await attach('storyboard', 'image', img.url, 'grok-imagine-image', storyboardPrompts[i], img.costUsd, 'storyboard.pack');
+        // Unique step_id per frame — see trailer/generate.ts comment.
+        await attach(
+          'storyboard',
+          'image',
+          img.url,
+          'grok-imagine-image',
+          storyboardPrompts[i],
+          img.costUsd,
+          `storyboard.frame_${i}`,
+        );
       } catch (err) { console.error(`[short] storyboard ${i} failed:`, err); }
     }
 

@@ -280,9 +280,15 @@ export default async function handler(
     }
 
     // 3. Storyboard frames — 6 images
+    //
+    // Feed the treatment we just wrote into the prompt context so the
+    // storyboard artist is drawing from the actual story, not just a
+    // one-line synopsis. Cohesion jumps with one extra line of input.
     let storyboardPrompts: string[] = [];
     try {
-      const raw = await xaiChat(xaiKey, STORYBOARD_PROMPT_PROMPT, context, 1000);
+      const storyboardContext =
+        `${context}\n\nTreatment:\n${treatment.slice(0, 3500)}`;
+      const raw = await xaiChat(xaiKey, STORYBOARD_PROMPT_PROMPT, storyboardContext, 1200);
       storyboardPrompts = JSON.parse(stripFences(raw)) as string[];
     } catch (err) {
       console.error('[trailer] storyboard prompts parse failed:', err);
@@ -292,7 +298,19 @@ export default async function handler(
       const prompt = storyboardPrompts[i];
       try {
         const img = await xaiImage(xaiKey, prompt, 'grok-imagine-image');
-        await attach(`storyboard`, 'image', img.url, 'grok-imagine-image', prompt, img.costUsd, 'storyboard.pack');
+        // Unique step_id per frame. Previously every frame was tagged
+        // 'storyboard.pack' which made mirrorAsset collide on a single
+        // file and film.html rendered N identical tiles. Matches the
+        // convention feature-worker.ts uses for the feature tier.
+        await attach(
+          'storyboard',
+          'image',
+          img.url,
+          'grok-imagine-image',
+          prompt,
+          img.costUsd,
+          `storyboard.frame_${i}`,
+        );
       } catch (err) {
         console.error(`[trailer] storyboard frame ${i} failed:`, err);
       }

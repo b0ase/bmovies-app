@@ -4044,8 +4044,25 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         .order('created_at', { ascending: true })
       if (!cancelled) {
         const all = (data as any[]) || []
-        setClips(all.filter(a => a.kind === 'video'))
-        setImages(all.filter(a => a.kind === 'image'))
+        // Dedupe by URL — legacy rows share mirror filenames due to the
+        // storyboard.pack step_id collision bug. Same file should only
+        // appear once in the bin.
+        const dedupe = <T extends { url: string }>(xs: T[]) =>
+          Array.from(new Map(xs.map((x) => [x.url, x])).values())
+        setClips(dedupe(all.filter((a) => a.kind === 'video')))
+        // Stills = storyboard images only. Posters (role='poster' / step_id
+        // 'storyboard.poster') belong on the Titles tab, not in the editor
+        // bin — the bin is for things you'd cut into the timeline.
+        setImages(
+          dedupe(
+            all.filter(
+              (a) =>
+                a.kind === 'image' &&
+                a.role !== 'poster' &&
+                (a.step_id || '') !== 'storyboard.poster',
+            ),
+          ),
+        )
         setLoading(false)
       }
     }
@@ -4160,7 +4177,7 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
                     color: i === activeClip ? '#fff' : '#aa66ff',
                   }}
                 >
-                  {clip.step_id?.replace('scene.', 'S').replace('.video', '') || clip.role || `C${i + 1}`}
+                  {labelForClip(clip, i)}
                 </button>
               )) : (
                 <div className="h-10 flex-1 bg-[#0a0a0a] border border-[#1a1a1a] border-dashed flex items-center justify-center text-[0.5rem] text-[#333]">
@@ -4199,43 +4216,130 @@ function MovieEditorView({ projectId, projectTitle }: { projectId: string; proje
         </div>
       </div>
 
-      {/* Clip bin */}
-      <details open={clips.length > 0}>
-        <summary className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold cursor-pointer mb-2">
-          Clip bin ({clips.length + images.length} assets)
-        </summary>
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          {clips.map((clip, i) => (
-            <button
-              key={clip.id}
-              onClick={() => setActiveClip(i)}
-              className="border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden text-left"
-            >
-              <div className="aspect-video bg-[#050505] flex items-center justify-center text-[#aa66ff] text-lg">
-                &#9654;
-              </div>
-              <div className="px-1.5 py-1 text-[0.45rem] text-[#888] font-mono truncate">
-                {clip.step_id || clip.role || `clip-${i + 1}`}
-              </div>
-            </button>
-          ))}
-          {images.map((img) => (
-            <div
-              key={img.id}
-              className="border border-[#222] bg-[#0a0a0a] overflow-hidden"
-            >
-              <div className="aspect-video bg-[#050505]">
-                <img src={img.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              </div>
-              <div className="px-1.5 py-1 text-[0.45rem] text-[#888] font-mono truncate">
-                {img.step_id || img.role || 'still'}
-              </div>
-            </div>
-          ))}
+      {/* Clips section — videos only, with lazy-loaded first-frame thumbnails */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">
+            Clips &middot; {clips.length}
+          </div>
+          <div className="text-[0.5rem] text-[#555] font-mono uppercase tracking-wider">
+            click to load into monitor
+          </div>
         </div>
-      </details>
+        {clips.length > 0 ? (
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            {clips.map((clip, i) => (
+              <button
+                key={clip.id}
+                onClick={() => setActiveClip(i)}
+                className={`border transition-colors overflow-hidden text-left ${
+                  i === activeClip
+                    ? 'border-[#E50914] bg-[#120003]'
+                    : 'border-[#222] bg-[#0a0a0a] hover:border-[#E50914]'
+                }`}
+                aria-label={`Load clip ${i + 1} into monitor`}
+              >
+                <div className="aspect-video bg-[#050505] relative">
+                  {/* preload="metadata" pulls the first frame — cheap and lazy,
+                      browsers decode one video frame instead of the whole file.
+                      #t=0.1 nudges Safari past a black first frame. */}
+                  <video
+                    src={`${clip.url}#t=0.1`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Overlay marker — subtle bMovies red chevron */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-8 h-8 rounded-full bg-black/60 border border-[#E50914]/60 flex items-center justify-center text-[#E50914] text-sm">
+                      &#9654;
+                    </div>
+                  </div>
+                </div>
+                <div className="px-1.5 py-1 text-[0.5rem] text-[#888] font-mono truncate flex items-center justify-between gap-2">
+                  <span>{labelForClip(clip, i)}</span>
+                  {i === activeClip && <span className="text-[#E50914] text-[0.45rem] uppercase tracking-wider">live</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="border border-dashed border-[#1a1a1a] bg-[#050505] p-6 text-center">
+            <div className="text-[#444] text-xs font-mono">No clips in bin yet.</div>
+          </div>
+        )}
+      </section>
+
+      {/* Stills section — storyboard images only. Posters live on the
+          Titles tab, not here — the bin is for cuttable material. */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">
+            Stills &middot; {images.length}
+          </div>
+          <div className="text-[0.5rem] text-[#555] font-mono uppercase tracking-wider">
+            storyboard frames
+          </div>
+        </div>
+        {images.length > 0 ? (
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            {images.map((img, i) => (
+              <a
+                key={img.id}
+                href={img.url}
+                target="_blank"
+                rel="noopener"
+                className="block border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors overflow-hidden"
+                aria-label={`Open still ${i + 1} full-size`}
+              >
+                <div className="aspect-video bg-[#050505]">
+                  <img src={img.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                </div>
+                <div className="px-1.5 py-1 text-[0.5rem] text-[#888] font-mono truncate">
+                  {labelForStill(img, i)}
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="border border-dashed border-[#1a1a1a] bg-[#050505] p-6 text-center">
+            <div className="text-[#444] text-xs font-mono">No stills yet.</div>
+          </div>
+        )}
+      </section>
     </div>
   )
+}
+
+/* ── Editor helpers ── */
+
+function labelForClip(
+  clip: { step_id: string | null; role: string | null },
+  i: number,
+): string {
+  const s = clip.step_id || ''
+  // Feature pipeline: scene.<n>.video → S<n>
+  const scene = s.match(/^scene\.(\d+)\.video$/)
+  if (scene) return `S${scene[1]}`
+  // Trailer pipeline: editor.trailer_cut (duplicated per clip) → T1, T2…
+  if (s === 'editor.trailer_cut' || clip.role === 'trailer-clip') return `T${i + 1}`
+  // Short pipeline: editor.scene_cut etc.
+  if (s.startsWith('editor.')) return `C${i + 1}`
+  return s || clip.role || `C${i + 1}`
+}
+
+function labelForStill(
+  img: { step_id: string | null; role: string | null },
+  i: number,
+): string {
+  const s = img.step_id || ''
+  // Feature pipeline: storyboard.frame_<n> → F<n>
+  const frame = s.match(/^storyboard\.frame_(\d+)$/)
+  if (frame) return `F${frame[1]}`
+  // Trailer/short legacy: storyboard.pack (duplicated) → F1, F2…
+  if (s === 'storyboard.pack' || img.role === 'storyboard') return `F${i + 1}`
+  return s || img.role || `still-${i + 1}`
 }
 
 /* ── Title Designer ── */
