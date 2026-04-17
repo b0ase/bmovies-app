@@ -1685,8 +1685,15 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
 
   return (
     <div className="">
-      {/* Header */}
+      {/* Header — mirrors the Studio header so the short address /
+          BRC-100 eyebrow stays visible when toggling between tabs. */}
       <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
+        <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2 truncate">
+          {displayNameFor(user)}
+          {isBrc100 && (
+            <span className="ml-2 text-[#E50914]">. BRC-100</span>
+          )}
+        </div>
         <h1
           className="text-5xl font-black leading-none"
           style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
