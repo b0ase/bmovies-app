@@ -890,17 +890,16 @@ function ProjectOverviewView({ film }: { film: Film }) {
               block isn't blocked on the fetch. */}
           <ProjectMetricsStrip film={film} />
 
-          {/* Actions — tier-aware. A pitch has no video to "Watch", so
-              we hide the red CTA at that tier and let the Film page
-              deep-link in the row below be the default read path.
-              The Publish button is renamed per tier so "Publish Film"
-              doesn't appear on a pitch that has no film. */}
-          <div className="flex flex-wrap gap-2">
-            {currentStatus === 'draft' && (
+          {/* ── Primary action ──────────────────────────────────
+              One decision that matters at the current state.
+              Draft → Publish [tier]. Anything else → nothing here
+              (all the views go in the navigation row below). */}
+          {currentStatus === 'draft' && (
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handlePublish}
                 disabled={publishing}
-                className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#0e3a0e] border border-[#2a6a2a] text-[#6bff8a] hover:bg-[#1a4a1a] transition-colors disabled:opacity-40"
+                className="text-[0.65rem] font-bold uppercase tracking-wider px-5 py-2.5 bg-[#0e3a0e] border border-[#2a6a2a] text-[#6bff8a] hover:bg-[#1a4a1a] transition-colors disabled:opacity-40"
               >
                 {publishing
                   ? 'Publishing...'
@@ -909,30 +908,22 @@ function ProjectOverviewView({ film }: { film: Film }) {
                   : film.tier === 'short' ? 'Publish Short'
                   : 'Publish Film'}
               </button>
-            )}
-            {film.tier !== 'pitch' && (
-              <a
-                href={`/film.html?id=${encodeURIComponent(film.id)}`}
-                className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
-              >
-                Watch
-              </a>
-            )}
-            <a
-              href={`/production.html?id=${encodeURIComponent(film.id)}`}
-              className="text-[0.65rem] font-bold uppercase tracking-wider px-4 py-2 border border-[#333] text-white hover:border-[#E50914] transition-colors"
-            >
-              Timeline
-            </a>
-          </div>
+            </div>
+          )}
 
-          {/* Deep links — same as captable.html's link row */}
-          <div className="flex flex-wrap gap-2 mt-3">
+          {/* ── Views & deep links ──────────────────────────────
+              All the places you can go from here. One row, one
+              visual weight, ordered by relevance. 'Watch' is the
+              primary read path for trailer+ tiers (video plays);
+              on a pitch the equivalent page is the Film page
+              (poster + logline), so we relabel in place rather
+              than offering both. */}
+          <div className="flex flex-wrap gap-2">
             <a
               href={`/film.html?id=${encodeURIComponent(film.id)}`}
               className="text-[0.6rem] font-bold uppercase tracking-wider px-3 py-1.5 bg-[#E50914] text-white hover:bg-[#b00610] transition-colors"
             >
-              Film page
+              {film.tier === 'pitch' ? 'Film page' : 'Watch'}
             </a>
             <a
               href={`/production.html?id=${encodeURIComponent(film.id)}`}
