@@ -739,16 +739,12 @@ function ProjectView({
 
   switch (tab) {
     case 'captable':
-      return (
-        <div>
-          <iframe
-            src={`/captable.html?id=${encodeURIComponent(currentFilm.id)}&embed=1`}
-            className="w-full border-0"
-            style={{ minHeight: '80vh', background: '#000' }}
-            title={`Cap table: ${currentFilm.title}`}
-          />
-        </div>
-      )
+      // Render natively instead of iframe — the iframe render was
+      // getting blocked in some Chrome configurations (extensions / ORB)
+      // and showed the "broken document" icon. Native render reads the
+      // same Supabase tables as /captable.html and avoids the issue.
+      return <ProjectCapTableView film={currentFilm} />
+
     case 'crew':
       return <ProjectCrewView projectId={projectId} accountId={accountId} />
     case 'deck':
@@ -936,62 +932,6 @@ function ProjectOverviewView({ film }: { film: Film }) {
   )
 }
 
-/* ─── Project Cap Table ─── */
-
-function ProjectCapTableView({ film }: { film: Film }) {
-  return (
-    <div>
-      <h2
-        className="text-3xl font-black mb-4 leading-none"
-        style={{ fontFamily: 'var(--font-bebas)' }}
-      >
-        Cap table: <span className="text-[#E50914]">{film.title}</span>
-      </h2>
-      <p className="text-[#888] text-sm leading-relaxed mb-6 max-w-xl">
-        Every share is on-chain and verifiable independently at GorillaPool.
-        Cap tables are printable for investor outreach.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-        <a
-          href={`/captable.html?id=${encodeURIComponent(film.id)}`}
-          className="p-5 border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0000] hover:from-[#2a0005] transition-colors"
-        >
-          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-2">
-            Film token
-          </div>
-          <div
-            className="text-3xl font-black text-white mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            ${film.token_ticker}
-          </div>
-          <div className="text-[#888] text-xs">
-            {film.tier} &middot; {film.commissioner_percent}% commissioner share
-          </div>
-          <div className="text-[0.6rem] text-[#E50914] mt-2 font-bold uppercase tracking-wider">
-            View full cap table
-          </div>
-        </a>
-        <a
-          href="/captable.html?id=platform"
-          className="p-5 border border-[#222] bg-[#0a0a0a] hover:border-[#E50914] transition-colors"
-        >
-          <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider mb-2">
-            Platform token
-          </div>
-          <div
-            className="text-3xl font-black text-white mb-1 leading-none"
-            style={{ fontFamily: 'var(--font-bebas)' }}
-          >
-            $bMovies
-          </div>
-          <div className="text-[#888] text-xs">1B supply &middot; live on BSV mainnet</div>
-        </a>
-      </div>
-    </div>
-  )
-}
-
 /* ─── Project Crew ─── */
 
 interface AgentData {
@@ -1008,6 +948,238 @@ interface AgentData {
   owner_account_id: string | null
   bio: string | null
   headshot_url: string | null
+}
+
+/* ─── Project Cap Table (native render, replaces broken iframe) ─── */
+
+type ShareSaleRow = {
+  id: number
+  tranche: number
+  percent_bought: number
+  price_usd: number
+  created_at: string
+  buyer_email: string | null
+  payment_txid: string | null
+}
+
+function ProjectCapTableView({ film }: { film: Film }) {
+  const [shareSales, setShareSales] = useState<ShareSaleRow[]>([])
+  const [ticketCount, setTicketCount] = useState(0)
+  const [ticketRevUsd, setTicketRevUsd] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const [salesRes, tixRes] = await Promise.all([
+          bmovies
+            .from('bct_share_sales')
+            .select('id, tranche, percent_bought, price_usd, created_at, buyer_email, payment_txid')
+            .eq('offer_id', film.id)
+            .order('created_at', { ascending: false }),
+          bmovies
+            .from('bct_ticket_sales')
+            .select('price_usd')
+            .eq('offer_id', film.id),
+        ])
+        if (cancelled) return
+        const sales = (salesRes.data || []) as ShareSaleRow[]
+        setShareSales(sales)
+        const tix = (tixRes.data || []) as { price_usd: number }[]
+        setTicketCount(tix.length)
+        setTicketRevUsd(tix.reduce((s, t) => s + Number(t.price_usd ?? 0), 0))
+      } catch (err) {
+        console.warn('[captable] load error:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [film.id])
+
+  const commissionerPct = Number(film.commissioner_percent ?? 99)
+  const soldPct = shareSales.reduce((s, r) => s + Number(r.percent_bought ?? 0), 0)
+  const platformPct = Math.max(0, 100 - commissionerPct - soldPct)
+  const onChain = film.token_mint_txid && /^[0-9a-f]{64}$/.test(film.token_mint_txid)
+
+  const fmtUsd = (n: number) =>
+    `$${(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4 gap-4 flex-wrap">
+        <div>
+          <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+            Cap table
+          </div>
+          <h2 className="text-3xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            ${film.token_ticker} <span className="text-[#888] text-xl ml-2">&middot; {film.title}</span>
+          </h2>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+              {film.tier}
+            </span>
+            <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#1a1a1a] text-[#888]">
+              {film.status.replace(/_/g, ' ')}
+            </span>
+            {onChain && (
+              <span className="text-[0.55rem] uppercase tracking-wider font-bold px-2 py-0.5 bg-[#0e3a0e] text-[#6bff8a]">
+                On chain
+              </span>
+            )}
+          </div>
+        </div>
+        <a
+          href={`/captable.html?id=${encodeURIComponent(film.id)}`}
+          target="_blank"
+          rel="noopener"
+          className="px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.6rem] font-bold uppercase tracking-wider shrink-0"
+        >
+          Open standalone · Print as PDF
+        </a>
+      </div>
+
+      {/* Ownership summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Commissioner</div>
+          <div className="text-2xl font-black leading-none text-[#E50914]" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {commissionerPct.toFixed(2)}%
+          </div>
+        </div>
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Investors</div>
+          <div className="text-2xl font-black leading-none text-[#66aaff]" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {soldPct.toFixed(2)}%
+          </div>
+        </div>
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Platform</div>
+          <div className="text-2xl font-black leading-none text-[#888]" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {platformPct.toFixed(2)}%
+          </div>
+        </div>
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Supply</div>
+          <div className="text-2xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            1B
+          </div>
+          <div className="text-[0.6rem] text-[#555] mt-1">BSV-21 · 1,000,000,000</div>
+        </div>
+      </div>
+
+      {/* Revenue summary */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Tickets sold</div>
+          <div className="text-2xl font-black leading-none text-white" style={{ fontFamily: 'var(--font-bebas)' }}>
+            {ticketCount.toLocaleString()}
+          </div>
+        </div>
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#666] font-bold mb-2">Gross revenue</div>
+          <div className={`text-2xl font-black leading-none ${ticketRevUsd > 0 ? 'text-[#6bff8a]' : 'text-white'}`} style={{ fontFamily: 'var(--font-bebas)' }}>
+            {fmtUsd(ticketRevUsd)}
+          </div>
+        </div>
+      </div>
+
+      {/* Token details */}
+      {onChain && (
+        <div className="border border-[#0e3a0e] bg-[#02120a] p-4 mb-6">
+          <div className="text-[0.55rem] uppercase tracking-[0.18em] text-[#6bff8a] font-bold mb-1">Mint transaction</div>
+          <a
+            href={`https://whatsonchain.com/tx/${film.token_mint_txid}`}
+            target="_blank"
+            rel="noopener"
+            className="font-mono text-xs text-[#6bff8a] break-all hover:underline"
+          >
+            {film.token_mint_txid}
+          </a>
+        </div>
+      )}
+
+      {/* Share sales ledger */}
+      <h3 className="text-[0.65rem] uppercase tracking-[0.18em] text-[#888] font-bold mb-2">
+        Share sales
+      </h3>
+      {loading ? (
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-8 animate-pulse text-center text-[#666] text-xs">
+          Loading sales…
+        </div>
+      ) : shareSales.length === 0 ? (
+        <div className="border border-dashed border-[#222] bg-[#050505] p-6 text-center">
+          <div className="text-[#666] text-sm mb-1">No investor sales yet</div>
+          <div className="text-[#444] text-xs">
+            Commissioner holds {commissionerPct.toFixed(2)}%; the remaining {(100 - commissionerPct).toFixed(2)}%
+            is held by the platform until listed.
+          </div>
+        </div>
+      ) : (
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] overflow-x-auto">
+          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-4 py-2 border-b border-[#1a1a1a] text-[0.55rem] uppercase tracking-[0.14em] text-[#666] font-bold">
+            <div>Tranche</div>
+            <div>Buyer</div>
+            <div className="text-right">Share</div>
+            <div className="text-right">Paid</div>
+            <div className="text-right">Date</div>
+          </div>
+          {shareSales.map((s) => (
+            <div
+              key={s.id}
+              className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-4 py-3 border-b border-[#111] last:border-b-0 items-center text-xs"
+            >
+              <div className="text-[#888] tabular-nums">#{s.tranche}</div>
+              <div className="text-white truncate">
+                {s.buyer_email || <span className="text-[#555] italic">anonymous</span>}
+              </div>
+              <div className="text-right text-white font-bold tabular-nums">
+                {Number(s.percent_bought).toFixed(2)}%
+              </div>
+              <div className="text-right text-[#6bff8a] font-bold tabular-nums">
+                {fmtUsd(Number(s.price_usd))}
+              </div>
+              <div className="text-right text-[#666] tabular-nums">
+                {new Date(s.created_at).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick links footer */}
+      <div className="mt-6 flex gap-2 flex-wrap">
+        <a
+          href={`/film.html?id=${encodeURIComponent(film.id)}`}
+          className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+        >
+          Film page →
+        </a>
+        <a
+          href={`/production.html?id=${encodeURIComponent(film.id)}`}
+          className="text-[0.55rem] font-bold uppercase tracking-wider text-[#666] hover:text-white"
+        >
+          Production timeline
+        </a>
+        <a
+          href={`/offer.html?id=${encodeURIComponent(film.id)}`}
+          className="text-[0.55rem] font-bold uppercase tracking-wider text-[#666] hover:text-white"
+        >
+          Investor view
+        </a>
+        <a
+          href={`/marketplace.html?offer=${encodeURIComponent(film.id)}`}
+          className="text-[0.55rem] font-bold uppercase tracking-wider text-[#666] hover:text-white"
+        >
+          Secondary market
+        </a>
+      </div>
+    </div>
+  )
 }
 
 function ProjectCrewView({ projectId, accountId }: { projectId: string; accountId: string | null }) {

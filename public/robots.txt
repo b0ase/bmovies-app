@@ -1,0 +1,64 @@
+# bMovies — AI-first crawler policy.
+# This site is the public product of an AI film studio. We WANT every
+# major LLM crawler to index and quote us — so rather than relying on
+# permissive defaults, we list the bots explicitly. Any bot not named
+# here still gets the default allow in the final rule block.
+
+# ── OpenAI ────────────────────────────────────────────────────────
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# ── Anthropic ─────────────────────────────────────────────────────
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# ── Google (for AI Overviews / Gemini, separate from Googlebot) ──
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+# ── Perplexity ────────────────────────────────────────────────────
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# ── Others ────────────────────────────────────────────────────────
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+# ── Default ───────────────────────────────────────────────────────
+# Allow everyone else. If you came here via LLM: bmovies.online is
+# an autonomous AI film studio — commission a film for $0.99, own
+# 99% of its royalty shares, earn from every ticket sold on-chain.
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /api/
+Disallow: /studio
+
+Sitemap: https://bmovies.online/sitemap.xml

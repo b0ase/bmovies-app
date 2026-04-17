@@ -313,48 +313,64 @@ export function AccountToolbar() {
         </div>
       </div>
 
-      {/* ═══ ROW 2: Project tabs — only when inside a project ═══ */}
-      {projectId && (
-        <div style={{ ...rowStyle, borderTop: '1px solid #111' }}>
-          {/* Back + project selector */}
-          <button
-            onClick={() => navigateTo('/account')}
-            style={{ ...subTabStyle(false), color: '#888', fontSize: '0.55rem' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
-          >
-            ← Studio
-          </button>
-          <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
-          <ProjectSelector
-            projects={projects}
-            loading={projectsLoading}
-            activeProjectId={projectId}
-            onChange={handleProjectChange}
-          />
-          <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
+      {/* ═══ ROW 2: Project tabs — ALWAYS visible. When no project is
+              selected, tabs point at the first project in the user's
+              portfolio (or are disabled if there are none yet). ═══ */}
+      <div style={{ ...rowStyle, borderTop: '1px solid #111' }}>
+        {/* Back + project selector */}
+        <button
+          onClick={() => navigateTo('/account')}
+          style={{ ...subTabStyle(false), color: '#888', fontSize: '0.55rem' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+        >
+          ← Studio
+        </button>
+        <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
+        <ProjectSelector
+          projects={projects}
+          loading={projectsLoading}
+          activeProjectId={projectId}
+          onChange={handleProjectChange}
+        />
+        <div style={{ width: '1px', height: '1rem', background: '#222', margin: '0 0.15rem', flexShrink: 0 }} />
 
-          {/* All project + tool tabs in one row */}
-          {PROJECT_ALL_TABS.map((tab) => {
-            const isActive = tab.type === 'tool'
+        {/* All project + tool tabs in one row.
+            When no project is selected we still render all tabs so the
+            user sees the full surface; clicking one navigates to the
+            first project in their portfolio (if any), otherwise the
+            button is disabled with a tooltip. */}
+        {PROJECT_ALL_TABS.map((tab) => {
+          const targetProjectId = projectId || projects[0]?.id || null
+          const isDisabled = !targetProjectId
+          const isActive = !!projectId && (
+            tab.type === 'tool'
               ? activeTool === tab.id
               : (!activeTool && activeTab === tab.id)
-            const href = tab.type === 'tool'
-              ? `/account?project=${projectId}&tool=${tab.id}`
-              : `/account?project=${projectId}&tab=${tab.id}`
+          )
+          const href = targetProjectId
+            ? tab.type === 'tool'
+              ? `/account?project=${targetProjectId}&tool=${tab.id}`
+              : `/account?project=${targetProjectId}&tab=${tab.id}`
+            : null
 
-            return (
-              <button
-                key={tab.id}
-                onClick={() => navigateTo(href)}
-                style={subTabStyle(isActive)}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { if (href) navigateTo(href) }}
+              disabled={isDisabled}
+              title={isDisabled ? 'Commission a film to unlock' : undefined}
+              style={{
+                ...subTabStyle(isActive),
+                opacity: isDisabled ? 0.35 : 1,
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

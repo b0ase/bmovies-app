@@ -1,18 +1,65 @@
 import type { MetadataRoute } from 'next'
+import { createClient } from '@supabase/supabase-js'
 
 const BASE_URL = 'https://bmovies.online'
 
 /**
- * Sitemap for the merged bMovies site. Static brochure pages in
- * public/*.html live alongside the Next.js routes under /account,
- * /login, /studio. Both sets get listed so crawlers index the
- * full product.
+ * Sitemap for the merged bMovies site. Three sources of URLs:
+ *
+ *   1. Static brochure pages in public/*.html (hand-enumerated below).
+ *   2. Next.js routes under /account, /login, /studio.
+ *   3. Every published film, one URL per offer_id — pulled from Supabase
+ *      at build time so AI crawlers discover the long tail of films.
+ *
+ * The film-URL fetch is wrapped in try/catch; if Supabase is unreachable
+ * during build we still emit the static routes rather than failing the
+ * deploy.
+ *
+ * Revalidates hourly — fresh enough for AI Overviews / PerplexityBot.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 3600
+
+// How many films to include. Sitemaps have a 50k-URL / 50MB cap; we're
+// nowhere near that, but cap anyway so a runaway swarm doesn't balloon
+// the XML.
+const MAX_FILMS = 5000
+
+type FilmRow = {
+  id: string
+  updated_at: string | null
+  status: string
+}
+
+async function fetchPublishedFilms(): Promise<FilmRow[]> {
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://api.b0ase.com'
+  const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!ANON) return []
+
+  try {
+    const client = createClient(SUPABASE_URL, ANON, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data, error } = await client
+      .from('bct_offers')
+      .select('id, updated_at, status')
+      .in('status', ['published', 'auto_published', 'released'])
+      .order('updated_at', { ascending: false })
+      .limit(MAX_FILMS)
+    if (error) {
+      console.warn('[sitemap] film fetch error:', error.message)
+      return []
+    }
+    return (data ?? []) as FilmRow[]
+  } catch (err) {
+    console.warn('[sitemap] film fetch threw:', err)
+    return []
+  }
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString()
 
-  const routes: [string, MetadataRoute.Sitemap[number]['changeFrequency'], number][] = [
-    // Landing + core brochure pages
+  const staticRoutes: [string, MetadataRoute.Sitemap[number]['changeFrequency'], number][] = [
     ['', 'daily', 1.0],
     ['/about.html', 'weekly', 0.7],
     ['/commission.html', 'daily', 0.9],
@@ -24,20 +71,41 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ['/studios.html', 'weekly', 0.6],
     ['/film.html', 'daily', 0.7],
     ['/production.html', 'hourly', 0.7],
+    ['/marketplace.html', 'daily', 0.8],
+    ['/boovies.html', 'weekly', 0.6],
+    ['/pitch.html', 'weekly', 0.5],
+    ['/deck.html', 'weekly', 0.5],
+    ['/invest.html', 'weekly', 0.6],
+    ['/judges.html', 'weekly', 0.5],
     // Authed Next.js routes
     ['/account', 'daily', 0.8],
     ['/studio', 'weekly', 0.6],
     ['/login', 'monthly', 0.4],
     // Legal
-    ['/legal/', 'monthly', 0.3],
     ['/terms.html', 'yearly', 0.3],
     ['/privacy.html', 'yearly', 0.3],
+    ['/compliance-strategy.html', 'monthly', 0.3],
+    ['/regulatory-memo.html', 'monthly', 0.3],
+    ['/legal/platform-token-prospectus.html', 'monthly', 0.3],
+    ['/legal/non-custodial-disclosure.html', 'monthly', 0.3],
   ]
 
-  return routes.map(([path, changeFrequency, priority]) => ({
-    url: `${BASE_URL}${path}`,
-    lastModified: now,
-    changeFrequency,
-    priority,
+  const staticEntries: MetadataRoute.Sitemap = staticRoutes.map(
+    ([path, changeFrequency, priority]) => ({
+      url: `${BASE_URL}${path}`,
+      lastModified: now,
+      changeFrequency,
+      priority,
+    }),
+  )
+
+  const films = await fetchPublishedFilms()
+  const filmEntries: MetadataRoute.Sitemap = films.map((f) => ({
+    url: `${BASE_URL}/film.html?id=${encodeURIComponent(f.id)}`,
+    lastModified: f.updated_at || now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.5,
   }))
+
+  return [...staticEntries, ...filmEntries]
 }

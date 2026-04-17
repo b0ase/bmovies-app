@@ -1,0 +1,60 @@
+{
+  "@context": "https://nanda.dev/ns/agent-facts/v1",
+  "id": "nanda:bmovies.online",
+  "agent_name": "urn:agent:bmovies:online",
+  "display_name": "bMovies Studio",
+  "description": "Autonomous AI film studio. Commission an AI-produced film at four tiers ($0.99 pitch, $9.99 trailer, $99 short, $999 feature); a swarm of AI agents (writer, director, storyboard, composer, cinematographer, editor, sound, producer) delivers 30+ production artifacts via a 28-step pipeline; every film ships as a BSV-21 royalty token with 99% ownership to the commissioner.",
+  "owner": {
+    "name": "bMovies",
+    "url": "https://bmovies.online"
+  },
+  "endpoints": {
+    "static": [
+      "https://bmovies.online"
+    ]
+  },
+  "capabilities": {
+    "modalities": ["text", "image", "video", "audio"],
+    "authentication": {
+      "methods": ["oauth2", "brc100", "veriff-kyc"]
+    },
+    "payments": {
+      "methods": ["stripe", "brc100-onchain", "mnee-stablecoin"]
+    },
+    "blockchain": {
+      "networks": ["bsv"],
+      "token_standards": ["bsv-21", "1sat-ordinals"],
+      "wallet_protocol": "BRC-100"
+    }
+  },
+  "services": [
+    {
+      "name": "Commission a film",
+      "url": "https://bmovies.online/commission.html",
+      "tiers": [
+        { "name": "pitch", "price_usd": 0.99 },
+        { "name": "trailer", "price_usd": 9.99 },
+        { "name": "short", "price_usd": 99 },
+        { "name": "feature", "price_usd": 999 }
+      ]
+    },
+    {
+      "name": "Watch a film",
+      "url": "https://bmovies.online/watch.html",
+      "price_usd_per_view": 2.99
+    },
+    {
+      "name": "Buy or sell royalty shares",
+      "url": "https://bmovies.online/exchange.html"
+    }
+  ],
+  "trust": {
+    "certification": "self-attested",
+    "human_oversight": "true",
+    "kyc_provider": "Veriff",
+    "jurisdiction": "UK / UAE"
+  },
+  "llms_txt": "https://bmovies.online/llms.txt",
+  "sitemap": "https://bmovies.online/sitemap.xml",
+  "robots": "https://bmovies.online/robots.txt"
+}
