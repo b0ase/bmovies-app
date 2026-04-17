@@ -277,7 +277,7 @@
     }
 
     /* ─── Recut deck ───
-       The NPGX-ported recut tools panel. Draft-only. Visual scaffold
+       The creative-tools recut panel. Draft-only. Visual scaffold
        for the PDF "Don't like the ending? Recut it" promise. */
     .recut-deck {
       border: 1px solid #2a2a2a;
@@ -831,7 +831,7 @@
     }
 
     /**
-     * The recut deck. Six NPGX-ported tools rendered as click-cards.
+     * The recut deck. Six creative tools rendered as click-cards.
      * Each card is a one-shot instruction to a specific specialist
      * (or small group) to redo a piece of work. The click handler
      * (wired in wireRecutDeck after innerHTML insertion) prefills the
@@ -839,9 +839,9 @@
      *
      * Visual-first by design: this is the panel the PDF Chapter 03
      * "Don't like the ending? Recut it" promise points at. Wiring the
-     * NPGX-equivalent edit canvas (timeline drag-reorder, frame
-     * inpainting, font picker) is Phase 2 work — what ships today is
-     * the click-to-revise affordance for every tool the PDF lists.
+     * full edit canvas (timeline drag-reorder, frame inpainting, font
+     * picker) is Phase 2 work — what ships today is the click-to-revise
+     * affordance for every tool the PDF lists.
      */
     function renderRecutDeck(offer, artifacts) {
       const ticker = esc(offer.token_ticker || '');
@@ -915,7 +915,7 @@
       return `
         <div class="recut-deck">
           <div class="recut-deck-head">
-            <div class="recut-deck-eyebrow">The Recut Deck · NPGX-ported tools</div>
+            <div class="recut-deck-eyebrow">The Recut Deck · creative tools</div>
             <h2>Don't like it? <span class="r">Recut it.</span></h2>
             <p>One click per tool. Each click is a real revision request — your specialists redo the affected work and the new version becomes the head of its chain. Old versions stay browsable. Costs one of your remaining revisions per click.</p>
           </div>
@@ -1082,7 +1082,7 @@
         </div>
 
         <!-- ─── THE RECUT DECK ───
-             NPGX-ported recut tools. Each tool is a one-click instruction
+             Creative recut tools. Each tool is a one-click instruction
              to a specific specialist to redo a piece of work. The tools
              post to /api/feature/revise with a pre-filled step + note,
              same backend as the free-form "Re-run any step" textarea
