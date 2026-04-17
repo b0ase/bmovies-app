@@ -1109,14 +1109,33 @@
           ? `style="cursor:pointer;" onclick="showFilmOrderBook('${esc(f.id)}')" title="View order book"`
           : '';
 
+        // Clicking anywhere in the title cell (poster or text) should
+        // take the user through to the film's offer page so they can
+        // invest / watch / see details. The row's own click handler
+        // still opens the order book, so we stopPropagation on the
+        // inner link.
+        const offerLink = f.id
+          ? `offer.html?id=${encodeURIComponent(f.id)}`
+          : null;
+
         html += `
           <tr ${clickAttr}>
             <td class="rank-cell">${i + 1}</td>
             <td>
               <div class="asset-cell">
-                ${f.poster ? `<img class="asset-thumb" src="${esc(f.poster)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
+                ${offerLink
+                  ? `<a href="${offerLink}" onclick="event.stopPropagation()" style="display:contents;">
+                       ${f.poster ? `<img class="asset-thumb" src="${esc(f.poster)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>'}
+                     </a>`
+                  : (f.poster ? `<img class="asset-thumb" src="${esc(f.poster)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;asset-thumb&quot;></div>'" />` : '<div class="asset-thumb"></div>')
+                }
                 <div>
-                  <div class="asset-name">${esc(f.title)}</div>
+                  <div class="asset-name">
+                    ${offerLink
+                      ? `<a href="${offerLink}" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;">${esc(f.title)}</a>`
+                      : esc(f.title)
+                    }
+                  </div>
                   <div class="asset-sub">${esc(f.status || '')}</div>
                 </div>
               </div>

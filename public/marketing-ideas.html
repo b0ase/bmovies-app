@@ -5,17 +5,19 @@
   <script src="js/session-sanitizer.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bMovies — Marketing Ideas</title>
-  <meta name="description" content="A scratchpad of marketing angles, taglines, and campaigns for bMovies. Each one a different way to explain the same thing: the cheapest way to make a movie the world has ever seen." />
+  <meta name="description" content="A scratchpad of marketing angles, taglines, and campaigns for bMovies. Each one a different way to explain the same thing." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://bmovies.online/marketing-ideas" />
   <meta property="og:title" content="bMovies — Marketing Ideas" />
-  <meta property="og:description" content="A scratchpad of campaigns and hooks for bMovies. Ride along." />
+  <meta property="og:description" content="A scratchpad of campaigns and hooks for bMovies." />
   <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="css/mobile.css">
   <link rel="stylesheet" href="css/theme.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -24,47 +26,41 @@
       color: #e8e8e8;
       line-height: 1.6;
     }
-    main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 4rem 2rem 6rem;
-    }
+    main { max-width: 1200px; margin: 0 auto; padding: 4rem 2rem 6rem; }
 
     .hero {
-      text-align: center;
       padding: 2rem 0 3rem;
       border-bottom: 1px solid #1f1f1f;
       margin-bottom: 3rem;
     }
     .eyebrow {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: #E50914;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       font-weight: 700;
     }
     h1 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(3rem, 8vw, 6rem);
+      font-size: clamp(2.6rem, 7vw, 5.4rem);
       color: #fff;
-      margin: 0.6rem 0 0.8rem;
+      margin: 0.5rem 0 0.8rem;
       letter-spacing: 0.02em;
       line-height: 0.95;
     }
     h1 span { color: #E50914; }
     .sub {
       color: #aaa;
-      max-width: 720px;
-      margin: 0 auto;
-      font-size: 1.05rem;
-      line-height: 1.6;
+      max-width: 780px;
+      font-size: 1rem;
+      line-height: 1.65;
     }
     .sub b { color: #fff; }
 
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.4rem;
+      gap: 1.2rem;
     }
     @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
 
@@ -72,50 +68,46 @@
       position: relative;
       border: 1px solid #1f1f1f;
       background: #0a0a0a;
-      padding: 2rem 2rem 1.8rem;
+      padding: 1.8rem 2rem 1.6rem;
       text-decoration: none;
       color: inherit;
       display: flex;
       flex-direction: column;
-      min-height: 340px;
-      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+      min-height: 320px;
+      transition: border-color .15s ease, background .15s ease;
     }
-    .idea:hover {
-      transform: translateY(-2px);
-      border-color: #333;
-      background: #0c0c0c;
-    }
+    .idea:hover { border-color: #E50914; background: #0c0c0c; }
     .idea .tag {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: #888;
-      border: 1px solid #1f1f1f;
-      padding: 0.25rem 0.55rem;
+      color: #E50914;
+      border: 1px solid #2a1414;
+      padding: 0.2rem 0.5rem;
       align-self: flex-start;
       margin-bottom: 1.2rem;
     }
     .idea h2 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.6rem;
+      font-size: 2.4rem;
       color: #fff;
       line-height: 0.95;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
       margin-bottom: 0.8rem;
     }
     .idea h2 span { color: #E50914; }
     .idea p {
-      color: #aaa;
-      font-size: 0.92rem;
-      line-height: 1.6;
-      margin-bottom: 1.1rem;
+      color: #9a9a9a;
+      font-size: 0.88rem;
+      line-height: 1.65;
+      margin-bottom: 0.9rem;
     }
     .idea p b { color: #fff; }
     .idea .meta {
       margin-top: auto;
       padding-top: 1rem;
-      border-top: 1px dashed #1f1f1f;
+      border-top: 1px dashed #1a1a1a;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.68rem;
       letter-spacing: 0.1em;
@@ -127,40 +119,32 @@
     }
     .idea .meta .go { color: #E50914; font-weight: 700; }
 
-    /* Per-idea accents */
-    .idea.boovies { background: linear-gradient(180deg, #140011 0%, #0a0a0a 60%); }
-    .idea.boovies:hover { border-color: #FF69B4; }
-    .idea.boovies h2 span { color: #FF69B4; }
-    .idea.boovies .tag { color: #FF69B4; border-color: #331426; }
-    .idea.boovies .meta .go { color: #FF69B4; }
-
-    .idea.pump { background: linear-gradient(180deg, #001411 0%, #0a0a0a 60%); }
-    .idea.pump:hover { border-color: #1FD882; }
-    .idea.pump h2 span { color: #1FD882; }
-    .idea.pump .tag { color: #1FD882; border-color: #0f3026; }
-    .idea.pump .meta .go { color: #1FD882; }
-
     .scratch-note {
       margin-top: 3rem;
-      border: 1px dashed #1f1f1f;
+      border: 1px solid #1f1f1f;
+      background: #0a0a0a;
       padding: 1.4rem 1.6rem;
-      background: rgba(255,255,255,0.01);
     }
     .scratch-note h3 {
-      font-size: 0.7rem;
+      font-size: 0.6rem;
       color: #888;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
       font-weight: 700;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.7rem;
     }
     .scratch-note p {
-      color: #888;
+      color: #9a9a9a;
       font-size: 0.85rem;
       line-height: 1.65;
       max-width: 760px;
     }
     .scratch-note p b { color: #ccc; }
+    .scratch-note code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #aaa;
+      font-size: 0.8rem;
+    }
 
     .footer-links {
       margin-top: 3rem;
@@ -169,12 +153,12 @@
       display: flex;
       gap: 1.2rem;
       flex-wrap: wrap;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
     }
     .footer-links a {
       color: #888;
       text-decoration: none;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       font-weight: 700;
     }
@@ -186,7 +170,7 @@
 
   <main>
     <div class="hero">
-      <div class="eyebrow">Working scratchpad · not a shipped product</div>
+      <div class="eyebrow">Working scratchpad · Not a shipped product</div>
       <h1>Marketing <span>ideas</span></h1>
       <p class="sub">
         Different hooks for the same thing. bMovies is the cheapest way to make a movie the world has ever seen — but "cheapest way to make a movie" isn't a campaign. These are. <b>Each one pulls a different lever:</b> the cheeky cut, the degen cut, the mogul cut. Pick one, steal from another, mash them together.
@@ -195,10 +179,10 @@
 
     <div class="grid">
 
-      <a class="idea boovies" href="/boovies.html">
+      <a class="idea" href="/boovies.html">
         <div class="tag">Campaign 01 · The cheeky cut</div>
         <h2>b<span>OO</span>vies</h2>
-        <p>The adults-only spin-off. Same engine, same agents, same 99% ownership — but the poster has tits on it. A pink-neon parody of the main brand that lets us market to a massive, underserved audience <b>without polluting the family logo</b>.</p>
+        <p>The adults-only spin-off. Same engine, same agents, same 99% ownership — but the poster has tits on it. A pastel parody of the main brand that lets us market to a massive, underserved audience <b>without polluting the family logo</b>.</p>
         <p>Six founding parody titles already teed up: Boobfather, Boob-ning, Jurassic Jugs, Raiders of the Lost Rack, Pulp Friction, Boob Wars. Each one its own standalone landing page.</p>
         <div class="meta">
           <span>/boovies.html</span>
@@ -206,11 +190,11 @@
         </div>
       </a>
 
-      <a class="idea pump" href="/pump-fun-for-movies">
+      <a class="idea" href="/pump-fun-for-movies">
         <div class="tag">Campaign 02 · The degen cut</div>
         <h2>Pump.fun <span>for movies</span></h2>
         <p>Position bMovies as the film-industry answer to Pump.fun. A $0.99 pitch is a <b>launch</b>. The audience "pumps" the winners up the tier ladder — trailer, short, feature — buying royalty shares along the way. Graduation replaces greenlighting.</p>
-        <p>Ships with a silly-serious brochure — <b>PUMPONOMICS</b> — modelled on our Ponzinomics guide but cranked up: rocket emojis, graduation ceremonies, and the pump-and-screen cycle, in A4 PDF glory.</p>
+        <p>Ships with a silly-serious brochure — <b>PUMPONOMICS</b> — modelled on our Ponzinomics guide but cranked up: graduation ceremonies, the pump-and-screen cycle, the full ladder math, in A4 PDF glory.</p>
         <div class="meta">
           <span>/pump-fun-for-movies</span>
           <span class="go">Open →</span>
@@ -225,7 +209,7 @@
         These aren't separate businesses. They're <b>narrative skins</b> over the same engine: a studio marketplace where any user can pitch a film for $0.99, ride a 28-step agent pipeline, and keep 99% of the royalty shares. The page the audience lands on is the only thing that changes. Same backend, same BSV rail, same artifacts — different story told on the way in.
       </p>
       <p style="margin-top:0.8rem;">
-        Add ideas by dropping another HTML page in <code style="color:#888;font-family:'JetBrains Mono',monospace;">public/</code> and adding a tile above. Keep the tile copy short, link to the landing page, and let the landing page do the selling.
+        Add ideas by dropping another HTML page in <code>public/</code> and a tile above. Keep the tile copy short, link to the landing page, and let the landing page do the selling.
       </p>
     </div>
 
