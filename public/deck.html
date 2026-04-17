@@ -293,7 +293,23 @@
       document.documentElement.classList.add('embedded');
     }
   </script>
-  <style>.embedded .site-header, .embedded .site-footer, .embedded header.site-header { display: none !important; } .embedded main, .embedded .deck-wrap { padding-top: 1rem !important; }</style>
+  <style>
+    .embedded .site-header,
+    .embedded .site-footer,
+    .embedded header.site-header,
+    /* Also hide the deck's own top action bar when rendered inside an
+       iframe — its Home / Offer detail / Watch links otherwise try to
+       navigate the iframe to a URL that has X-Frame-Options: DENY, and
+       the iframe drops to chrome-error. The parent /account page
+       already carries navigation to those destinations. */
+    .embedded header.screen-bar {
+      display: none !important;
+    }
+    .embedded main,
+    .embedded .deck-wrap {
+      padding-top: 1rem !important;
+    }
+  </style>
   <header class="screen-bar screen-only">
     <a href="index.html" class="logo">bMovies</a>
     <div class="actions">

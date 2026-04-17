@@ -43,6 +43,15 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
         ],
       },
+      {
+        // Lets the /account deck tab navigate an embedded iframe to
+        // the offer details without dropping to chrome-error. The
+        // /account shell wraps it in its own navigation anyway.
+        source: '/offer.html',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
     ];
   },
 };
