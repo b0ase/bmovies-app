@@ -199,7 +199,12 @@ export function AccountToolbar() {
 
   const handleProjectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value
-    if (!id) return
+    // Empty value = the "All projects" option at the top — navigate
+    // up to the Studio view at /account, which lists every project.
+    if (!id) {
+      navigateTo('/account')
+      return
+    }
     // Stay at current tab/tool when switching projects
     if (toolParam) {
       navigateTo(`/account?project=${id}&tool=${toolParam}`)
@@ -413,7 +418,10 @@ function ProjectSelector({
         <option value="">No projects</option>
       ) : (
         <>
-          <option value="">Select project</option>
+          {/* Empty value bounces the selector to /account (studio view
+              listing all projects). Kept at the top so it reads as a
+              "home" option rather than a placeholder. */}
+          <option value="">All projects</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.title} (${p.ticker})
