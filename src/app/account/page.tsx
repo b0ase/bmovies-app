@@ -6575,10 +6575,26 @@ function MovieEditorView({
     let cancelled = false
     async function load() {
       setLoading(true)
+      // Walk descendants — a pitch-keyed project may have a trailer
+      // child whose cuts live on the trailer's offer_id, not the
+      // pitch's. The editor should list every tier's clips.
+      const lineageIds: string[] = [projectId]
+      let cursor: string = projectId
+      for (let i = 0; i < 3; i++) {
+        const { data }: { data: { id: string } | null } = await bmovies
+          .from('bct_offers')
+          .select('id')
+          .eq('parent_offer_id', cursor)
+          .limit(1)
+          .maybeSingle()
+        if (!data) break
+        lineageIds.push(data.id)
+        cursor = data.id
+      }
       const { data } = await bmovies
         .from('bct_artifacts')
         .select('id, kind, url, step_id, role')
-        .eq('offer_id', projectId)
+        .in('offer_id', lineageIds)
         .eq('kind', 'video')
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
@@ -7971,17 +7987,26 @@ function ScoreComposerView({ projectId, projectTitle }: { projectId: string; pro
 
 type PreviewClip = { id: number; url: string; step_id: string | null; role: string | null }
 
+interface TitleCard { t: number; text: string; duration?: number }
+
 function PreviewView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [tier, setTier] = useState<string>('pitch')
   const [clips, setClips] = useState<PreviewClip[]>([])
   const [frames, setFrames] = useState<string[]>([])        // image URLs for slideshow fallback
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
+  const [voUrl, setVoUrl] = useState<string | null>(null)   // voiceover narration audio
+  const [musicUrl, setMusicUrl] = useState<string | null>(null)  // music bed
+  const [titleCards, setTitleCards] = useState<TitleCard[]>([])  // {t, text, duration} timeline
+  const [currentTitle, setCurrentTitle] = useState<string | null>(null)
   const [activeIdx, setActiveIdx] = useState(0)
   const [slideIdx, setSlideIdx] = useState(0)
   const [loading, setLoading] = useState(true)
   const [autoplayErr, setAutoplayErr] = useState(false)
   const [buffering, setBuffering] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const voRef = useRef<HTMLAudioElement | null>(null)
+  const musicRef = useRef<HTMLAudioElement | null>(null)
+  const elapsedRef = useRef(0)  // seconds into the composite playback
   // All clips render as stacked <video> elements. Swapping which one
   // is visible (instead of tearing down + rebuilding the element via
   // React's `key`) means the next clip stays pre-buffered and there's
@@ -8021,10 +8046,12 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
         if (rootOffer?.tier) leafTier = rootOffer.tier
       }
 
+      // Preview plays the layered deliverable — clips + VO + music +
+      // title overlays — so we load every kind, not just video/image.
       const artsP = bmovies.from('bct_artifacts')
         .select('id, kind, url, step_id, role, created_at, offer_id')
         .in('offer_id', lineageIds)
-        .in('kind', ['video', 'image'])
+        .in('kind', ['video', 'image', 'audio', 'text'])
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
       const artsRes = await artsP
@@ -8034,6 +8061,8 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
 
       const videos = arts.filter((a) => a.kind === 'video')
       const images = arts.filter((a) => a.kind === 'image')
+      const audios = arts.filter((a) => a.kind === 'audio')
+      const texts = arts.filter((a) => a.kind === 'text')
 
       const dedupe = <T extends { url: string }>(xs: T[]) =>
         Array.from(new Map(xs.map((x) => [x.url, x])).values())
@@ -8086,10 +8115,54 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
         images.find((a) => (a.step_id || '') === 'storyboard.poster' || a.role === 'poster')
           ?.url || null
 
+      // ── Post-production layers — VO, music, titles ─────────────
+      // Post-production produces:
+      //   vo.trailer_narration   audio · ElevenLabs VO
+      //   composer.trailer_score audio · MusicGen bed
+      //   editor.trailer_titles  text  · JSON title-card timeline
+      //     [{t:0, text:"In a world..."}, {t:8, text:"One man..."}, ...]
+      // We load and layer them during playback so the preview delivers
+      // the full trailer experience, not just raw clips.
+      const vo = audios.find((a) => (a.step_id || '').includes('vo.'))?.url || null
+      const music = audios.find((a) => (a.step_id || '').includes('composer.'))?.url || null
+
+      let cards: TitleCard[] = []
+      const titlesText = texts.find((a) => (a.step_id || '') === 'editor.trailer_titles')
+      if (titlesText?.url) {
+        try {
+          // Artifacts of kind=text may be data-urls or remote URLs.
+          let raw: string
+          if (titlesText.url.startsWith('data:')) {
+            const comma = titlesText.url.indexOf(',')
+            const head = titlesText.url.slice(5, comma)
+            const body = titlesText.url.slice(comma + 1)
+            raw = head.includes(';base64') ? atob(body) : decodeURIComponent(body)
+          } else {
+            raw = await fetch(titlesText.url).then((r) => r.text()).catch(() => '')
+          }
+          const parsed = JSON.parse(raw.replace(/^```json\n?|```$/g, '').trim())
+          if (Array.isArray(parsed)) {
+            cards = parsed
+              .map((c: any) => ({
+                t: Number(c.t ?? c.at ?? 0),
+                text: String(c.text ?? c.card ?? ''),
+                duration: c.duration ? Number(c.duration) : undefined,
+              }))
+              .filter((c) => c.text.length > 0)
+              .sort((a, b) => a.t - b.t)
+          }
+        } catch (err) {
+          console.warn('[preview] title-cards parse failed:', err)
+        }
+      }
+
       setTier(t)
       setClips(picked)
       setFrames(frameUrls)
       setPosterUrl(poster)
+      setVoUrl(vo)
+      setMusicUrl(music)
+      setTitleCards(cards)
       setActiveIdx(0)
       setSlideIdx(0)
       setLoading(false)
@@ -8109,8 +8182,71 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
   }, [clips.length, frames.length])
 
   function onClipEnd() {
-    if (activeIdx < clips.length - 1) setActiveIdx((i) => i + 1)
+    // Add finished clip's duration to elapsed before moving to the next.
+    const finished = videoRefs.current[activeIdx]
+    if (finished) elapsedRef.current += finished.duration || 8
+    if (activeIdx < clips.length - 1) {
+      setActiveIdx((i) => i + 1)
+    } else {
+      // End of reel — stop audio, reset elapsed.
+      try { voRef.current?.pause() } catch {}
+      try { musicRef.current?.pause() } catch {}
+      elapsedRef.current = 0
+      setCurrentTitle(null)
+    }
   }
+
+  // Drive title overlays + start audio tracks in sync with video playback.
+  useEffect(() => {
+    if (clips.length === 0) return
+    const video = videoRefs.current[activeIdx]
+    if (!video) return
+
+    const onPlay = () => {
+      // Start VO and music only on first clip; they span the whole reel.
+      if (activeIdx === 0) {
+        if (voRef.current) {
+          try { voRef.current.currentTime = 0; voRef.current.play().catch(() => {}) } catch {}
+        }
+        if (musicRef.current) {
+          try {
+            musicRef.current.currentTime = 0
+            musicRef.current.volume = 0.35  // duck music under VO
+            musicRef.current.play().catch(() => {})
+          } catch {}
+        }
+      }
+    }
+    const onPause = () => {
+      try { voRef.current?.pause() } catch {}
+      try { musicRef.current?.pause() } catch {}
+    }
+    const onTimeUpdate = () => {
+      const now = elapsedRef.current + (video.currentTime || 0)
+      // Find the most recent title card whose `t` <= now, applying
+      // duration if present. Empty gap between cards → no overlay.
+      let active: string | null = null
+      for (const card of titleCards) {
+        if (card.t <= now) {
+          const endT = card.duration ? card.t + card.duration : card.t + 4
+          if (now < endT) { active = card.text; break }
+          active = null
+        } else {
+          break
+        }
+      }
+      setCurrentTitle(active)
+    }
+
+    video.addEventListener('play', onPlay)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('timeupdate', onTimeUpdate)
+    return () => {
+      video.removeEventListener('play', onPlay)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('timeupdate', onTimeUpdate)
+    }
+  }, [activeIdx, clips.length, titleCards])
 
   // Drive playback imperatively when activeIdx changes. All clips
   // live in the DOM stacked; we just pause the outgoing one and
@@ -8230,6 +8366,31 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none z-20">
                 <div className="w-10 h-10 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
               </div>
+            )}
+            {/* Title-card overlay — text driven by the trailer_titles
+                JSON timeline. Sits above the video, below the
+                buffering spinner. Fades in/out as cards fire. */}
+            {currentTitle && (
+              <div className="absolute inset-x-0 bottom-[10%] z-20 pointer-events-none flex justify-center px-6">
+                <div
+                  className="text-white text-center font-black leading-tight uppercase tracking-wide"
+                  style={{
+                    fontFamily: 'var(--font-bebas)',
+                    fontSize: 'clamp(1.2rem, 3.5vw, 2.8rem)',
+                    textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)',
+                    maxWidth: '90%',
+                  }}
+                >
+                  {currentTitle}
+                </div>
+              </div>
+            )}
+            {/* Hidden audio tracks — VO on top, music bed under */}
+            {voUrl && (
+              <audio ref={voRef} src={voUrl} preload="auto" crossOrigin="anonymous" />
+            )}
+            {musicUrl && (
+              <audio ref={musicRef} src={musicUrl} preload="auto" crossOrigin="anonymous" />
             )}
           </div>
         ) : mode === 'slideshow' ? (
