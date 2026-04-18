@@ -154,10 +154,16 @@ export function AccountToolbar() {
           return
         }
 
+        // A trailer / short / feature is a facet of its root pitch,
+        // not its own project. Filter to roots (parent_offer_id=NULL)
+        // so the dropdown matches the workbench list. Without this,
+        // the user sees two "Ashes of the Border" entries — one for
+        // the pitch, one for the trailer.
         let q = bmovies
           .from('bct_offers')
           .select('id, title, token_ticker, tier, status')
           .is('archived_at', null)
+          .is('parent_offer_id', null)
           .order('created_at', { ascending: false })
 
         if (accountId && address) {
