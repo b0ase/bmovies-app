@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HyperFlix — bMovies, but for memecoins</title>
+  <meta name="description" content="HyperFlix is the memecoin-vertical sister of bMovies. Same engine, pink-purple skin, AI-generated viral video for token communities. Already partly built; awaiting the bMovies architecture port." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bmovies.online/hyperflix.html" />
+  <meta property="og:title" content="HyperFlix — bMovies, but for memecoins" />
+  <meta property="og:description" content="The memecoin-vertical sister of bMovies. Pink, purple, on-chain. Already started." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* HyperFlix brand palette — sourced from /Volumes/2026/Projects/hyperflix/css/styles.css
+       --primary    #ff3366  hot pink
+       --secondary  #6633ff  electric purple
+       --accent     #f7931a  bitcoin orange
+       --dark       #0f0e1a  ink-black
+       Used here to give the HyperFlix page a visually distinct skin from the bMovies red. */
+    :root {
+      --hf-pink:   #ff3366;
+      --hf-purple: #6633ff;
+      --hf-orange: #f7931a;
+      --hf-dark:   #0f0e1a;
+      --hf-darker: #0a0915;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--hf-darker);
+      color: #e8e8e8;
+      line-height: 1.6;
+    }
+    main { max-width: 1200px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+    .hero {
+      padding: 2rem 0 3rem;
+      border-bottom: 1px solid #1f1b30;
+      margin-bottom: 3rem;
+      background:
+        radial-gradient(ellipse at top left,  rgba(255, 51, 102, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at top right, rgba(102, 51, 255, 0.18) 0%, transparent 65%);
+      margin-left: -2rem;
+      margin-right: -2rem;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+    .eyebrow {
+      font-size: 0.65rem;
+      color: var(--hf-pink);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 9vw, 6.6rem);
+      color: #fff;
+      margin: 0.5rem 0 0.8rem;
+      letter-spacing: 0.02em;
+      line-height: 0.95;
+    }
+    h1 .hf {
+      background: linear-gradient(90deg, var(--hf-pink), var(--hf-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    h1 .orange { color: var(--hf-orange); }
+    .sub {
+      color: #b8b3c9;
+      max-width: 820px;
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+    .sub b { color: #fff; }
+    .sub a { color: var(--hf-pink); text-decoration: none; }
+    .sub a:hover { text-decoration: underline; }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.6rem;
+      padding: 0.85rem 1.4rem;
+      background: linear-gradient(90deg, var(--hf-pink), var(--hf-purple));
+      color: #fff;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border-radius: 0;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 0 rgba(102, 51, 255, 0.2);
+    }
+    .hero-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 0 rgba(102, 51, 255, 0.3);
+    }
+    .hero-secondary {
+      display: inline-block;
+      margin-top: 1.6rem;
+      margin-left: 0.6rem;
+      padding: 0.85rem 1.4rem;
+      border: 1px solid #2a2540;
+      color: #b8b3c9;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .hero-secondary:hover { border-color: var(--hf-pink); color: #fff; }
+
+    section { margin-top: 3.4rem; }
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    h2 .hf {
+      background: linear-gradient(90deg, var(--hf-pink), var(--hf-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .section-eyebrow {
+      font-size: 0.6rem;
+      color: var(--hf-pink);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    p { color: #9d97b1; max-width: 780px; line-height: 1.7; margin-bottom: 1rem; }
+    p b { color: #ddd; }
+    p a { color: var(--hf-pink); text-decoration: none; }
+    p a:hover { text-decoration: underline; }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--hf-orange);
+      font-size: 0.84em;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 800px) { .compare { grid-template-columns: 1fr; } }
+    .compare-card {
+      border: 1px solid #1f1b30;
+      background: rgba(15, 14, 26, 0.6);
+      padding: 1.4rem 1.6rem;
+    }
+    .compare-card.bm { border-color: rgba(229, 9, 20, 0.3); }
+    .compare-card.hf { border-color: rgba(255, 51, 102, 0.3); }
+    .compare-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.5rem;
+    }
+    .compare-card.bm h3 { color: #E50914; }
+    .compare-card.hf h3 { color: var(--hf-pink); }
+    .compare-card ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 0.6rem;
+    }
+    .compare-card li {
+      color: #b0aac5;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      padding: 0.3rem 0;
+      border-bottom: 1px dashed #1f1b30;
+    }
+    .compare-card li:last-child { border-bottom: 0; }
+    .compare-card li b { color: #fff; }
+
+    .stack {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.9rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 900px) { .stack { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 540px) { .stack { grid-template-columns: 1fr; } }
+    .stack-card {
+      border: 1px solid #1f1b30;
+      background: rgba(15, 14, 26, 0.6);
+      padding: 1rem 1.1rem;
+      position: relative;
+    }
+    .stack-card .n {
+      position: absolute;
+      top: 0.4rem;
+      right: 0.7rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      background: linear-gradient(90deg, var(--hf-pink), var(--hf-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      opacity: 0.5;
+    }
+    .stack-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.05rem;
+      color: #fff;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.3rem;
+    }
+    .stack-card p {
+      color: #9d97b1;
+      font-size: 0.74rem;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .stack-card .status {
+      display: inline-block;
+      margin-top: 0.6rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      padding: 0.15rem 0.45rem;
+      text-transform: uppercase;
+    }
+    .status.live    { color: #6bff8a; border: 1px solid rgba(107, 255, 138, 0.3); }
+    .status.partial { color: var(--hf-orange); border: 1px solid rgba(247, 147, 26, 0.3); }
+    .status.todo    { color: var(--hf-pink); border: 1px solid rgba(255, 51, 102, 0.3); }
+
+    .callout {
+      margin-top: 1.4rem;
+      padding: 1.2rem 1.5rem;
+      border: 1px solid rgba(102, 51, 255, 0.4);
+      background:
+        linear-gradient(135deg, rgba(255, 51, 102, 0.06), rgba(102, 51, 255, 0.08));
+      color: #d4ccea;
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+    .callout b { color: #fff; }
+    .callout .label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--hf-pink);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-links {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1f1b30;
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      font-size: 0.72rem;
+    }
+    .footer-links a {
+      color: #888097;
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .footer-links a:hover { color: var(--hf-pink); }
+  </style>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="hero">
+      <div class="eyebrow">Sister vertical · Memecoin-video market</div>
+      <h1><span class="hf">HYPER</span><span class="orange">FLIX</span></h1>
+      <p class="sub">
+        bMovies, rebranded for <b>memecoin culture</b>. Same eight-agent AI film pipeline, same $0.99 pitch, same 1B-supply royalty token, same on-chain rails — but every output is a viral memecoin video. Token DAOs commission canonical lore videos. Holders co-own the cap table. The royalty-share token doubles as a fan badge.
+      </p>
+      <p class="sub" style="margin-top:1rem;">
+        HyperFlix is the proof that we're not just theorising about white-label verticals. We started building it for memecoins <b>before</b> we built bMovies. The Next.js front end with HandCash + Solana wallet adapters is partly built (<code>/Volumes/2026/Projects/hyperflix</code>). The backlog now is to <b>port the bMovies architecture sideways</b> — production pipeline, Stripe webhook, token mint, cap table, royalty splits — and reskin in pink + purple.
+      </p>
+      <a href="https://hyperflix.com" target="_blank" rel="noopener" class="hero-cta">Visit hyperflix.com →</a>
+      <a href="/marketing-ideas.html" class="hero-secondary">Back to marketing ideas</a>
+    </div>
+
+    <section>
+      <div class="section-eyebrow">The thesis</div>
+      <h2>bMovies and HyperFlix are the <span class="hf">same engine</span></h2>
+      <p>
+        bMovies wraps the engine for Hollywood-style B-movies, mogul/speculation framing, audience of cinephiles and crypto-curious investors. HyperFlix wraps the same engine for memecoin culture — short, sharp, viral, in-jokey video built for token communities to fund and own.
+      </p>
+      <div class="compare">
+        <div class="compare-card bm">
+          <h3>bMovies</h3>
+          <ul>
+            <li><b>Audience:</b> film fans, crypto-curious investors, mogul-aspirationals</li>
+            <li><b>Output:</b> Hollywood-style B-movies (32s trailer → 5min short → 50min feature)</li>
+            <li><b>Brand:</b> Netflix-red, Bebas Neue, mogul/speculation framing</li>
+            <li><b>Token:</b> $bMovies platform share + per-film royalty tokens</li>
+            <li><b>Status:</b> shipping</li>
+          </ul>
+        </div>
+        <div class="compare-card hf">
+          <h3>HyperFlix</h3>
+          <ul>
+            <li><b>Audience:</b> memecoin DAOs, token communities, crypto-culture publishers</li>
+            <li><b>Output:</b> short-form viral video for token lore, launches, drama, victory laps</li>
+            <li><b>Brand:</b> hot-pink + electric-purple, neon, degen energy</li>
+            <li><b>Token:</b> per-video royalty tokens, doubles as a fan badge</li>
+            <li><b>Status:</b> partly built — Next.js shell + wallet adapters; engine port pending</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-eyebrow">Why memecoins want this</div>
+      <h2>The unmet need: <span class="hf">canonical lore</span></h2>
+      <p>
+        Every memecoin community has a shared in-joke universe — the founding meme, the rivalry, the rugpull conspiracy theories, the holder hall-of-fame, the moonshot mythology. None of it is <b>monetisable</b> beyond Twitter likes. HyperFlix turns it into a primary-issuance market.
+      </p>
+      <p>
+        A token DAO commissions a video ("the official $PEPE origin story", "the great $WIF rugpull dramatisation", "$BONK's first meme through to first $1B"). Holders fund the production by buying royalty shares in the resulting video token. The video lives on-chain, the cap table does too, and revenue (ad placements, paid views, sponsorships, secondary sales) flows back to the holder set pro-rata — same mechanics as bMovies' film royalty engine.
+      </p>
+      <div class="callout">
+        <span class="label">Why this works</span>
+        Memecoin holders already understand <b>"viral content as collectible"</b> — they buy NFT pfps, follow project-only Twitter accounts, support meme creators directly. The piece they're missing is a <b>primary-issuance market for memecoin films</b>. HyperFlix is that market, with the bMovies cap-table mechanics doing the heavy lifting underneath.
+      </div>
+    </section>
+
+    <section>
+      <div class="section-eyebrow">What gets reused</div>
+      <h2>Port the engine. <span class="hf">Reskin</span> the wrapper.</h2>
+      <p>
+        Every layer below is shared between bMovies and HyperFlix. Building HyperFlix isn't building a new platform — it's a fork of bMovies' <code>/public</code> + a tenant config row in Supabase. The pink/purple skin sits on top of the same agent pipeline, the same payment rails, the same on-chain primitives.
+      </p>
+      <div class="stack">
+        <div class="stack-card">
+          <div class="n">01</div>
+          <h3>Pitch</h3>
+          <p>$0.99 commission via Stripe (or via HandCash for the BSV-native crowd). Same /api/refine + /api/checkout flow.</p>
+          <span class="status live">Live on bMovies</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">02</div>
+          <h3>Production</h3>
+          <p>Eight AI agents. Memecoin-themed personas as a config swap (the writer is "Dogen Allegri", the director is "Wif Coppola").</p>
+          <span class="status live">Live on bMovies</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">03</div>
+          <h3>Token mint</h3>
+          <p>BSV-21 royalty token per video, 99% to commissioner. Same mint contract, same supply, same cascade rules.</p>
+          <span class="status live">Live on bMovies</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">04</div>
+          <h3>Cap table</h3>
+          <p>Bonding-curve fund page with KYC at list-shares, x402 settlements per agent step. Identical backend.</p>
+          <span class="status live">Live on bMovies</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">05</div>
+          <h3>Wallet connect</h3>
+          <p>HandCash + Solana adapters already wired in the HyperFlix Next.js shell. Phantom + MetaMask hooks present.</p>
+          <span class="status partial">Partial · HyperFlix</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">06</div>
+          <h3>Production pipeline</h3>
+          <p>The eight-agent worker is bMovies-side today. Needs to be tenant-aware so HyperFlix commissions route through the same workers with memecoin prompt-tuning.</p>
+          <span class="status todo">Port</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">07</div>
+          <h3>Storefront</h3>
+          <p>HyperFlix.com homepage + dashboard exists in skeleton. Pitch / Fund / Watch surfaces need to be built mirroring bMovies' patterns.</p>
+          <span class="status todo">Port</span>
+        </div>
+        <div class="stack-card">
+          <div class="n">08</div>
+          <h3>Token-DAO inbox</h3>
+          <p>HyperFlix-specific: a way for a token contract / multisig to commission collectively (Snapshot vote → Stripe / wallet pay). Doesn't exist on bMovies yet.</p>
+          <span class="status todo">New</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-eyebrow">Discipline</div>
+      <h2>Finish bMovies. Then <span class="hf">port sideways</span>.</h2>
+      <p>
+        The temptation with white-label verticals is to start three half-finished platforms and ship none. The discipline is simple: <b>finish bMovies first</b>, get the engine to a polished, paid-for, KYC-clean, on-chain-settled state, then fork the front end for the next vertical (CATFLIX, HyperFlix, bOOvies, faith, kids, regional).
+      </p>
+      <p>
+        HyperFlix's existing Next.js shell doesn't go to waste — it becomes the visual reference for what a tenant skin looks like. The wallet adapter work also doesn't go to waste — once the bMovies engine accepts BSV / Solana / EVM payment rails (Phase 3), HyperFlix can route to the user's preferred chain natively.
+      </p>
+      <div class="callout">
+        <span class="label">Roadmap order</span>
+        <b>1.</b> Finish bMovies post-submission UX sweep (in flight). &nbsp;
+        <b>2.</b> Build out the multi-tenant config layer in Supabase (one studio config = one vertical). &nbsp;
+        <b>3.</b> Port the production pipeline to be tenant-aware. &nbsp;
+        <b>4.</b> Reskin /public as <code>hyperflix.com</code> with the pink + purple palette and memecoin agent personas. &nbsp;
+        <b>5.</b> Wire the token-DAO commission inbox (Snapshot integration). &nbsp;
+        <b>6.</b> Repeat for CATFLIX, faith, kids, regional, brand-sponsored.
+      </div>
+    </section>
+
+    <div class="footer-links">
+      <a href="/marketing-ideas.html">← Marketing ideas index</a>
+      <a href="/catflix.html">CATFLIX (sister vertical)</a>
+      <a href="/boovies.html">bOOvies</a>
+      <a href="/about.html">How bMovies works</a>
+      <a href="https://hyperflix.com" target="_blank" rel="noopener">hyperflix.com ↗</a>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="footer-inner"><div class="footer-copy">© 2026 bMovies · The Bitcoin Corporation Ltd</div></div></footer>
+  <script type="module" src="js/nav-session.js"></script>
+</body>
+</html>
