@@ -175,6 +175,13 @@
       gap: 0.6rem; margin-top: 0.5rem;
       max-width: 720px;
     }
+    /* Single-button variant — one pill, centred under the tier row. */
+    .fund-row.fund-row-single {
+      grid-template-columns: 1fr;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
+    }
     .fund-btn {
       padding: 0.7rem; font-family: inherit;
       background: transparent; color: #ccc;
@@ -987,33 +994,25 @@
       }).join('');
 
       // Row 2 — Secondary action: BUY royalty shares in THIS film via
-      // BSV wallet. Different path entirely from the Make button
-      // above. Every tier slot leads to the same cap table (you're
-      // buying shares in the current film regardless of which tier
-      // level is being raised toward) but the ?target=<tier> hint
-      // tells offer.html which raise target to pre-select on the
-      // slider. Button labels the film's own token ticker so the
-      // user sees exactly what they're buying.
+      // BSV wallet. Every unraised tier used to get its own button,
+      // but they all linked to the same cap table with only a
+      // ?target=<tier> hint for the offer-page slider default — so
+      // users saw 2-3 near-identical buttons. Collapsed to ONE
+      // button. The slider on offer.html still defaults sensibly
+      // based on what's been raised so far.
       const ticker = offer.token_ticker || 'shares';
-      const fundRowButtons = TIER_ORDER.map(t => {
-        const meta = TIER_META[t];
-        const isCurrent = t === currentTier;
-        const derivative = byTier[t];
-        if (isCurrent || derivative) {
-          return `<div class="fund-btn placeholder" aria-hidden="true"></div>`;
-        }
-        const href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
-        return `
-          <a class="fund-btn" href="${href}" title="Buy $${esc(ticker)} royalty shares — raise target: ${esc(meta.label.toLowerCase())}">
-            <span class="fund-buy">Buy $${esc(ticker)}</span>
-            <span class="fund-target">fund the ${esc(meta.label.toLowerCase())}</span>
-          </a>
-        `;
-      }).join('');
+      const nextUnraised = TIER_ORDER.find(t => t !== currentTier && !byTier[t]);
+      const fundRow = nextUnraised ? `
+        <a class="fund-btn" href="offer.html?id=${encodeURIComponent(offer.id)}"
+           title="Buy $${esc(ticker)} royalty shares in this film">
+          <span class="fund-buy">Buy $${esc(ticker)}</span>
+          <span class="fund-target">royalty shares in this film</span>
+        </a>
+      ` : '';
 
       return `
         <div class="tier-row">${tierRowButtons}</div>
-        <div class="fund-row">${fundRowButtons}</div>
+        ${fundRow ? `<div class="fund-row fund-row-single">${fundRow}</div>` : ''}
       `;
     }
 
