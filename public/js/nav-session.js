@@ -81,8 +81,8 @@ const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 // nested pages like /legal/*.html.
 const NAV_LINKS = [
   { href: '/commission.html',  label: 'Pitch' },
-  { href: '/productions.html', label: 'Produce' },
   { href: '/exchange.html',    label: 'Raise' },
+  { href: '/productions.html', label: 'Produce' },
   { href: '/market.html',      label: 'Market' },
   { href: '/release.html',     label: 'Release' },
   // About → footer. Judge → footer. See FOOTER_LINKS below.
