@@ -448,3 +448,34 @@ land (Apr 23). Once the review window closes these are fair game.
   (`scripts/feature-worker.ts`). Logged here because it's a
   behavioural change, not a bug fix, and fits the same review-window
   hold as the other gaps above.
+
+- **`<pending>`** — `nav+studios: Market → Studio; studios.html opens with the 'start studio → team raises' narrative`
+
+  Nav swap per reporter's direction: *"when you start a studio, you bring your
+  team in, and then your team can raise. It's not a new feature, it's just
+  MARKETING and STUDIO working as they should."* `/market.html` still exists
+  as a deep-link page (moved to `FOOTER_LINKS` as "Market (Phase 2)" so the
+  Phase-2 disclosure stays discoverable), but the primary-nav slot it held
+  now points at `/studios.html` — the studios directory users were already
+  reaching via the footer.
+
+  Nav row: `About · Pitch · Fund · Produce · Studio · Release`.
+
+  `/studios.html` page-intro rewritten from *"Choose your team"* (too
+  passive — reads like you're picking an existing studio for your film) to
+  *"Start a studio. Bring your team. Raise on your films."* (active, maps
+  the three things a studio owner actually does). Explicit CTA to the
+  $0.99 account-dashboard studio-create flow. Second paragraph frames the
+  six founding studios as the seed roster for anyone who doesn't want to
+  start their own. Both paragraphs link out to the places where the
+  declared actions actually happen (`/account` for create, `/offer.html`
+  for the fund flow).
+
+  `ACTIVE_ALIASES.studio.html → studios.html` added so per-studio detail
+  pages highlight the Studio nav item.
+
+  **Not in this commit:** the bonding-curve fund UI on per-studio
+  `/studio.html` pages. That's the next iteration — either a thin
+  studio-specific offer view or an `/offer.html` extension that accepts
+  a studio id. Listed in "Known scope gaps" as a follow-up rather than
+  shipped in this pass.

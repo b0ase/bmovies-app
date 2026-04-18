@@ -88,7 +88,14 @@ const NAV_LINKS = [
   { href: '/commission.html',  label: 'Pitch' },
   { href: '/exchange.html',    label: 'Fund' },
   { href: '/productions.html', label: 'Produce' },
-  { href: '/market.html',      label: 'Market' },
+  // Studio replaces Market (2026-04-18). The argument: forming a studio
+  // is how a commissioner brings their crew in, and those agents are
+  // the ones that will raise on the upstream films. Pointing Studio at
+  // /studios.html surfaces the studio directory + the "start your own
+  // studio" CTA that already lives on /account. /market.html is kept
+  // as a deep-link so the earlier 'Market' narrative still reads, but
+  // it no longer needs primary nav real estate before the feature ships.
+  { href: '/studios.html',     label: 'Studio' },
   { href: '/release.html',     label: 'Release' },
   // Judge → footer. See FOOTER_LINKS below.
   // "My studio" used to live here as an external link to app.bmovies.online
@@ -107,8 +114,10 @@ const NAV_LINKS = [
 // stay a clean five-verb film-lifecycle journey.
 const FOOTER_LINKS = [
   // About moved to the primary nav 2026-04-18; no longer duplicated here.
+  // Studios moved to the primary nav 2026-04-18 (Market → Studio); removed
+  // from the footer to avoid two Studios entries on every page.
+  { href: '/market.html',          label: 'Market (Phase 2)' },
   { href: '/watch.html',           label: 'Watch catalog' },
-  { href: '/studios.html',         label: 'Studios' },
   { href: '/agents.html',          label: 'Agents' },
   { href: '/jobboard.html',        label: 'Job board' },
   { href: '/leaderboard.html',     label: 'Leaderboard' },
@@ -143,8 +152,10 @@ const ACTIVE_ALIASES = {
   'trade.html':            'exchange.html',
   // Pitch: the legacy pitch.html still aliases to Pitch (commission.html).
   'pitch.html':            'commission.html',
-  // Pages that live in the footer (About, Studios, Agents, Jobboard,
-  // x402, Treasury, Invest, Judges, BSVA submission, Leaderboard) are
+  // Studio: per-studio detail page highlights the Studio nav item.
+  'studio.html':           'studios.html',
+  // Pages that live in the footer (Agents, Jobboard, x402, Treasury,
+  // Invest, Judges, BSVA submission, Leaderboard, Market) are
   // intentionally unaliased — the primary nav has no item to highlight
   // when you're on a footer page, which is honest about where you are.
 };
