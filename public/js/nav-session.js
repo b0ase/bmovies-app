@@ -94,7 +94,7 @@ const NAV_LINKS = [
   { href: '/studios.html',     label: 'Studio' },
   { href: '/exchange.html',    label: 'Fund' },
   { href: '/productions.html', label: 'Produce' },
-  { href: '/release.html',     label: 'Release' },
+  { href: '/release.html',     label: 'Publish' },
   // Judge → footer. See FOOTER_LINKS below.
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
