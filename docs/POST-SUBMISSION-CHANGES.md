@@ -115,3 +115,38 @@ rolls over.
 
   **`judges.html` count stripped.** The tour card `The 73 agents` →
   `The agent roster`. Same reason.
+
+- **`<pending>`** — `fix(post-submission): nav ordering — Produce between Pitch and Fund, commission.html H1 rename`
+
+  Two related changes landing together so they make sense as one message:
+
+  **Nav re-ordered: `About · Pitch · Produce · Fund · Judge`.**
+  Previous ordering had Watch last (4th position, right of Fund).
+  Reordered and relabelled to narrate the primary-to-secondary market
+  journey left-to-right:
+
+  1. **Pitch** — primary market. Pay, a film gets made for you, you
+     receive 99% of the BSV-21 royalty token as the byproduct. Consumer
+     action.
+  2. **Produce** — the live production floor. /productions.html shows
+     films currently being produced by the agent swarm — you see what
+     happens after someone pitches. Monitoring / spectator page.
+  3. **Fund** — secondary market. Buy shares in a film someone ELSE is
+     making or has made. Explicit investor action via /exchange.html.
+
+  Pitch and Fund were previously adjacent and both implied "paying for
+  something"; splitting them with Produce in the middle gives each a
+  clear commercial frame and makes the distinction between primary
+  commission and secondary investment visible to anyone scanning the nav.
+
+  **`/commission.html` H1 rename:** `Commission your film. Start at $0.99.`
+  → `Pitch your movie for $0.99.` Matches the new nav label so a visitor
+  clicking **Pitch** lands on a page whose headline uses the same verb.
+  Page title also updated to `bMovies — Pitch your movie for $0.99`.
+  Using **movie** (not **film**) to stay consistent with the brand
+  wordmark (bMOVIES) and the "Pump dot fun for movies" site hero.
+
+  **No new features.** This is a labelling / IA change only. Every page
+  still does what it did. The MARKET nav item the user proposed (for
+  film promotion post-production) is NOT being built — that's explicit
+  new scope and belongs to post-hackathon work per the guardrails.

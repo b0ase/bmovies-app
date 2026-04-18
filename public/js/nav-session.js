@@ -47,22 +47,31 @@
 
 const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 
-// Five items, ordered as a user journey:
+// Five items, ordered as a user journey — primary market first, then
+// the live production floor, then the secondary market:
 //
-//   About  → what is this?
-//   Pitch  → commission a film ($0.99+)
-//   Fund   → invest in the cap table (BSV or fiat)
-//   Watch  → see what's produced / in production
-//   Judge  → BSVA-judge shortcut with the free-trailer coupon
+//   About    → what is this?
+//   Pitch    → pay to have a film made ($0.99+). PRIMARY MARKET.
+//   Produce  → the live feed of films currently being produced.
+//              Monitoring/spectator page — users "see what's in production".
+//   Fund     → buy shares in someone else's film. SECONDARY MARKET.
+//   Judge    → BSVA-judge shortcut with the free-trailer coupon
 //
-// Naming: action verbs where the page is a thing-you-do (Pitch, Fund, Watch,
-// Judge), nouns where the page is informational (About). "Commission" was
-// accurate but sounded expensive; "Pitch" meets users at the $0.99 entry
-// tier without hiding the upsell. "Exchange" was jargon; "Fund" maps
-// directly to buying shares. "Live" / "Watch" both pointed at catalogs of
-// completed work — consolidated into a single Watch → /productions.html
-// (productions.html is the better-presented of the two; /watch.html still
-// reachable by deep link and aliased below).
+// Why Pitch and Fund are separate even though both involve paying:
+// They're genuinely different commercial actions. Pitch is a consumer
+// action (I pay, a film gets made for me, I happen to receive 99% of the
+// BSV-21 royalty token as the byproduct). Fund is an investor action
+// (I buy shares in a film someone ELSE is making — explicit cap-table
+// participation). The earlier "Commission" label conflated these; split
+// them so each nav item has one clear action.
+//
+// Why Produce sits between Pitch and Fund: narrative ordering. You pitch
+// an idea → it gets produced (you watch it happen live) → you can fund
+// others' productions in the same stream. The journey reads left to right.
+//
+// /productions.html is the canonical live-production feed. /watch.html
+// (completed-films catalog) is aliased to Produce below so visitors with
+// bookmarks still see the nav highlight correctly.
 //
 // Studios and Agents are deliberately NOT in the nav:
 //   - /studios.html is a directory, not a user flow (we haven't established
@@ -82,8 +91,8 @@ const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 const NAV_LINKS = [
   { href: '/about.html',       label: 'About' },
   { href: '/commission.html',  label: 'Pitch' },
+  { href: '/productions.html', label: 'Produce' },
   { href: '/exchange.html',    label: 'Fund' },
-  { href: '/productions.html', label: 'Watch' },
   { href: '/judges.html',      label: 'Judge' },
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
@@ -99,8 +108,10 @@ const NAV_LINKS = [
 // live outside the consumer nav (agents, studios, jobboard, x402, etc.)
 // intentionally have NO active nav item so nothing misleads.
 const ACTIVE_ALIASES = {
-  // Watch: productions.html is the canonical "see what's running / ran";
-  // /watch.html, /film.html, /marketplace.html, /production.html all point here.
+  // Produce: productions.html is the canonical live-production feed;
+  // /watch.html (completed catalog), /film.html (individual film page),
+  // /marketplace.html (legacy), /production.html (single-production view),
+  // and /deck.html (printable investor deck) all highlight Produce.
   'watch.html':            'productions.html',
   'film.html':             'productions.html',
   'marketplace.html':      'productions.html',
