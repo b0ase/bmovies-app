@@ -112,7 +112,7 @@ STYLE
 async function verifyUser(
   authHeader: string | undefined,
   supabaseUrl: string,
-  anonKey: string,
+  serviceKey: string,
 ): Promise<{ ok: true; userId: string; email: string | null } | { ok: false; status: number; error: string }> {
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
     return { ok: false, status: 401, error: 'Sign in to chat with the writers room.' };
@@ -120,23 +120,24 @@ async function verifyUser(
   const token = authHeader.slice(7).trim();
   if (!token) return { ok: false, status: 401, error: 'Missing access token.' };
 
-  // Supabase REST /auth/v1/user with the Bearer token returns the user
-  // record if the JWT is valid. We skip the full supabase-js client to
-  // keep the cold-start footprint small.
+  // Use the service-role client's auth.getUser(token) to validate the
+  // JWT. Earlier revisions used Supabase REST /auth/v1/user + the anon
+  // key, which required a SUPABASE_ANON_KEY env var that isn't set on
+  // the current Vercel project — the endpoint returned
+  // 'Supabase auth not configured' for authenticated users. Switching
+  // to service-role + getUser(jwt) reuses the same env vars every
+  // other /api/* endpoint in this project uses, so commission-chat
+  // no longer needs a dedicated anon key.
   try {
-    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: anonKey,
-      },
-      signal: AbortSignal.timeout(10_000),
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
     });
-    if (!res.ok) {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user?.id) {
       return { ok: false, status: 401, error: 'Session expired — please sign in again.' };
     }
-    const user = await res.json() as { id?: string; email?: string | null };
-    if (!user?.id) return { ok: false, status: 401, error: 'Invalid session.' };
-    return { ok: true, userId: user.id, email: user.email ?? null };
+    return { ok: true, userId: data.user.id, email: data.user.email ?? null };
   } catch {
     return { ok: false, status: 503, error: 'Auth service unreachable — try again in a moment.' };
   }
@@ -159,11 +160,11 @@ export default async function handler(
 
   const xaiKey = process.env.XAI_API_KEY;
   const supabaseUrl = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const model = process.env.COMMISSION_CHAT_MODEL || 'grok-3-mini';
 
   if (!xaiKey) { res.status(500).json({ error: 'XAI_API_KEY not set' }); return; }
-  if (!supabaseUrl || !anonKey) {
+  if (!supabaseUrl || !serviceKey) {
     res.status(500).json({ error: 'Supabase auth not configured' });
     return;
   }
@@ -213,7 +214,7 @@ export default async function handler(
   const auth = await verifyUser(
     req.headers.authorization as string | undefined ?? req.headers.Authorization as string | undefined,
     supabaseUrl,
-    anonKey,
+    serviceKey,
   );
   if (!auth.ok) {
     res.status(auth.status).json({ error: auth.error });

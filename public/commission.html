@@ -1219,15 +1219,42 @@
       ideaEl.addEventListener('input', disarm, { passive: true });
     }
 
+    // Sample idea is a real Grok call now — /api/commission/sample-idea
+    // returns { title, ticker, logline, synopsis }. We paste the
+    // synopsis into the canvas (the primary commissioner input), and
+    // stash the rest as a hint for the downstream refine-and-commit
+    // step. If the API hiccups we fall back to the placeholder so the
+    // button still does something visible.
     armOrRun(
       sampleBtn,
       'Sample idea',
-      'Tap again to replace',
-      () => {
-        ideaEl.value = ideaEl.placeholder.replace(/\n{2,}/g, '\n\n');
-        updateCounts();
-        scheduleSave();
-        ideaEl.focus();
+      'Tap again for a fresh one',
+      async () => {
+        const originalText = sampleBtn.textContent;
+        sampleBtn.textContent = 'Thinking…';
+        sampleBtn.disabled = true;
+        try {
+          const res = await fetch('/api/commission/sample-idea', { method: 'POST' });
+          if (!res.ok) throw new Error(`sample-idea ${res.status}`);
+          const data = await res.json();
+          const body = data.synopsis || data.logline || '';
+          if (!body) throw new Error('empty sample');
+          ideaEl.value = body;
+          window.__sampleIdeaMeta = {
+            title:   data.title   || '',
+            ticker:  data.ticker  || '',
+            logline: data.logline || '',
+          };
+        } catch (err) {
+          console.warn('[commission] sample-idea failed, using placeholder:', err);
+          ideaEl.value = ideaEl.placeholder.replace(/\n{2,}/g, '\n\n');
+        } finally {
+          sampleBtn.textContent = originalText;
+          sampleBtn.disabled = false;
+          updateCounts();
+          scheduleSave();
+          ideaEl.focus();
+        }
       },
     );
 
