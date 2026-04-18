@@ -13,10 +13,11 @@
  * default one on sign-up and charging $0.99 only for the AI-generated
  * custom upgrade (logo, bio, 8 specialist agents, unique name).
  *
- * Default studio shape:
+ * Default studio shape (deliberately minimal — no token, no treasury):
  *   name             : "{email-prefix}'s studio" or "Anonymous studio"
- *   token_ticker     : deterministic 5-char derived from name, unique
- *   treasury_address : fresh BSV key (same as the paid flow)
+ *   token_ticker     : NULL — a token is a security; issuance gates behind
+ *                      the $0.99 upgrade + KYC flow. See /api/studio/complete.
+ *   treasury_address : NULL — generated alongside the token at upgrade.
  *   logo_url         : null (UI renders a first-initial placeholder)
  *   bio              : null
  *   aesthetic        : null
@@ -40,10 +41,6 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 
-// Polyfill webcrypto for @bsv/sdk in Node.js runtimes
-import { webcrypto } from 'node:crypto';
-if (!(globalThis as any).crypto) (globalThis as any).crypto = webcrypto;
-
 interface VercelRequest {
   method?: string;
   body?: unknown;
@@ -60,36 +57,6 @@ function setCors(res: VercelResponse): void {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-}
-
-function generateBaseTicker(name: string): string {
-  const alpha = name.toUpperCase().replace(/[^A-Z]/g, '');
-  return alpha.slice(0, 5).padEnd(3, 'X');
-}
-
-async function pickUniqueTicker(
-  supabase: any,
-  name: string,
-): Promise<string> {
-  const base = generateBaseTicker(name);
-  {
-    const { data } = await supabase
-      .from('bct_studios')
-      .select('token_ticker')
-      .eq('token_ticker', base)
-      .maybeSingle();
-    if (!data) return base;
-  }
-  for (let i = 2; i <= 99; i++) {
-    const candidate = `${base.slice(0, 5 - String(i).length)}${i}`;
-    const { data } = await supabase
-      .from('bct_studios')
-      .select('token_ticker')
-      .eq('token_ticker', candidate)
-      .maybeSingle();
-    if (!data) return candidate;
-  }
-  throw new Error(`Could not generate a unique ticker for "${name}"`);
 }
 
 // Derive a studio name from an authed user. Prefers the Supabase
@@ -182,17 +149,13 @@ export default async function handler(
   }
 
   // ─── Create a fresh default studio ───
+  // Deliberately minimal: no token, no treasury, no logo, no bio.
+  // These are issued together at upgrade time ($0.99 + KYC) so the
+  // user's first on-chain footprint is tied to a verified identity.
   const displayName = (authUser.user_metadata as Record<string, unknown> | null)?.full_name as string | undefined
     || (authUser.user_metadata as Record<string, unknown> | null)?.display_name as string | undefined
     || null;
   const studioName = deriveStudioName(authUser.email || null, displayName);
-
-  const { PrivateKey } = await import('@bsv/sdk');
-  const treasuryKey = PrivateKey.fromRandom();
-  const treasuryAddress = treasuryKey.toAddress().toString();
-  const treasuryWif = treasuryKey.toWif();
-
-  const ticker = await pickUniqueTicker(supabase, studioName);
   const studioId = randomStudioId();
 
   const { data: inserted, error: insertErr } = await supabase
@@ -200,9 +163,8 @@ export default async function handler(
     .insert({
       id: studioId,
       name: studioName,
-      token_ticker: ticker,
-      treasury_address: treasuryAddress,
-      treasury_wif: treasuryWif,
+      token_ticker: null,
+      treasury_address: null,
       owner_account_id: accountId,
       created_by: 'auto',
       founded_year: new Date().getUTCFullYear(),

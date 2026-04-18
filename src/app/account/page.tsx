@@ -3349,8 +3349,8 @@ interface WalletData {
   studios: {
     id: string
     name: string
-    token_ticker: string
-    treasury_address: string
+    token_ticker: string | null
+    treasury_address: string | null
     agentCount: number
     filmCount: number
   }[]
@@ -3472,7 +3472,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
 
         if (cancelled) return
 
-        const studios = (studiosRes.data || []) as { id: string; name: string; token_ticker: string; treasury_address: string }[]
+        const studios = (studiosRes.data || []) as { id: string; name: string; token_ticker: string | null; treasury_address: string | null }[]
         const agents = (agentsRes.data || []) as { id: string; name: string; role: string; reputation: number; jobs_completed: number; wallet_address: string; owner_account_id: string | null }[]
 
         const studiosWithCounts = studios.map((s) => ({
@@ -4009,7 +4009,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
                         className="text-xl font-black text-white leading-none"
                         style={{ fontFamily: 'var(--font-bebas)' }}
                       >
-                        ${s.token_ticker}
+                        {s.token_ticker ? `$${s.token_ticker}` : s.name}
                       </span>
                       <span className="text-[#888] text-sm">Your studio</span>
                     </div>
@@ -4019,22 +4019,28 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
                     {' \u00b7 '}
                     {s.filmCount} film{s.filmCount !== 1 ? 's' : ''} produced
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[#666] text-[0.55rem] font-bold uppercase tracking-wider">
-                      Treasury:
-                    </span>
-                    <span className="text-[#888] font-mono text-xs">
-                      {truncAddr(s.treasury_address)}
-                    </span>
-                    <a
-                      href={`https://whatsonchain.com/address/${s.treasury_address}`}
-                      target="_blank"
-                      rel="noopener"
-                      className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
-                    >
-                      View on WoC
-                    </a>
-                  </div>
+                  {s.treasury_address ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#666] text-[0.55rem] font-bold uppercase tracking-wider">
+                        Treasury:
+                      </span>
+                      <span className="text-[#888] font-mono text-xs">
+                        {truncAddr(s.treasury_address)}
+                      </span>
+                      <a
+                        href={`https://whatsonchain.com/address/${s.treasury_address}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="text-[0.55rem] font-bold uppercase tracking-wider text-[#E50914] hover:text-white"
+                      >
+                        View on WoC
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="text-[#666] text-[0.6rem] uppercase tracking-wider">
+                      Token + treasury issued at <a href="/account?tab=studio" className="text-[#E50914]">$0.99 upgrade</a>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -4333,8 +4339,8 @@ const AESTHETIC_OPTIONS = [
 interface StudioData {
   id: string
   name: string
-  token_ticker: string
-  treasury_address: string
+  token_ticker: string | null
+  treasury_address: string | null
   bio: string | null
   logo_url: string | null
   poster_url: string | null
@@ -4671,9 +4677,15 @@ function StudioInfoSection({
                 >
                   {studio.name}
                 </h3>
-                <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
-                  ${studio.token_ticker}
-                </span>
+                {studio.token_ticker ? (
+                  <span className="text-[0.55rem] font-mono text-[#E50914] shrink-0">
+                    ${studio.token_ticker}
+                  </span>
+                ) : (
+                  <span className="text-[0.55rem] font-mono text-[#666] shrink-0 uppercase tracking-wider">
+                    No token yet
+                  </span>
+                )}
               </div>
               {studio.aesthetic && (
                 <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
@@ -4724,7 +4736,7 @@ function StudioInfoSection({
             <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-4 mb-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <p className="text-[#bbb] text-sm">
-                  <span className="text-[#E50914] font-bold">Upgrade</span> for $0.99 to get an AI-generated logo, roster poster, bio, and 8 specialist agents.
+                  <span className="text-[#E50914] font-bold">Upgrade</span> for $0.99 to mint your studio token, issue a treasury address, and unlock an AI-generated logo, roster poster, bio, and 8 specialist agents. KYC verification is required at checkout.
                 </p>
                 <button
                   onClick={async () => {

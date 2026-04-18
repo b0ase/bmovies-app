@@ -329,33 +329,25 @@ export default async function handler(
 
   // ─── Detect auto-placeholder ───
   // /api/studio/ensure-default creates a minimal studio row
-  // (created_by='auto') for every signed-in user. When the user pays
-  // $0.99 to upgrade, we don't want to insert a second studio — the
-  // schema has no UNIQUE on owner_account_id but the UI relies on
-  // .maybeSingle(), so two rows would break the account page. We
-  // reuse the placeholder's id, token_ticker, and treasury_address
-  // (the ticker is already inscribed/quoted in any welcome UX), and
-  // fill in everything else with the Grok-generated assets below.
+  // (created_by='auto') for every signed-in user. Placeholders
+  // deliberately carry NO token ticker and NO treasury address — those
+  // are securities-adjacent artifacts that only get minted here, at
+  // upgrade time, alongside KYC verification. We reuse the
+  // placeholder's id (so downstream references stay stable) but
+  // generate a fresh ticker and treasury address as part of the
+  // upgrade payload.
   const { data: placeholder } = await supabase
     .from('bct_studios')
-    .select('id, token_ticker, treasury_address, created_by')
+    .select('id, created_by')
     .eq('owner_account_id', accountId)
     .maybeSingle();
   const isUpgrade = placeholder?.created_by === 'auto';
 
   const aestheticLabel = aesthetic || 'eclectic and bold';
 
-  // Generate treasury address (only if this is a brand-new studio —
-  // an upgrade reuses the placeholder's existing treasury so BSV
-  // received during the placeholder phase lands in the same wallet).
   const { PrivateKey } = await import('@bsv/sdk');
-  const treasuryAddress = isUpgrade
-    ? (placeholder!.treasury_address as string)
-    : PrivateKey.fromRandom().toAddress().toString();
-
-  const ticker = isUpgrade
-    ? (placeholder!.token_ticker as string)
-    : await pickUniqueTicker(supabase, studioName);
+  const treasuryAddress = PrivateKey.fromRandom().toAddress().toString();
+  const ticker = await pickUniqueTicker(supabase, studioName);
   const studioId = isUpgrade
     ? (placeholder!.id as string)
     : `user-studio-${accountId}-${Date.now()}`;
@@ -470,6 +462,8 @@ export default async function handler(
         .from('bct_studios')
         .update({
           name: studioName,
+          token_ticker: ticker,
+          treasury_address: treasuryAddress,
           bio: bio || null,
           logo_url: logoUrl || null,
           poster_url: posterUrl || null,
