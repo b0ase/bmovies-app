@@ -123,6 +123,7 @@ interface Film {
   commissioner_percent: number
   account_id: string | null
   created_at: string
+  parent_offer_id: string | null
   bct_artifacts: { id: number; kind: string; role: string | null; url: string; step_id: string | null; superseded_by: number | null }[]
 }
 
@@ -267,7 +268,7 @@ function AccountContent() {
           .from('bct_offers')
           .select(
             `id, title, synopsis, tier, status, token_ticker, token_mint_txid,
-             commissioner_percent, account_id, created_at,
+             commissioner_percent, account_id, created_at, parent_offer_id,
              bct_artifacts ( id, kind, role, url, step_id, superseded_by )`,
           )
           .is('archived_at', null)
@@ -288,7 +289,18 @@ function AccountContent() {
           setFilmsError(error.message)
           setFilms([])
         } else {
-          setFilms((data as unknown as Film[]) || [])
+          // Collapse tier lineages to the leaf (highest-tier) offer.
+          // A pitch that's been upgraded to a trailer shouldn't appear
+          // twice in the workbench — the trailer IS the project now.
+          // Mark any offer whose id appears as another offer's
+          // parent_offer_id as "has a child" and hide it from the list.
+          const all = (data as unknown as Film[]) || []
+          const hasChild = new Set<string>()
+          for (const f of all) {
+            if (f.parent_offer_id) hasChild.add(f.parent_offer_id)
+          }
+          const leaves = all.filter((f) => !hasChild.has(f.id))
+          setFilms(leaves)
         }
       } catch (err) {
         if (cancelled) return
@@ -1285,7 +1297,7 @@ function ProjectView({
         .from('bct_offers')
         .select(
           `id, title, synopsis, tier, status, token_ticker, token_mint_txid,
-           commissioner_percent, account_id, created_at,
+           commissioner_percent, account_id, created_at, parent_offer_id,
            bct_artifacts ( id, kind, role, url, step_id, superseded_by )`,
         )
         .eq('id', projectId)
