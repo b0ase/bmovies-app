@@ -726,6 +726,46 @@
     import { renderCascade, WATCH_PRICE_SATS } from './js/cascade.js';
     import { openPayPicker } from './js/pay-picker.js';
 
+    // ─── Inline derivative video lightbox ───
+    //
+    // "Watch trailer" on a pitch page (or "Watch short" on a trailer
+    // page) used to navigate to the derivative's own film.html, which
+    // felt like leaving the project. Now the button opens a fullscreen
+    // overlay that plays the derivative's trailer_video_url on top of
+    // this page. Click the backdrop or × to close.
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-inline-play]');
+      if (!btn) return;
+      e.preventDefault();
+      const url = btn.getAttribute('data-inline-play');
+      const title = btn.getAttribute('data-inline-title') || '';
+      const tier = btn.getAttribute('data-inline-tier') || 'Trailer';
+      if (!url) return;
+
+      // Remove any prior overlay so re-clicks don't stack players.
+      document.querySelectorAll('.inline-vid-overlay').forEach((n) => n.remove());
+
+      const overlay = document.createElement('div');
+      overlay.className = 'inline-vid-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;padding:2rem;';
+      overlay.innerHTML = `
+        <div style="position:absolute;top:1rem;left:1rem;right:1rem;display:flex;justify-content:space-between;align-items:center;color:#fff;font-family:monospace;font-size:0.7rem;">
+          <span style="text-transform:uppercase;letter-spacing:0.15em;color:#E50914;font-weight:700;">
+            ${tier} &middot; ${title.replace(/[<>&]/g, (c) => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
+          </span>
+          <button aria-label="Close" style="background:transparent;border:1px solid #E50914;color:#fff;font-size:1.2rem;width:2rem;height:2rem;cursor:pointer;">&times;</button>
+        </div>
+        <video src="${url}" autoplay controls style="max-width:100%;max-height:85vh;background:#000;border:1px solid #222;" playsinline></video>
+      `;
+      const close = () => { overlay.remove(); };
+      overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
+      overlay.querySelector('button').addEventListener('click', close);
+      document.addEventListener('keydown', function onEsc(ev) {
+        if (ev.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+      });
+      document.body.appendChild(overlay);
+    });
+
     // ─── Direct-to-Stripe handler for Make-tier buttons ───
     //
     // The tier-row on a film page knows everything needed to fire a
@@ -951,6 +991,24 @@
           label = `✓ ${meta.label}`;
           disabled = true;
         } else if (derivative) {
+          // When the derivative already has a playable video, stay on
+          // this page and open a lightbox instead of navigating away.
+          // The pitch + trailer are the same project conceptually —
+          // bouncing the user to a separate film.html page made them
+          // feel like two unrelated productions. Falls back to the
+          // derivative's own page when no video is available yet
+          // (e.g. short/feature whose post-production hasn't finished).
+          if (derivative.trailer_video_url) {
+            const vidUrl = derivative.trailer_video_url;
+            const dTitle = String(derivative.title || offer.title || '').replace(/"/g, '&quot;');
+            return `<button
+              class="tier-btn included"
+              data-inline-play="${esc(vidUrl)}"
+              data-inline-title="${dTitle}"
+              data-inline-tier="${meta.label}">
+              ▶ Watch ${meta.label.toLowerCase()}
+            </button>`;
+          }
           state = 'included';
           label = `▶ Watch ${meta.label.toLowerCase()}`;
           href = `film.html?id=${encodeURIComponent(derivative.id)}`;
@@ -1094,7 +1152,7 @@
     async function loadDerivatives(offerId) {
       const { data } = await supabase
         .from('bct_offers')
-        .select('id, title, tier, token_ticker, status')
+        .select('id, title, tier, token_ticker, status, trailer_video_url')
         .eq('parent_offer_id', offerId)
         .order('id', { ascending: false });
       return data || [];
