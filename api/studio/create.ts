@@ -111,23 +111,22 @@ export default async function handler(
 
   const accountId = account.id as string;
 
-  // KYC gate: nothing tokenizable gets created without a verified owner.
-  // Studios mint a BSV-21 token on completion, so creation requires KYC.
-  // (Same gate is applied to film commissions and token mints.)
-  const { data: kyc } = await supabase
-    .from('bct_user_kyc')
-    .select('status')
-    .eq('account_id', accountId)
-    .maybeSingle();
-
-  if (!kyc || kyc.status !== 'verified') {
-    res.status(403).json({
-      error: 'KYC verification required before creating a studio.',
-      reason: 'kyc_required',
-      next: '/kyc.html',
-    });
-    return;
-  }
+  // NO KYC gate at studio-CREATE time.
+  //
+  // /api/studio/complete (the post-Stripe provisioner) only writes
+  // bct_studios + bct_agents rows — it does NOT mint an on-chain
+  // BSV-21 token. Grep-verified 2026-04-18: no mint, no bsv21, no
+  // op_return in the complete.ts handler. The studio exists purely
+  // off-chain until the owner decides to take its token live, and
+  // that later step (studio token mint / publish) is the legally-
+  // relevant moment that should carry the KYC gate.
+  //
+  // An earlier version of this handler gated studio CREATION on
+  // bct_user_kyc.status='verified'. That contradicted the stated
+  // architecture (create = no KYC, publish/mint = KYC) and blocked
+  // users at the same wrong layer the commission.html KYC gate did
+  // before it was removed (see commit c3c8556). Removed for the
+  // same reason.
 
   // Check if user already owns a studio
   const { data: existing } = await supabase

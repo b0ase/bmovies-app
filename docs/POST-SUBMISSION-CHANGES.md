@@ -258,3 +258,51 @@ rolls over.
 
   No change to API contracts, no new features, no schema changes.
   Pure removal of a wrong-layer gate.
+
+- **`<pending>`** — `fix(post-submission): auto-create bct_account on signup + remove KYC gate from studio create`
+
+  **Reported symptom** (user bitcoincorp11@gmail.com): signed into
+  /account, tried to create a studio, hit 403 *"No bMovies account
+  found. Commission a film or link a wallet first."* Couldn't proceed.
+
+  **Root cause A — orphan auth user.** The DB trigger `handle_new_user()`
+  only inserts into `public.user_profiles` on new auth.users signup.
+  It does NOT create a matching `bct_accounts` row, so email-signup
+  users start off with no bMovies-app account. The BRC-100 wallet
+  auth path has a best-effort insert in
+  `src/app/api/auth/brc100/verify/route.ts:250`, but Supabase native
+  email/magic-link signup skips that route entirely. Twenty-four
+  orphan users existed in the database at the time of this fix,
+  including the reporter.
+
+  **Root cause B — wrong-layer KYC gate on studio creation.**
+  `/api/studio/create.ts` enforced `bct_user_kyc.status='verified'`
+  BEFORE the Stripe checkout session. Grep-verified the post-payment
+  handler `/api/studio/complete.ts` only writes `bct_studios` and
+  `bct_agents` rows — NO on-chain BSV-21 mint, no op_return, no
+  bsv21 primitive. So the studio is a purely off-chain DB object
+  at creation time. Minting the studio's BSV-21 token to make it
+  tradable happens at a later, separate step — which is where the
+  KYC gate actually belongs. Same wrong-layer pattern as the
+  commission.html KYC gate removed in c3c8556.
+
+  **Fix A** (`migrations/010_auto_create_bct_account_on_signup.sql`):
+  - Rewrote `handle_new_user()` to ALSO upsert `public.bct_accounts`
+    (auth_user_id, email, display_name). `ON CONFLICT DO NOTHING`
+    keeps it safe for users already inserted via the BRC-100 path.
+  - `display_name` falls back to the email's local part
+    (`split_part(email, '@', 1)`) so /account always has something
+    human-readable to show.
+  - Backfilled every existing orphan auth.users row: `INSERT 0 24`.
+    Post-migration the orphan count is zero.
+  - Function marked `SECURITY DEFINER` + explicit `search_path=public`
+    so it runs with trigger-owner permissions.
+
+  **Fix B** (`api/studio/create.ts`):
+  - Removed the KYC check block. Sign-in gate stays; KYC gate moves
+    to whichever endpoint actually handles the studio-token mint
+    when that ships.
+
+  Combined effect: bitcoincorp11 (and the other 23 orphans) can now
+  hit /account, fill in a studio name, and land on the Stripe
+  checkout for $0.99. No Veriff detour.
