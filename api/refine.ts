@@ -120,8 +120,12 @@ export default async function handler(
     res.status(400).json({ error: 'idea must be a string with 8+ characters' });
     return;
   }
-  if (idea.length > 800) {
-    res.status(400).json({ error: 'idea must be 800 chars or fewer' });
+  // Upper bound bumped 800 → 6000 so visitors can paste a full draft
+  // treatment (title + logline + multi-paragraph synopsis) and have
+  // Grok reshape the whole thing, rather than being forced to trim
+  // down to a 2-sentence logline before refining.
+  if (idea.length > 6000) {
+    res.status(400).json({ error: `idea must be 6000 chars or fewer (got ${idea.length})` });
     return;
   }
 
@@ -142,11 +146,15 @@ export default async function handler(
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: idea.trim() },
         ],
-        max_tokens: 600,
+        // Bumped from 600 — a 6000-char input needs room for a full
+        // refined JSON reply (title + logline + ~300-word synopsis +
+        // ticker). 600 truncated JSON mid-string on long inputs and
+        // surfaced as a parse error downstream.
+        max_tokens: 1500,
         temperature: 0.85,
         response_format: { type: 'json_object' },
       }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(40_000),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

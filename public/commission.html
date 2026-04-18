@@ -1534,7 +1534,18 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idea }),
         });
-        if (!res.ok) throw new Error('refine returned ' + res.status);
+        if (!res.ok) {
+          // Surface the actual reason from the JSON body instead of a
+          // generic '400'. The refine endpoint returns
+          // {"error": "idea must be 6000 chars or fewer (got 2983)"}
+          // which is a lot more useful than '400'.
+          let detail = res.status.toString();
+          try {
+            const j = await res.json();
+            if (j?.error) detail = j.error;
+          } catch {}
+          throw new Error(detail);
+        }
         const body = await res.json();
         refined = { title: body.title, ticker: body.ticker, synopsis: body.synopsis };
         pTitle.textContent = refined.title;
