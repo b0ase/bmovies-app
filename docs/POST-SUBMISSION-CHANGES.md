@@ -212,7 +212,7 @@ rolls over.
   to avoid self-links). Judge is still discoverable; it's just one of
   eleven footer entries now instead of the only one.
 
-- **`<pending>`** — `fix(post-submission): remove client-side KYC gate before Stripe checkout`
+- **`c3c8556`** — `fix(post-submission): remove client-side KYC gate before Stripe checkout`
 
   **Reported by a real prospective customer** (Bailey) who tried to buy
   a trailer and "didn't encounter a Stripe option anywhere. Ended up
