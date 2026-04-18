@@ -480,7 +480,7 @@ land (Apr 23). Once the review window closes these are fair game.
   a studio id. Listed in "Known scope gaps" as a follow-up rather than
   shipped in this pass.
 
-- **`<pending>`** — `feat: start-your-studio + per-studio tier commissions, both direct to Stripe`
+- **`69bcbcd`** — `feat: start-your-studio + per-studio tier commissions, both direct to Stripe`
 
   Two related additions so the studio flow is usable end-to-end without
   bouncing through /commission.html or /account first:
