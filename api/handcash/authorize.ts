@@ -145,12 +145,14 @@ export default async function handler(
     const { HandCashConnect } = await import('@handcash/handcash-connect');
     const hc = new HandCashConnect({ appId, appSecret });
     redirectionUrl = hc.getRedirectionUrl({
-      // HandCash Connect serialises an array → "PAY,USER_PUBLIC_PROFILE"
-      // which is the format the authorize page parses. Passing a bare
-      // string 'PAY' was letting the auth complete but NOT granting the
-      // Pay scope on the resulting auth token — so wallet.pay() later
-      // threw "Permission not established". Explicit array fixes it.
-      permissions: ['PAY', 'USER_PUBLIC_PROFILE'],
+      // HandCash authorize page expects comma-separated permissions.
+      // Bare 'PAY' was completing auth but NOT landing the Pay scope
+      // on the resulting token — wallet.pay() later threw
+      // "Permission not established". SDK types declare permissions
+      // as string, so we pre-join rather than passing an array (which
+      // the SDK's serialiser would also accept via .toString() but
+      // TypeScript rejects).
+      permissions: 'PAY,USER_PUBLIC_PROFILE',
       redirectUrl: `${APP_ORIGIN}/api/handcash/callback`,
       state,
     });
