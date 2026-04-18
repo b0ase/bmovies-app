@@ -203,6 +203,40 @@ function AccountContent() {
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [projectId, tab, tool, section])
 
+  // ─── Normalize project URL to root (pitch) ───
+  //
+  // The trailer / short / feature are FACETS of the root pitch, not
+  // projects of their own. We want the workbench — and every tool view
+  // inside it — to treat the whole lineage as a single project keyed
+  // by the pitch id. If the URL points at a descendant (e.g. from an
+  // older commission-banner redirect), walk up parent_offer_id until
+  // we hit null and replace the URL. Everything below this point reads
+  // `projectId` = root pitch id.
+  useEffect(() => {
+    if (!projectId) return
+    let cancelled = false
+    async function walkToRoot() {
+      let cursor: string | null = projectId
+      let root: string | null = null
+      for (let i = 0; i < 4 && cursor; i++) {
+        const { data }: { data: { parent_offer_id: string | null } | null } = await bmovies
+          .from('bct_offers')
+          .select('parent_offer_id')
+          .eq('id', cursor)
+          .maybeSingle()
+        if (!data) break
+        if (!data.parent_offer_id) { root = cursor; break }
+        cursor = data.parent_offer_id
+      }
+      if (cancelled || !root || root === projectId) return
+      const params = new URLSearchParams(window.location.search)
+      params.set('project', root)
+      router.replace(`/account?${params.toString()}`, { scroll: false })
+    }
+    walkToRoot()
+    return () => { cancelled = true }
+  }, [projectId, router])
+
   // ─── Auth bootstrap ───
   useEffect(() => {
     let cancelled = false
@@ -289,18 +323,17 @@ function AccountContent() {
           setFilmsError(error.message)
           setFilms([])
         } else {
-          // Collapse tier lineages to the leaf (highest-tier) offer.
-          // A pitch that's been upgraded to a trailer shouldn't appear
-          // twice in the workbench — the trailer IS the project now.
-          // Mark any offer whose id appears as another offer's
-          // parent_offer_id as "has a child" and hide it from the list.
+          // Collapse tier lineages to the ROOT (pitch) offer.
+          // A pitch that's been upgraded to a trailer is one project;
+          // the trailer is a facet of that pitch, not a separate film.
+          // The pitch owns the token + the project identity; each
+          // descendant tier adds a deliverable (trailer cut, short cut,
+          // feature cut) with its own publish state. TierLadder on the
+          // overview page exposes per-tier state; Publish tab offers
+          // per-tier publish. Here we just hide non-root rows.
           const all = (data as unknown as Film[]) || []
-          const hasChild = new Set<string>()
-          for (const f of all) {
-            if (f.parent_offer_id) hasChild.add(f.parent_offer_id)
-          }
-          const leaves = all.filter((f) => !hasChild.has(f.id))
-          setFilms(leaves)
+          const roots = all.filter((f) => !f.parent_offer_id)
+          setFilms(roots)
         }
       } catch (err) {
         if (cancelled) return
@@ -579,8 +612,13 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
           .maybeSingle()
         if (cancelled) return
         if (data?.id) {
+          // The trailer/short/feature is a facet of the parent pitch,
+          // not a project of its own. Stay on the pitch's overview so
+          // the user's mental model ("my Ashes of the Border project")
+          // stays intact. The TierLadder on the overview already shows
+          // "▶ Watch trailer" once the child is ready.
           setDismissed(true)
-          router.replace(`/account?project=${encodeURIComponent(data.id)}&tab=overview`, { scroll: false })
+          router.replace(`/account?project=${encodeURIComponent(projectParent)}&tab=overview`, { scroll: false })
           return
         }
         await new Promise((r) => setTimeout(r, 4000))
@@ -1577,7 +1615,7 @@ const TIER_PRICE_DISPLAY: Record<Tier, string> = {
   feature: '$999',
 }
 
-interface LineageOffer { id: string; tier: string; title: string; token_ticker: string | null }
+interface LineageOffer { id: string; tier: string; title: string; token_ticker: string | null; status?: string }
 
 function TierLadder({ film }: { film: Film }) {
   const [lineage, setLineage] = useState<Partial<Record<Tier, LineageOffer>>>({})
@@ -1594,11 +1632,11 @@ function TierLadder({ film }: { film: Film }) {
       while (cursorId) {
         const { data }: { data: (LineageOffer & { parent_offer_id: string | null }) | null } = await bmovies
           .from('bct_offers')
-          .select('id, tier, title, token_ticker, parent_offer_id')
+          .select('id, tier, title, token_ticker, status, parent_offer_id')
           .eq('id', cursorId)
           .maybeSingle()
         if (!data) break
-        chain.unshift({ id: data.id, tier: data.tier, title: data.title, token_ticker: data.token_ticker })
+        chain.unshift({ id: data.id, tier: data.tier, title: data.title, token_ticker: data.token_ticker, status: data.status })
         cursorId = data.parent_offer_id
       }
       if (chain.length === 0) return {}
@@ -1621,7 +1659,7 @@ function TierLadder({ film }: { film: Film }) {
         const nextTier = TIER_ORDER[nextIdx]
         const { data }: { data: LineageOffer | null } = await bmovies
           .from('bct_offers')
-          .select('id, tier, title, token_ticker')
+          .select('id, tier, title, token_ticker, status')
           .eq('parent_offer_id', parentId)
           .eq('tier', nextTier)
           .maybeSingle()
@@ -1731,63 +1769,44 @@ function TierLadder({ film }: { film: Film }) {
         {TIER_ORDER.map((t, idx) => {
           const existing = lineage[t]
           const isCurrent = existing && existing.id === film.id
-          const isAncestor = existing && !isCurrent
           const isNextUpgrade = !existing && idx === currentIdx + 1
-          const isLocked = !existing && idx > currentIdx + 1
           const label = t.charAt(0).toUpperCase() + t.slice(1)
           const price = TIER_PRICE_DISPLAY[t]
           const pending = pendingTier === t
 
-          if (isCurrent) {
-            return (
-              <div
-                key={t}
-                className="flex-1 min-w-[7rem] border border-[#E50914] bg-[#1a0003] px-3 py-2.5 text-center"
-              >
-                <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-0.5">
-                  Current
-                </div>
-                <div
-                  className="text-base font-black text-white leading-none"
-                  style={{ fontFamily: 'var(--font-bebas)' }}
-                >
-                  {label}
-                </div>
-              </div>
-            )
-          }
-
-          if (isAncestor && existing) {
-            return (
-              <a
-                key={t}
-                href={`/account?project=${encodeURIComponent(existing.id)}&tab=overview`}
-                className="flex-1 min-w-[7rem] border border-[#2a6a2a] bg-[#0a1a0a] px-3 py-2.5 text-center hover:border-[#6bff8a] transition-colors"
-              >
-                <div className="text-[0.55rem] uppercase tracking-wider text-[#6bff8a] font-bold mb-0.5">
-                  Done
-                </div>
-                <div
-                  className="text-base font-black text-white leading-none"
-                  style={{ fontFamily: 'var(--font-bebas)' }}
-                >
-                  {label}
-                </div>
-              </a>
-            )
-          }
-
-          // A descendant tier that ALREADY exists (e.g. user is viewing
-          // the pitch but the trailer is already produced) — link out.
           if (existing) {
-            return (
-              <a
-                key={t}
-                href={`/account?project=${encodeURIComponent(existing.id)}&tab=overview`}
-                className="flex-1 min-w-[7rem] border border-[#333] bg-[#0a0a0a] px-3 py-2.5 text-center hover:border-[#E50914] transition-colors"
-              >
-                <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-0.5">
-                  Open
+            // Per-tier publish state. Pitch is usually already
+            // published (auto-publishes after its revision window).
+            // Trailers / shorts / features default to 'released' and
+            // require an explicit publish from the user.
+            const s = existing.status || ''
+            const isPublished = s === 'published' || s === 'auto_published'
+            const isGenerating = s === 'funded' || s === 'in_progress' || s === 'producing' || s === 'queued'
+            const isDraft = !isPublished && !isGenerating
+            const stateLabel = isPublished ? 'Published'
+              : isGenerating ? 'Producing…'
+              : 'Draft'
+            const stateColor = isPublished ? '#6bff8a'
+              : isGenerating ? '#E50914'
+              : '#ffb347'
+            const borderColor = isCurrent
+              ? '#E50914'
+              : isPublished ? '#2a6a2a'
+              : '#3a3a1a'
+            const bgColor = isCurrent
+              ? '#1a0003'
+              : isPublished ? '#0a1a0a'
+              : '#15120a'
+
+            // Click action:
+            //   - Pitch tile (current) is non-clickable (you're already here)
+            //   - Descendant with video → preview tool
+            //   - Anything else → overview (pitch stays on overview)
+            const clickable = !isCurrent
+            const inner = (
+              <>
+                <div className="text-[0.55rem] uppercase tracking-wider font-bold mb-0.5" style={{ color: stateColor }}>
+                  {stateLabel}
                 </div>
                 <div
                   className="text-base font-black text-white leading-none"
@@ -1795,6 +1814,21 @@ function TierLadder({ film }: { film: Film }) {
                 >
                   {label}
                 </div>
+              </>
+            )
+            const cls = `flex-1 min-w-[7rem] border px-3 py-2.5 text-center transition-colors`
+            const style = { borderColor, background: bgColor }
+            if (!clickable) {
+              return <div key={t} className={cls} style={style}>{inner}</div>
+            }
+            return (
+              <a
+                key={t}
+                href={`/account?project=${encodeURIComponent(film.id)}&tool=preview&tierFocus=${t}`}
+                className={`${cls} hover:border-[#6bff8a]`}
+                style={style}
+              >
+                {inner}
               </a>
             )
           }
@@ -7501,19 +7535,44 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
     let cancelled = false
     async function load() {
       setLoading(true)
-      const offerP = bmovies.from('bct_offers').select('tier').eq('id', projectId).maybeSingle()
-      // Load EVERY artifact — we'll partition into videos / frames /
-      // poster client-side so the single fetch covers all three
-      // render paths.
+
+      // Walk DOWN from the root (current projectId) to find every
+      // descendant in this lineage. Each tier has its own artifacts —
+      // the preview should show the highest-tier video available, so
+      // we aggregate across the whole lineage before picking.
+      const lineageIds: string[] = [projectId]
+      let leafTier: string = 'pitch'
+      let cursor: string = projectId
+      for (let i = 0; i < 3; i++) {
+        const { data }: { data: { id: string; tier: string } | null } = await bmovies
+          .from('bct_offers')
+          .select('id, tier')
+          .eq('parent_offer_id', cursor)
+          .limit(1)
+          .maybeSingle()
+        if (!data) break
+        lineageIds.push(data.id)
+        leafTier = data.tier
+        cursor = data.id
+      }
+      if (lineageIds.length === 1) {
+        const { data: rootOffer }: { data: { tier: string } | null } = await bmovies
+          .from('bct_offers')
+          .select('tier')
+          .eq('id', projectId)
+          .maybeSingle()
+        if (rootOffer?.tier) leafTier = rootOffer.tier
+      }
+
       const artsP = bmovies.from('bct_artifacts')
-        .select('id, kind, url, step_id, role, created_at')
-        .eq('offer_id', projectId)
+        .select('id, kind, url, step_id, role, created_at, offer_id')
+        .in('offer_id', lineageIds)
         .in('kind', ['video', 'image'])
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
-      const [offerRes, artsRes] = await Promise.all([offerP, artsP])
+      const artsRes = await artsP
       if (cancelled) return
-      const t = (offerRes.data as { tier?: string } | null)?.tier || 'pitch'
+      const t = leafTier
       const arts = ((artsRes.data as any[]) || []) as (PreviewClip & { kind: string })[]
 
       const videos = arts.filter((a) => a.kind === 'video')
