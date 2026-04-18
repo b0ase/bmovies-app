@@ -336,6 +336,65 @@
       .cat-row { grid-template-columns: 1fr; gap: 0.3rem; }
     }
 
+    /* Featured trailers strip — the 6 watchable trailers deserve big
+       poster cards above the Recent Productions list. Netflix-ish
+       horizontal shelf on desktop, stacked on mobile. */
+    .trailers {
+      padding: 3.5rem 3rem 2rem; background: #000; color: #fff;
+    }
+    .trailers .eyebrow { color: #E50914; }
+    .trailers .section-title { color: #fff; border-bottom-color: #E50914; }
+    .trailers-blurb { font-size: 0.85rem; color: #aaa; max-width: 640px; margin-bottom: 1.6rem; line-height: 1.55; }
+    .trailer-strip {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .trailer-card {
+      position: relative; aspect-ratio: 2/3; overflow: hidden;
+      background: #111; border: 1px solid #222; text-decoration: none;
+      color: #fff; transition: transform 0.2s, border-color 0.2s;
+    }
+    .trailer-card:hover { border-color: #E50914; transform: translateY(-3px); }
+    .trailer-card img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.4s;
+    }
+    .trailer-card:hover img { transform: scale(1.05); }
+    .trailer-card .tc-gradient {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85));
+      pointer-events: none;
+    }
+    .trailer-card .tc-play {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .trailer-card:hover .tc-play { opacity: 1; }
+    .trailer-card .tc-play-btn {
+      width: 3.5rem; height: 3.5rem; border-radius: 50%;
+      background: rgba(229,9,20,0.95);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; color: #fff; font-weight: 900;
+      box-shadow: 0 4px 20px rgba(229,9,20,0.6);
+    }
+    .trailer-card .tc-label {
+      position: absolute; left: 0.8rem; right: 0.8rem; bottom: 0.8rem;
+      font-size: 0.85rem; font-weight: 900; line-height: 1.1;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    }
+    .trailer-card .tc-ticker {
+      font-size: 0.55rem; color: #E50914; letter-spacing: 0.12em;
+      text-transform: uppercase; font-weight: 700; margin-top: 0.3rem;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+    .trailers-loading {
+      color: #666; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+
+    /* Make the hero-carousel slides clickable when wired by JS. */
+    .hero-slide[data-offer-id] { cursor: pointer; }
+
   </style>
 </head>
 <body>
@@ -430,6 +489,18 @@
     </div>
   </section>
 
+  <section class="trailers">
+    <div class="eyebrow">Now playing</div>
+    <div class="section-title" style="border-bottom:1px solid #E50914;padding-bottom:0.6rem;margin-bottom:0.8rem;">Featured trailers</div>
+    <p class="trailers-blurb">
+      Every trailer below is fully made — poster, 4 video clips, title cards, voiceover, music bed — by a swarm of AI agents on Bitcoin SV. Click any poster to watch.
+      <a href="watch.html" style="color:#E50914;font-weight:700;">See all films →</a>
+    </p>
+    <div id="trailer-strip" class="trailer-strip">
+      <div class="trailers-loading">Loading featured trailers&hellip;</div>
+    </div>
+  </section>
+
   <section class="catalog">
     <div class="eyebrow">Now showing</div>
     <div class="section-title">Recent productions</div>
@@ -500,8 +571,10 @@
           ctaWatch.href = 'watch.html?id=' + encodeURIComponent(watchable.id);
         }
 
-        // Catalog teaser (3 most recent)
-        const recent = (offers || []).slice(0, 3);
+        // Catalog teaser — 8 most recent (was 3). Landing page now
+        // surfaces a meaningful slice of the 17+ published films so
+        // judges/visitors land on real content, not a skeleton.
+        const recent = (offers || []).slice(0, 8);
         if (!recent.length) {
           el.innerHTML = '<div class="cat-loading">Swarm has not posted any productions yet.</div>';
         } else {
@@ -563,40 +636,54 @@
     // xAI temp CDN URLs expire — never trust them for hero slides.
     const isEphemeralUrl = (url) => typeof url === 'string' && /(imgen|vidgen|videos)\.x\.ai/.test(url);
 
+    // Resolve a poster URL + fall-through for one offer row.
+    function resolvePoster(o) {
+      const arts = (o.bct_artifacts || []).filter(a => !isEphemeralUrl(a.url) && !a.superseded_by);
+      const key = (o.title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
+      const mapHit = POSTER_MAP[key] || POSTER_MAP[(o.title || '').toLowerCase()];
+      if (mapHit) return mapHit;
+      const posterArt = arts.find(a => a.role === 'poster' && a.kind === 'image');
+      if (posterArt?.url) return posterArt.url;
+      const sb = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
+      return sb?.url || null;
+    }
+
     async function loadHeroCarousel() {
       const { data } = await supabase
         .from('bct_offers')
-        .select('id, title, bct_artifacts(kind, url, role)')
+        .select('id, title, bct_artifacts(kind, url, role, superseded_by)')
         .in('status', ['published', 'auto_published', 'released'])
         .not('is_swarm', 'is', true)
         .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(20);
 
-      const images = [];
+      // Build poster→offerId pairs so hero slides become clickable.
+      const pairs = [];
       for (const o of data || []) {
-        const arts = (o.bct_artifacts || []).filter(a => !isEphemeralUrl(a.url));
-        // POSTER_MAP wins so commissioner-provided canonical art beats
-        // whatever the pipeline produced.
-        const posterKeyA = (o.title || '').toLowerCase().replace(/[!?.]+$/, '').trim();
-        const posterMap = POSTER_MAP[posterKeyA] || POSTER_MAP[(o.title || '').toLowerCase()];
-        if (posterMap) { images.push(posterMap); continue; }
-        const posterArt = arts?.find(a => a.role === 'poster' && a.kind === 'image');
-        if (posterArt?.url) { images.push(posterArt.url); continue; }
-        const sb = arts.find(a => a.role === 'storyboard' && a.kind === 'image');
-        if (sb?.url) { images.push(sb.url); continue; }
+        const url = resolvePoster(o);
+        if (url) pairs.push({ url, id: o.id });
       }
-
-      const unique = [...new Set(images)];
+      // Dedupe by poster URL (same film → same slide).
+      const seen = new Set();
+      const unique = pairs.filter(p => seen.has(p.url) ? false : (seen.add(p.url), true));
       const container = document.getElementById('hero-carousel');
 
       // Only replace the static fallback if we have at least 2 real images.
-      // Otherwise keep the static posters running.
       if (unique.length >= 2) {
-        container.innerHTML = unique.map((url, i) =>
-          `<div class="hero-slide${i === 0 ? ' active' : ''}" style="background-image:url('${url}')"></div>`
+        container.innerHTML = unique.map((p, i) =>
+          `<div class="hero-slide${i === 0 ? ' active' : ''}" data-offer-id="${esc(p.id)}" style="background-image:url('${esc(p.url)}')"></div>`
         ).join('');
       }
+
+      // Wire click-through — a visitor clicking the hero backdrop lands
+      // on that film's watch page. Previously the carousel was purely
+      // decorative wallpaper.
+      container.addEventListener('click', (e) => {
+        const slide = e.target.closest('.hero-slide[data-offer-id]');
+        if (!slide) return;
+        window.location.href = 'watch.html?id=' + encodeURIComponent(slide.dataset.offerId);
+      });
 
       // Start the rotation — works for static or dynamic slides
       let idx = 0;
@@ -609,7 +696,54 @@
       }, 5_000);
     }
 
+    // ─── Featured trailers strip ───
+    // Pull every trailer-tier published offer with real video artifacts
+    // and render as 2:3 poster cards with a hover PLAY button. These are
+    // the watchable proof-of-product anchor of the landing page.
+    async function loadFeaturedTrailers() {
+      const stripEl = document.getElementById('trailer-strip');
+      if (!stripEl) return;
+      try {
+        const { data } = await supabase
+          .from('bct_offers')
+          .select('id, title, token_ticker, tier, status, created_at, bct_artifacts(kind, role, url, superseded_by)')
+          .eq('tier', 'trailer')
+          .in('status', ['published', 'auto_published', 'released'])
+          .not('is_swarm', 'is', true)
+          .is('archived_at', null)
+          .order('created_at', { ascending: false })
+          .limit(12);
+        const trailers = (data || []).filter(o => {
+          const arts = o.bct_artifacts || [];
+          return arts.some(a => a.kind === 'video' && !a.superseded_by);
+        });
+        if (!trailers.length) {
+          stripEl.innerHTML = '<div class="trailers-loading">No trailers available yet.</div>';
+          return;
+        }
+        stripEl.innerHTML = trailers.map(o => {
+          const poster = resolvePoster(o) || 'img/bmovies_og.jpg';
+          const href = 'film.html?id=' + encodeURIComponent(o.id);
+          return `
+            <a href="${href}" class="trailer-card" aria-label="Watch ${esc(o.title)}">
+              <img src="${esc(poster)}" alt="${esc(o.title)}" loading="lazy" />
+              <div class="tc-gradient"></div>
+              <div class="tc-play"><div class="tc-play-btn">▶</div></div>
+              <div class="tc-label">
+                ${esc(o.title)}
+                ${o.token_ticker ? `<div class="tc-ticker">$${esc(o.token_ticker)}</div>` : ''}
+              </div>
+            </a>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('[trailers] load failed:', err);
+        stripEl.innerHTML = '<div class="trailers-loading">Couldn\'t load trailers.</div>';
+      }
+    }
+
     loadHeroCarousel();
+    loadFeaturedTrailers();
 
     // ─── Live productions strip ───
     // If any feature is currently in production (status in funded /
