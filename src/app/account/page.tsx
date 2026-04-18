@@ -6570,6 +6570,17 @@ function MovieEditorView({
   const [activeClip, setActiveClip] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  // ── Layered deliverable tracks ─────────────────────────────────
+  // When the user plays the Trailer tab's Monitor we layer the VO +
+  // music + title cards over the clip sequence so they're watching
+  // THE TRAILER, not four silent raw clips. Matches PreviewView.
+  const [voUrl, setVoUrl] = useState<string | null>(null)
+  const [musicUrl, setMusicUrl] = useState<string | null>(null)
+  const [titleCards, setTitleCards] = useState<TitleCard[]>([])
+  const [currentTitle, setCurrentTitle] = useState<string | null>(null)
+  const voRef = useRef<HTMLAudioElement | null>(null)
+  const musicRef = useRef<HTMLAudioElement | null>(null)
+  const elapsedRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -6595,16 +6606,55 @@ function MovieEditorView({
         .from('bct_artifacts')
         .select('id, kind, url, step_id, role')
         .in('offer_id', lineageIds)
-        .eq('kind', 'video')
+        .in('kind', ['video', 'audio', 'text'])
         .is('superseded_by', null)
         .order('created_at', { ascending: true })
-      if (!cancelled) {
-        const all = Array.from(
-          new Map(((data as EditorClip[]) || []).map((x) => [x.url, x])).values(),
-        )
-        setAllClips(all)
-        setLoading(false)
+      if (cancelled) return
+
+      const rows = (data as Array<EditorClip & { kind: string }>) || []
+      const videos = rows.filter((r) => r.kind === 'video')
+      const audios = rows.filter((r) => r.kind === 'audio')
+      const texts = rows.filter((r) => r.kind === 'text')
+
+      const all = Array.from(new Map(videos.map((x) => [x.url, x])).values())
+      setAllClips(all)
+
+      // Pick the VO and music bed. Trailer post-production stores:
+      //   vo.trailer_narration     audio · ElevenLabs narration
+      //   composer.trailer_score   audio · MusicGen score
+      setVoUrl(audios.find((a) => (a.step_id || '').includes('vo.'))?.url || null)
+      setMusicUrl(audios.find((a) => (a.step_id || '').includes('composer.'))?.url || null)
+
+      // Parse title-card timeline from editor.trailer_titles JSON.
+      const titlesRow = texts.find((r) => (r.step_id || '') === 'editor.trailer_titles')
+      if (titlesRow?.url) {
+        try {
+          let raw: string
+          if (titlesRow.url.startsWith('data:')) {
+            const comma = titlesRow.url.indexOf(',')
+            const head = titlesRow.url.slice(5, comma)
+            const body = titlesRow.url.slice(comma + 1)
+            raw = head.includes(';base64') ? atob(body) : decodeURIComponent(body)
+          } else {
+            raw = await fetch(titlesRow.url).then((r) => r.text()).catch(() => '')
+          }
+          const parsed = JSON.parse(raw.replace(/^```json\n?|```$/g, '').trim())
+          if (Array.isArray(parsed)) {
+            const cards: TitleCard[] = parsed
+              .map((c: any) => ({
+                t: Number(c.t ?? c.at ?? 0),
+                text: String(c.text ?? c.card ?? ''),
+                duration: c.duration ? Number(c.duration) : undefined,
+              }))
+              .filter((c) => c.text.length > 0)
+              .sort((a, b) => a.t - b.t)
+            setTitleCards(cards)
+          }
+        } catch (err) {
+          console.warn('[editor] title-cards parse failed:', err)
+        }
       }
+      setLoading(false)
     }
     load()
     return () => { cancelled = true }
@@ -6639,22 +6689,95 @@ function MovieEditorView({
       : titleAllVideo.filter((c) => (c.step_id || '').startsWith(`${tier}.title.`))
 
   function handleClipEnd() {
+    // Roll elapsed forward by the finished clip's duration so title
+    // cards stay aligned as we move to the next clip in the reel.
+    const finished = videoRef.current
+    if (finished) elapsedRef.current += finished.duration || 8
     if (activeClip < clips.length - 1) setActiveClip((prev) => prev + 1)
-    else setIsPlaying(false)
+    else {
+      // End of reel — stop audio, reset elapsed + overlay.
+      try { voRef.current?.pause() } catch {}
+      try { musicRef.current?.pause() } catch {}
+      elapsedRef.current = 0
+      setCurrentTitle(null)
+      setIsPlaying(false)
+    }
   }
 
   function playAll() {
+    // Reset the layered-playback cursor, start audio on first clip.
+    elapsedRef.current = 0
+    setCurrentTitle(null)
     setActiveClip(0)
     setIsPlaying(true)
-    setTimeout(() => videoRef.current?.play(), 100)
+    setTimeout(() => {
+      videoRef.current?.play().catch(() => {})
+      if (voRef.current) {
+        try { voRef.current.currentTime = 0; voRef.current.play().catch(() => {}) } catch {}
+      }
+      if (musicRef.current) {
+        try {
+          musicRef.current.currentTime = 0
+          musicRef.current.volume = 0.35  // duck music under VO
+          musicRef.current.play().catch(() => {})
+        } catch {}
+      }
+    }, 100)
   }
 
   function switchTier(next: EditorTier) {
     if (next === tier) return
+    try { voRef.current?.pause() } catch {}
+    try { musicRef.current?.pause() } catch {}
+    elapsedRef.current = 0
+    setCurrentTitle(null)
     setManualTier(next)
     setActiveClip(0)
     setIsPlaying(false)
   }
+
+  // Drive title overlay from video playback position. Only active on
+  // the trailer tier (title cards are a trailer-tier deliverable);
+  // other tiers just play clean video.
+  useEffect(() => {
+    if (tier !== 'trailer') { setCurrentTitle(null); return }
+    const video = videoRef.current
+    if (!video) return
+    const onTime = () => {
+      const now = elapsedRef.current + (video.currentTime || 0)
+      let active: string | null = null
+      for (const card of titleCards) {
+        if (card.t <= now) {
+          const endT = card.duration ? card.t + card.duration : card.t + 4
+          if (now < endT) { active = card.text; break }
+          active = null
+        } else break
+      }
+      setCurrentTitle(active)
+    }
+    const onPause = () => {
+      try { voRef.current?.pause() } catch {}
+      try { musicRef.current?.pause() } catch {}
+    }
+    const onPlay = () => {
+      // Mid-reel resume: if the user pauses and hits play again,
+      // re-start the audio tracks in sync with the video.
+      if (voRef.current && voRef.current.paused && activeClip === 0) {
+        voRef.current.play().catch(() => {})
+      }
+      if (musicRef.current && musicRef.current.paused && activeClip === 0) {
+        musicRef.current.play().catch(() => {})
+      }
+    }
+    video.addEventListener('timeupdate', onTime)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('play', onPlay)
+    return () => {
+      video.removeEventListener('timeupdate', onTime)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('play', onPlay)
+    }
+  }, [tier, titleCards, activeClip])
 
   if (loading) {
     return (
@@ -6719,16 +6842,41 @@ function MovieEditorView({
           </span>
         </div>
         {clips.length > 0 ? (
-          <video
-            ref={videoRef}
-            key={clips[activeClip]?.url}
-            src={clips[activeClip]?.url}
-            controls
-            autoPlay={isPlaying}
-            onEnded={handleClipEnd}
-            className="w-full aspect-video bg-black"
-            preload="metadata"
-          />
+          <div className="relative w-full aspect-video bg-black">
+            <video
+              ref={videoRef}
+              key={clips[activeClip]?.url}
+              src={clips[activeClip]?.url}
+              controls
+              autoPlay={isPlaying}
+              onEnded={handleClipEnd}
+              className="w-full h-full bg-black"
+              preload="metadata"
+            />
+            {/* Title card overlay — only populated on the trailer tier */}
+            {tier === 'trailer' && currentTitle && (
+              <div className="absolute inset-x-0 bottom-[10%] z-20 pointer-events-none flex justify-center px-6">
+                <div
+                  className="text-white text-center font-black leading-tight uppercase tracking-wide"
+                  style={{
+                    fontFamily: 'var(--font-bebas)',
+                    fontSize: 'clamp(1.2rem, 3.5vw, 2.8rem)',
+                    textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)',
+                    maxWidth: '90%',
+                  }}
+                >
+                  {currentTitle}
+                </div>
+              </div>
+            )}
+            {/* Hidden audio tracks layered with the video on trailer */}
+            {tier === 'trailer' && voUrl && (
+              <audio ref={voRef} src={voUrl} preload="auto" crossOrigin="anonymous" />
+            )}
+            {tier === 'trailer' && musicUrl && (
+              <audio ref={musicRef} src={musicUrl} preload="auto" crossOrigin="anonymous" />
+            )}
+          </div>
         ) : (
           <div className="aspect-video bg-[#050505] flex items-center justify-center">
             <div className="text-center">
