@@ -80,12 +80,17 @@ const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 // All hrefs are ROOT-relative so this nav works everywhere including
 // nested pages like /legal/*.html.
 const NAV_LINKS = [
+  // About promoted back to the primary nav (left of Pitch) on 2026-04-18 —
+  // the five-verb lifecycle row alone left new visitors without a
+  // "how does this work?" entry point, and the footer was doing too
+  // much of that work.
+  { href: '/about.html',       label: 'About' },
   { href: '/commission.html',  label: 'Pitch' },
   { href: '/exchange.html',    label: 'Raise' },
   { href: '/productions.html', label: 'Produce' },
   { href: '/market.html',      label: 'Market' },
   { href: '/release.html',     label: 'Release' },
-  // About → footer. Judge → footer. See FOOTER_LINKS below.
+  // Judge → footer. See FOOTER_LINKS below.
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
   // so it was pulled to avoid two adjacent links pointing at the same URL.
@@ -101,7 +106,7 @@ const NAV_LINKS = [
 // Keeping them in the footer rather than the nav lets the primary nav
 // stay a clean five-verb film-lifecycle journey.
 const FOOTER_LINKS = [
-  { href: '/about.html',           label: 'About' },
+  // About moved to the primary nav 2026-04-18; no longer duplicated here.
   { href: '/watch.html',           label: 'Watch catalog' },
   { href: '/studios.html',         label: 'Studios' },
   { href: '/agents.html',          label: 'Agents' },
