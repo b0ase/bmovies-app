@@ -530,18 +530,67 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
   const commissioned = searchParams.get('commissioned')
   const title = searchParams.get('title') || ''
   const tier  = searchParams.get('tier')  || ''
+  const projectParent = searchParams.get('project') || ''
   const [dismissed, setDismissed] = useState(false)
 
-  // Auto-dismiss once a matching offer shows up OR after 90s
+  // Auto-dismiss + auto-navigate once the new offer appears.
+  //
+  // Two modes depending on how the user got here:
+  //
+  //   (A) Upgrade from a project overview — URL has project=<parent>.
+  //       Poll bct_offers for a row with parent_offer_id=<project> AND
+  //       tier=<tier>. When found, navigate to that offer's overview
+  //       so the user sees the new trailer/short/feature being built.
+  //       Title match is unsafe here because upgrades inherit the
+  //       parent title ("Ashes of the Border" pitch → "Ashes of the
+  //       Border" trailer) and would false-positive immediately.
+  //
+  //   (B) Fresh pitch / non-project commission — fallback to the
+  //       original title-match against the films[] list.
+  //
+  // Both modes hard-cap at 5 minutes so a degraded webhook doesn't
+  // leave the banner pulsing forever.
   useEffect(() => {
     if (dismissed || commissioned !== '1') return
+    let cancelled = false
+
+    async function pollForChild() {
+      const t0 = Date.now()
+      while (!cancelled && Date.now() - t0 < 5 * 60_000) {
+        const { data } = await bmovies
+          .from('bct_offers')
+          .select('id')
+          .eq('parent_offer_id', projectParent)
+          .eq('tier', tier)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (cancelled) return
+        if (data?.id) {
+          setDismissed(true)
+          router.replace(`/account?project=${encodeURIComponent(data.id)}&tab=overview`, { scroll: false })
+          return
+        }
+        await new Promise((r) => setTimeout(r, 4000))
+      }
+      if (!cancelled) {
+        setDismissed(true)
+        router.replace(`/account?project=${encodeURIComponent(projectParent)}&tab=overview`, { scroll: false })
+      }
+    }
+
+    if (projectParent && tier) {
+      pollForChild()
+      return () => { cancelled = true }
+    }
+
+    // Fallback mode (B): match by title.
     const decoded = decodeURIComponent(title).toLowerCase().trim()
     const matched = films.some(
       (f) => (f.title || '').toLowerCase().trim() === decoded,
     )
     if (matched) {
       setDismissed(true)
-      // Strip query params so a refresh doesn't re-summon the banner
       router.replace('/account?tab=studio', { scroll: false })
       return
     }
@@ -549,13 +598,14 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
       setDismissed(true)
       router.replace('/account?tab=studio', { scroll: false })
     }, 90_000)
-    return () => window.clearTimeout(id)
-  }, [dismissed, commissioned, title, films, router])
+    return () => { cancelled = true; window.clearTimeout(id) }
+  }, [dismissed, commissioned, title, tier, projectParent, films, router])
 
   if (commissioned !== '1' || dismissed) return null
 
   const decodedTitle = decodeURIComponent(title)
   const decodedTier = (decodeURIComponent(tier) || 'film').toLowerCase()
+  const isProjectUpgrade = Boolean(projectParent && tier)
 
   return (
     <div
@@ -577,16 +627,20 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
             : <>Your {decodedTier}{decodedTitle ? <> — &ldquo;{decodedTitle}&rdquo;</> : ''} is queued</>}
         </div>
         <div className="text-[#aaa] text-xs leading-relaxed mt-1">
-          Stripe payment received. The agent swarm is spinning up; your
-          film will appear in the Pipeline section below in a minute or two.
-          You can close this tab — production continues on the server.
+          {isProjectUpgrade
+            ? <>Stripe payment received. The agent swarm is spinning up your {decodedTier} now. We&apos;ll take you to the new production page as soon as it&apos;s ready — usually 30-60 seconds. You can close this tab — production continues on the server.</>
+            : <>Stripe payment received. The agent swarm is spinning up; your film will appear in the Pipeline section below in a minute or two. You can close this tab — production continues on the server.</>
+          }
         </div>
       </div>
       <button
         type="button"
         onClick={() => {
           setDismissed(true)
-          router.replace('/account?tab=studio', { scroll: false })
+          const target = isProjectUpgrade
+            ? `/account?project=${encodeURIComponent(projectParent)}&tab=overview`
+            : '/account?tab=studio'
+          router.replace(target, { scroll: false })
         }}
         className="text-[#666] hover:text-white text-xs px-2 py-1"
         aria-label="Dismiss"
@@ -1521,59 +1575,78 @@ function TierLadder({ film }: { film: Film }) {
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
+
+    async function loadLineage() {
+      const chain: LineageOffer[] = []
+      let cursorId: string | null = film.id
+      while (cursorId) {
+        const { data }: { data: (LineageOffer & { parent_offer_id: string | null }) | null } = await bmovies
+          .from('bct_offers')
+          .select('id, tier, title, token_ticker, parent_offer_id')
+          .eq('id', cursorId)
+          .maybeSingle()
+        if (!data) break
+        chain.unshift({ id: data.id, tier: data.tier, title: data.title, token_ticker: data.token_ticker })
+        cursorId = data.parent_offer_id
+      }
+      if (chain.length === 0) return {}
+
+      // Walk DOWN from the root, looking for one derivative at each
+      // next tier. Linear by construction (a pitch has at most one
+      // trailer; a trailer has at most one short; etc.).
+      const found: Partial<Record<Tier, LineageOffer>> = {}
+      for (const o of chain) {
+        if ((TIER_ORDER as readonly string[]).includes(o.tier)) {
+          found[o.tier as Tier] = o
+        }
+      }
+      const leaf = chain[chain.length - 1]
+      let parentId: string = leaf.id
+      let parentTier = leaf.tier as Tier
+      while (true) {
+        const nextIdx = TIER_ORDER.indexOf(parentTier) + 1
+        if (nextIdx <= 0 || nextIdx >= TIER_ORDER.length) break
+        const nextTier = TIER_ORDER[nextIdx]
+        const { data }: { data: LineageOffer | null } = await bmovies
+          .from('bct_offers')
+          .select('id, tier, title, token_ticker')
+          .eq('parent_offer_id', parentId)
+          .eq('tier', nextTier)
+          .maybeSingle()
+        if (!data) break
+        found[nextTier] = data
+        parentId = data.id
+        parentTier = nextTier
+      }
+      return found
+    }
+
+    async function run() {
       setLoading(true)
       try {
-        // Walk up parent chain from the current film to the root pitch.
-        const chain: LineageOffer[] = []
-        let cursorId: string | null = film.id
-        while (cursorId) {
-          const { data }: { data: (LineageOffer & { parent_offer_id: string | null }) | null } = await bmovies
-            .from('bct_offers')
-            .select('id, tier, title, token_ticker, parent_offer_id')
-            .eq('id', cursorId)
-            .maybeSingle()
-          if (!data) break
-          chain.unshift({ id: data.id, tier: data.tier, title: data.title, token_ticker: data.token_ticker })
-          cursorId = data.parent_offer_id
-        }
-        if (chain.length === 0) { if (!cancelled) { setLineage({}); setLoading(false) }; return }
+        const initial = await loadLineage()
+        if (!cancelled) { setLineage(initial); setLoading(false) }
 
-        // Now walk DOWN from the root, looking for one derivative at
-        // each next tier. Linear by construction (a pitch has at most
-        // one trailer; a trailer has at most one short; etc.).
-        const found: Partial<Record<Tier, LineageOffer>> = {}
-        for (const o of chain) {
-          if ((TIER_ORDER as readonly string[]).includes(o.tier)) {
-            found[o.tier as Tier] = o
-          }
+        // Poll every 5s for 5 minutes so the ladder updates live when
+        // an upgrade-webhook fires on this page. Cheap — bounded, 1-4
+        // tiny queries per tick. Stops as soon as the page unmounts.
+        const t0 = Date.now()
+        while (!cancelled && Date.now() - t0 < 5 * 60_000) {
+          await new Promise((r) => setTimeout(r, 5000))
+          if (cancelled) break
+          const fresh = await loadLineage()
+          if (cancelled) break
+          const grew = Object.keys(fresh).length > Object.keys(initial).length
+          setLineage(fresh)
+          if (grew) break
         }
-        const leaf = chain[chain.length - 1]
-        let parentId: string = leaf.id
-        let parentTier = leaf.tier as Tier
-        while (true) {
-          const nextIdx = TIER_ORDER.indexOf(parentTier) + 1
-          if (nextIdx <= 0 || nextIdx >= TIER_ORDER.length) break
-          const nextTier = TIER_ORDER[nextIdx]
-          const { data }: { data: LineageOffer | null } = await bmovies
-            .from('bct_offers')
-            .select('id, tier, title, token_ticker')
-            .eq('parent_offer_id', parentId)
-            .eq('tier', nextTier)
-            .maybeSingle()
-          if (!data) break
-          found[nextTier] = data
-          parentId = data.id
-          parentTier = nextTier
-        }
-        if (!cancelled) setLineage(found)
       } catch (error) {
         if (!cancelled) console.warn('[tier-ladder] load failed:', error)
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
-    load()
+    run()
     return () => { cancelled = true }
   }, [film.id])
 
