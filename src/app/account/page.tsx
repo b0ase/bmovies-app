@@ -1403,6 +1403,8 @@ function ProjectView({
       return <ProjectDeckView film={currentFilm} />
     case 'room':
       return <ProjectRoomView film={currentFilm} />
+    case 'voiceover':
+      return <ProjectVoView film={currentFilm} />
     case 'overview':
     default:
       return <ProjectOverviewView film={currentFilm} />
@@ -3688,6 +3690,325 @@ function ProjectDeckView({ film }: { film: Film }) {
         style={{ minHeight: '85vh', background: '#000' }}
         title={`Investor deck: ${film.title}`}
       />
+    </div>
+  )
+}
+
+/* ─── Project Voiceover ─── */
+/*
+ * Voiceover tab — commissioner can:
+ *   - Hear the current VO on top of the trailer reel
+ *   - Edit the script (either free-form, or via "Refine with AI")
+ *   - Pick a voice (shortlist matches ElevenLabs ids in post-production.ts)
+ *   - Regenerate (burns one of 3 free revisions; after that, upload-only)
+ *   - Upload their own MP3 (no revision limit)
+ *
+ * Revision counter = count of non-superseded + superseded vo.trailer_narration
+ * rows ever inserted for this offer. Hard-gated at 3 for trailers; shorts and
+ * features get 5 (larger budget, more room to iterate).
+ */
+function ProjectVoView({ film }: { film: Film }) {
+  const REV_LIMIT = film.tier === 'trailer' ? 3 : film.tier === 'short' ? 5 : 7
+
+  // ElevenLabs voice shortlist — matches resolveVoiceId() in post-production.ts.
+  const VOICES = [
+    { id: 'adam',    label: 'Adam · deep American narrator (default)' },
+    { id: 'brian',   label: 'Brian · deep trailer-announcer' },
+    { id: 'daniel',  label: 'Daniel · British authoritative' },
+    { id: 'arnold',  label: 'Arnold · gravelly, intense' },
+    { id: 'clyde',   label: 'Clyde · characterful, comedic' },
+    { id: 'callum',  label: 'Callum · soft, thoughtful' },
+    { id: 'rachel',  label: 'Rachel · warm female' },
+    { id: 'bella',   label: 'Bella · intimate female' },
+    { id: 'domi',    label: 'Domi · sharp female' },
+  ]
+
+  const [loading, setLoading] = useState(true)
+  const [scriptText, setScriptText] = useState('')
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null)
+  const [pastRevisions, setPastRevisions] = useState<Array<{ id: number; url: string; created_at: string; voice?: string }>>([])
+  const [voiceId, setVoiceId] = useState('adam')
+  const [status, setStatus] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [refining, setRefining] = useState(false)
+  const [refineHint, setRefineHint] = useState('')
+
+  const revisionsUsed = pastRevisions.length
+  const revisionsLeft = Math.max(0, REV_LIMIT - revisionsUsed)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const { data } = await bmovies
+          .from('bct_artifacts')
+          .select('id, step_id, url, superseded_by, created_at, model')
+          .eq('offer_id', film.id)
+          .in('step_id', ['vo.trailer_script', 'vo.trailer_narration'])
+          .order('created_at', { ascending: false })
+        if (cancelled) return
+        const rows = data || []
+        const scriptRow = rows.find((r) => r.step_id === 'vo.trailer_script' && !r.superseded_by)
+        const narrationHead = rows.find((r) => r.step_id === 'vo.trailer_narration' && !r.superseded_by)
+        const narrationHistory = rows.filter((r) => r.step_id === 'vo.trailer_narration')
+        if (scriptRow?.url?.startsWith('data:')) {
+          try { setScriptText(decodeURIComponent(scriptRow.url.split(',')[1] || '')) } catch {}
+        }
+        if (narrationHead?.url) setCurrentAudioUrl(narrationHead.url)
+        setPastRevisions(
+          narrationHistory.map((r) => ({
+            id: r.id as number,
+            url: r.url as string,
+            created_at: r.created_at as string,
+            voice: (r.model as string) || undefined,
+          })),
+        )
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [film.id])
+
+  async function refineScriptWithAI() {
+    if (!scriptText.trim()) {
+      setStatus('Paste or edit a script first.')
+      return
+    }
+    setRefining(true)
+    setStatus(null)
+    try {
+      const res = await fetch('/api/trailer/vo/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: film.id,
+          currentScript: scriptText,
+          hint: refineHint || 'Make it sharper, more cinematic, more dramatic',
+          title: film.title,
+          synopsis: film.synopsis,
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`)
+      if (body?.refined) {
+        setScriptText(body.refined)
+        setStatus('Script refined. Review above, then Regenerate.')
+      }
+    } catch (err) {
+      setStatus(`Refine failed: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setRefining(false)
+    }
+  }
+
+  async function regenerateVo() {
+    if (revisionsLeft <= 0) {
+      setStatus(`All ${REV_LIMIT} revisions used. Upload your own MP3 instead.`)
+      return
+    }
+    setBusy(true)
+    setStatus('Updating script + re-TTSing with ElevenLabs…')
+    try {
+      // 1. Patch vo.trailer_script with the current text (the endpoint
+      //    treats an existing script as curated and reuses it verbatim).
+      const scriptUrl =
+        'data:text/plain;charset=utf-8,' + encodeURIComponent(scriptText.trim())
+      const { error: patchErr } = await bmovies
+        .from('bct_artifacts')
+        .update({ url: scriptUrl })
+        .eq('offer_id', film.id)
+        .eq('step_id', 'vo.trailer_script')
+        .is('superseded_by', null)
+      if (patchErr) {
+        // If there's no existing script row yet, insert one.
+        await bmovies.from('bct_artifacts').insert({
+          offer_id: film.id,
+          kind: 'text',
+          url: scriptUrl,
+          model: 'user-curated',
+          prompt: 'user-edited VO script',
+          payment_txid: `user-edit-${Date.now().toString(36)}`,
+          role: 'vo',
+          step_id: 'vo.trailer_script',
+        })
+      }
+
+      // 2. Force re-TTS with the chosen voice.
+      const res = await fetch('/api/trailer/post-production', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offerId: film.id,
+          voiceId,
+          force: { voAudio: true },
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`)
+      setStatus(`Regenerated. New VO cost \$${(body.costUsd || 0).toFixed(2)}. Reloading…`)
+      // Reload revisions + audio after a moment so Supabase replication lands.
+      setTimeout(() => { window.location.reload() }, 1200)
+    } catch (err) {
+      setStatus(`Regenerate failed: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setStatus('Keep MP3 under 5MB.')
+      return
+    }
+    setBusy(true)
+    setStatus('Uploading your MP3…')
+    try {
+      const form = new FormData()
+      form.append('offerId', film.id)
+      form.append('file', file)
+      const res = await fetch('/api/trailer/vo/upload', { method: 'POST', body: form })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`)
+      setStatus('Uploaded. Reloading…')
+      setTimeout(() => { window.location.reload() }, 800)
+    } catch (err) {
+      setStatus(`Upload failed: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (loading) {
+    return <div className="animate-pulse h-40 bg-[#0e0e0e]" />
+  }
+
+  return (
+    <div className="max-w-4xl">
+      <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+        Voiceover
+      </div>
+      <h2 className="text-3xl font-black leading-none text-white mb-4" style={{ fontFamily: 'var(--font-bebas)' }}>
+        Fix the voiceover on <span className="text-[#E50914]">{film.title}</span>
+      </h2>
+      <p className="text-[#888] text-sm leading-relaxed mb-6 max-w-xl">
+        Edit the script, pick a voice, regenerate. You get {REV_LIMIT} free revisions for a {film.tier}; after that you can upload your own MP3.
+      </p>
+
+      {/* Current VO player */}
+      <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-5">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">
+          Current VO
+        </div>
+        {currentAudioUrl ? (
+          <audio controls src={currentAudioUrl} className="w-full" style={{ filter: 'invert(0.85)' }} />
+        ) : (
+          <div className="text-[#666] text-xs italic">No VO yet. Post-production may still be running.</div>
+        )}
+        <div className="text-[0.6rem] text-[#555] mt-2">
+          Revisions used: <strong className="text-[#E50914]">{revisionsUsed}</strong> / {REV_LIMIT}
+        </div>
+      </div>
+
+      {/* Script editor */}
+      <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">VO script</div>
+          <div className="text-[0.55rem] text-[#555]">{scriptText.length} chars</div>
+        </div>
+        <textarea
+          value={scriptText}
+          onChange={(e) => setScriptText(e.target.value)}
+          rows={6}
+          className="w-full bg-black border border-[#222] text-white p-3 text-sm font-mono leading-relaxed focus:outline-none focus:border-[#E50914]"
+          placeholder="Write the script the narrator will read…"
+        />
+
+        {/* Refine with AI */}
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+          <input
+            type="text"
+            value={refineHint}
+            onChange={(e) => setRefineHint(e.target.value)}
+            className="bg-black border border-[#222] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#E50914]"
+            placeholder="What's wrong with it? (e.g. 'too cheerful — make it darker')"
+          />
+          <button
+            type="button"
+            onClick={refineScriptWithAI}
+            disabled={refining || busy}
+            className="px-4 py-2 bg-[#1a1a1a] border border-[#333] text-[#ccc] text-[0.65rem] font-bold uppercase tracking-wider hover:border-[#E50914] hover:text-[#E50914] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {refining ? 'Refining…' : 'Refine with AI →'}
+          </button>
+        </div>
+      </div>
+
+      {/* Voice picker + regenerate */}
+      <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-5">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">Voice</div>
+        <select
+          value={voiceId}
+          onChange={(e) => setVoiceId(e.target.value)}
+          className="w-full bg-black border border-[#222] text-white px-3 py-2 text-sm mb-3 focus:outline-none focus:border-[#E50914]"
+        >
+          {VOICES.map((v) => (
+            <option key={v.id} value={v.id}>{v.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={regenerateVo}
+          disabled={busy || revisionsLeft <= 0 || !scriptText.trim()}
+          className="w-full px-4 py-3 bg-[#E50914] text-white text-sm font-black uppercase tracking-wider hover:bg-[#b00610] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Working…' : revisionsLeft > 0
+            ? `Regenerate VO · ${revisionsLeft} revision${revisionsLeft === 1 ? '' : 's'} left`
+            : 'Out of free revisions — upload your own below'}
+        </button>
+      </div>
+
+      {/* Upload own MP3 */}
+      <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-5">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">Or upload your own MP3</div>
+        <p className="text-[#666] text-xs leading-relaxed mb-3">
+          Record your own take, or hire a human voice actor. Under 5MB, 32s or less. No revision limit on uploads.
+        </p>
+        <input
+          type="file"
+          accept="audio/mpeg,audio/mp3,.mp3"
+          onChange={handleUpload}
+          disabled={busy}
+          className="block w-full text-[#ccc] text-sm file:mr-3 file:py-2 file:px-4 file:border-0 file:bg-[#1a1a1a] file:text-[#ccc] file:text-[0.65rem] file:font-bold file:uppercase file:tracking-wider file:cursor-pointer hover:file:bg-[#E50914] hover:file:text-white"
+        />
+      </div>
+
+      {/* Revision history */}
+      {pastRevisions.length > 1 && (
+        <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-3">Past takes (superseded)</div>
+          <div className="space-y-2">
+            {pastRevisions.slice(1).map((r) => (
+              <div key={r.id} className="flex items-center gap-3">
+                <audio controls src={r.url} className="flex-1" style={{ filter: 'invert(0.85)', height: '32px' }} />
+                <div className="text-[0.55rem] text-[#555] uppercase tracking-wider">
+                  {new Date(r.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {status && (
+        <div className={`mt-4 p-3 text-sm ${status.includes('fail') || status.includes('error') ? 'bg-[#3a1010] text-[#ff8f8f]' : 'bg-[#0e3a0e] text-[#6bff8a]'}`}>
+          {status}
+        </div>
+      )}
     </div>
   )
 }
