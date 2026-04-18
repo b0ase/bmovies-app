@@ -98,6 +98,11 @@ const NAV_LINKS = [
   { href: '/exchange.html',    label: 'Fund' },
   { href: '/productions.html', label: 'Produce' },
   { href: '/release.html',     label: 'Publish' },
+  // Watch → right of Publish (2026-04-18). Publish is the commissioner-
+  // facing end of the lifecycle; Watch is the audience-facing equivalent.
+  // Putting them adjacent completes the loop: you either make or you
+  // consume, pick a door.
+  { href: '/watch.html',       label: 'Watch' },
   // Judge → footer. See FOOTER_LINKS below.
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
