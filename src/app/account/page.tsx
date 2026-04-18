@@ -6055,11 +6055,27 @@ interface AltOffer {
   pipeline_state: { is_alt?: boolean } | null
 }
 
+// Six house studios that can produce an alt. Picking one injects that
+// studio's aesthetic into the style-bible prompt on the generate step,
+// so two alts of the same pitch made by different studios look and
+// feel genuinely different. Null = studio-agnostic production (old
+// default behaviour).
+const ALT_STUDIOS: Array<{ id: string; label: string; blurb: string }> = [
+  { id: '',                  label: '— no preference —',       blurb: 'Studio-agnostic production (original default).' },
+  { id: '21st-century-bot',  label: '21st Century Bot',        blurb: 'Cameron-esque sci-fi techno-spectacle, blue-orange palette, humanity-vs-machine.' },
+  { id: 'bolt-disney',       label: 'Bolt Disney',             blurb: 'Family warmth, jewel tones, musical-ready staging, magical-realism flourishes.' },
+  { id: 'clanker-bros',      label: 'Clanker Bros',            blurb: 'Gritty practical effects, industrial palette, Safdies-meets-Cronenberg body horror.' },
+  { id: 'dreamforge',        label: 'Dreamforge',              blurb: 'Dreamlike surrealism, painterly compositions, Malick-via-Tarsem elliptical editing.' },
+  { id: 'neuralscope',       label: 'NeuralScope',             blurb: 'Clinical sci-fi cool, Villeneuve brutalism, composed symmetry, textural drone score.' },
+  { id: 'paramountal-ai',    label: 'Paramountal AI',          blurb: 'Four-quadrant blockbuster polish, practical stunts, propulsive orchestral score.' },
+]
+
 function AltTrailersView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
   const [alts, setAlts] = useState<AltOffer[]>([])
   const [loading, setLoading] = useState(true)
   const [pending, setPending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [studioChoice, setStudioChoice] = useState<string>('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -6103,6 +6119,7 @@ function AltTrailersView({ projectId, projectTitle }: { projectId: string; proje
           synopsis: pitch.synopsis || '',
           parentOfferId: projectId,
           isAlt: true,
+          ...(studioChoice ? { studio: studioChoice } : {}),
           email: session.user?.email,
           supabaseUserId: session.user?.id,
           successPath: `/account?project=${encodeURIComponent(projectId)}&tool=alt&commissioned=1`,
@@ -6138,23 +6155,48 @@ function AltTrailersView({ projectId, projectTitle }: { projectId: string; proje
       </div>
 
       <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-5 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-0.5">
-              Commission an alt · $9.99
-            </div>
-            <p className="text-[#bbb] text-sm leading-relaxed">
-              Fires a fresh trailer generation against the same script.
-              Different style bible, different shot plan, different cuts.
-              Private by default — mark as canonical later if you want it public.
-            </p>
+        <div className="mb-4">
+          <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-0.5">
+            Commission an alt · $9.99
           </div>
+          <p className="text-[#bbb] text-sm leading-relaxed">
+            Fires a fresh trailer generation against the same script.
+            Pick a studio — or leave on <em>no preference</em> for a studio-agnostic
+            production. Each studio injects its own aesthetic into the style bible,
+            so two alts of the same pitch look and feel genuinely different.
+            Private by default; you pick a canonical winner later.
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="alt-studio-picker" className="block text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">
+            Studio aesthetic
+          </label>
+          <select
+            id="alt-studio-picker"
+            value={studioChoice}
+            onChange={(e) => setStudioChoice(e.target.value)}
+            className="w-full bg-black border border-[#222] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#E50914]"
+          >
+            {ALT_STUDIOS.map((s) => (
+              <option key={s.id || 'none'} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+          {/* Show the blurb for whichever studio is currently selected. */}
+          <p className="text-[0.7rem] text-[#888] mt-2 leading-snug">
+            {ALT_STUDIOS.find((s) => s.id === studioChoice)?.blurb}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end flex-wrap gap-3">
           <button
             onClick={commissionAlt}
             disabled={pending}
             className="px-4 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider shrink-0 disabled:opacity-50"
           >
-            {pending ? 'Redirecting…' : 'Commission alt · $9.99'}
+            {pending ? 'Redirecting…' : studioChoice
+              ? `Commission ${ALT_STUDIOS.find((s) => s.id === studioChoice)?.label} alt · $9.99`
+              : 'Commission alt · $9.99'}
           </button>
         </div>
         {err && (

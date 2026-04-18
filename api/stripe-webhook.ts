@@ -415,6 +415,7 @@ export default async function handler(
     // filter (TierLadder leaf pick, /watch.html listing, workbench
     // dedup) can treat it as private.
     const isAlt = (meta as { isAlt?: string }).isAlt === '1';
+    const studioHint = ((meta as { studio?: string }).studio || '').trim() || null;
     const { error: offerErr } = await supabase.from('bct_offers').insert({
       id: offerId,
       producer_id: `stripe-${tier}`,
@@ -429,6 +430,7 @@ export default async function handler(
       commissioner_percent: commissionerPercent,
       account_id: accountId,
       parent_offer_id: parentOfferId,
+      studio: studioHint,
       pipeline_state: isAlt ? { source: 'stripe-webhook', is_alt: true, stripeSessionId: session.id } : { source: 'stripe-webhook', stripeSessionId: session.id },
     });
     if (offerErr) {

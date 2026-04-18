@@ -91,7 +91,7 @@ export default async function handler(
     return;
   }
 
-  let body: { title?: string; ticker?: string; synopsis?: string; tier?: string; email?: string; parentOfferId?: string; source?: string; supabaseUserId?: string; successPath?: string; isAlt?: boolean };
+  let body: { title?: string; ticker?: string; synopsis?: string; tier?: string; email?: string; parentOfferId?: string; source?: string; supabaseUserId?: string; successPath?: string; isAlt?: boolean; studio?: string };
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
   } catch {
@@ -239,6 +239,7 @@ export default async function handler(
         ...(parentOfferId ? { parentOfferId } : {}),
         ...(body.supabaseUserId ? { supabaseUserId: body.supabaseUserId } : {}),
         ...(body.isAlt ? { isAlt: '1' } : {}),
+        ...(body.studio ? { studio: body.studio } : {}),
       },
     });
 

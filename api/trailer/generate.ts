@@ -287,7 +287,7 @@ export default async function handler(
   // Load the offer
   const { data: offer, error: loadErr } = await supabase
     .from('bct_offers')
-    .select('id, title, synopsis, tier, status')
+    .select('id, title, synopsis, tier, status, studio')
     .eq('id', offerId)
     .maybeSingle();
   if (loadErr || !offer) {
@@ -295,7 +295,45 @@ export default async function handler(
     return;
   }
 
-  const context = `Title: ${offer.title}\n\nSynopsis: ${offer.synopsis}`;
+  // Studio aesthetic — when the commissioner picks one of the house
+  // studios at commission time, that studio's tonal DNA gets injected
+  // into the style bible prompt. Different studios produce visually
+  // different versions of the SAME synopsis — which is the whole point
+  // of the Alt tab (commissioner commissions a 21st-century-bot trailer
+  // and a bolt-disney trailer of the same pitch, compares, picks one).
+  // Null/missing = studio-agnostic production (old default).
+  const STUDIO_STYLE: Record<string, string> = {
+    '21st-century-bot':
+      'Produced by 21ST CENTURY BOT. Sweeping sci-fi CGI worlds, blue-orange complementary palette, ' +
+      'humanity-vs-machine thematic tension, James-Cameron-esque techno-spectacle, futuristic vehicle and ' +
+      'environment design, orchestral-synth hybrid scoring, hard-sci-fi narrative logic.',
+    'bolt-disney':
+      'Produced by BOLT DISNEY. Family-entertainment warmth, saturated jewel-tone palette, lens flares, ' +
+      'coming-of-age emotional beats, musical-ready staging, hero-moment wide shots, "believe in yourself" ' +
+      'thematic throughline, magical-realism flourishes, swelling string-and-choir score.',
+    'clanker-bros':
+      'Produced by CLANKER BROS. Gritty practical-effects grounding, muted steel-and-concrete palette, ' +
+      'cold-industrial locations, lo-fi analog textures, mechanical character design, diegetic score, ' +
+      'Safdie-brothers-via-Cronenberg body-horror adjacency, hand-held kinetic camera.',
+    'dreamforge':
+      'Produced by DREAMFORGE. Dreamlike surrealism, iridescent/pastel palette with deep shadow, ' +
+      'Terrence-Malick-meets-Tarsem-Singh painterly compositions, slow dissolves, elliptical editing, ' +
+      'voiceover-driven interior lives, ambient cinematic score, soft natural light.',
+    'neuralscope':
+      'Produced by NEURALSCOPE. Analytical cool sci-fi, clinical blue-white palette with single accent hue, ' +
+      'Villeneuve-style brutalist geometry, composed symmetrical framing, intellectual pacing, ' +
+      'Hans-Zimmer-style textural drone score, muted naturalistic performance.',
+    'paramountal-ai':
+      'Produced by PARAMOUNTAL AI. Blockbuster four-quadrant polish, glossy saturated palette, ' +
+      'spectacle-first shot economy, Tom-Cruise-vehicle practical stunts, propulsive orchestral score, ' +
+      'crisp-edged VFX, "ride the trailer" narrative pacing, summer-tentpole gloss.',
+  };
+  const studioKey = (offer.studio as string | null | undefined)?.toLowerCase() || '';
+  const studioStyleLine = STUDIO_STYLE[studioKey] || '';
+
+  const context = `Title: ${offer.title}\n\nSynopsis: ${offer.synopsis}${
+    studioStyleLine ? `\n\nSTUDIO AESTHETIC (apply throughout):\n${studioStyleLine}` : ''
+  }`;
   let totalCost = 0;
   const artifacts: Array<{ role: string; kind: string; url: string; model: string; costUsd: number }> = [];
 
