@@ -3830,6 +3830,35 @@ function ProjectDeckView({ film }: { film: Film }) {
   )
 }
 
+/* ─── Slider field used by the Voiceover tab ─── */
+function SliderField({
+  label, value, setValue, hint,
+}: {
+  label: string
+  value: number
+  setValue: (v: number) => void
+  hint?: string
+}) {
+  return (
+    <div>
+      <div className="flex justify-between items-baseline mb-1">
+        <span className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold">{label}</span>
+        <span className="text-[0.65rem] text-[#E50914] font-mono">{value.toFixed(2)}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.05}
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+        className="w-full accent-[#E50914]"
+      />
+      {hint && <div className="text-[0.55rem] text-[#555] mt-1">{hint}</div>}
+    </div>
+  )
+}
+
 /* ─── Project Voiceover ─── */
 /*
  * Voiceover tab — commissioner can:
@@ -3859,18 +3888,60 @@ function ProjectVoView({ film }: { film: Film }) {
     { id: 'domi',    label: 'Domi · sharp female' },
   ]
 
+  const MODELS = [
+    { id: 'eleven_multilingual_v2', label: 'v2 Multilingual · quality default' },
+    { id: 'eleven_turbo_v2_5',      label: 'Turbo v2.5 · fast + cheap' },
+    { id: 'eleven_v3',              label: 'v3 alpha · expressive, audio tags' },
+  ]
+
+  // Audio tags v3 understands inline. Clicking inserts at cursor. Older
+  // models silently ignore tags so they don't break a v2 render either.
+  const AUDIO_TAGS: Array<{ label: string; insert: string }> = [
+    { label: '[whispers]', insert: '[whispers] ' },
+    { label: '[excited]',  insert: '[excited] ' },
+    { label: '[sighs]',    insert: '[sighs] ' },
+    { label: '[laughs]',   insert: '[laughs] ' },
+    { label: '[angry]',    insert: '[angry] ' },
+    { label: '[sad]',      insert: '[sad] ' },
+    { label: '[pause 1s]', insert: '[pause 1s] ' },
+    { label: '[pause 2s]', insert: '[pause 2s] ' },
+  ]
+
   const [loading, setLoading] = useState(true)
   const [scriptText, setScriptText] = useState('')
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null)
   const [pastRevisions, setPastRevisions] = useState<Array<{ id: number; url: string; created_at: string; voice?: string }>>([])
   const [voiceId, setVoiceId] = useState('adam')
+  const [modelId, setModelId] = useState('eleven_multilingual_v2')
+  const [stability, setStability] = useState(0.45)
+  const [similarityBoost, setSimilarityBoost] = useState(0.85)
+  const [style, setStyle] = useState(0.35)
+  const [speakerBoost, setSpeakerBoost] = useState(true)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [refining, setRefining] = useState(false)
   const [refineHint, setRefineHint] = useState('')
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+  const scriptRef = useRef<HTMLTextAreaElement>(null)
 
+  const isV3 = modelId === 'eleven_v3'
   const revisionsUsed = pastRevisions.length
   const revisionsLeft = Math.max(0, REV_LIMIT - revisionsUsed)
+
+  function insertAtCursor(text: string) {
+    const ta = scriptRef.current
+    if (!ta) { setScriptText((s) => s + text); return }
+    const start = ta.selectionStart ?? scriptText.length
+    const end = ta.selectionEnd ?? scriptText.length
+    const next = scriptText.slice(0, start) + text + scriptText.slice(end)
+    setScriptText(next)
+    requestAnimationFrame(() => {
+      ta.focus()
+      ta.selectionStart = ta.selectionEnd = start + text.length
+    })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -3972,13 +4043,20 @@ function ProjectVoView({ film }: { film: Film }) {
         })
       }
 
-      // 2. Force re-TTS with the chosen voice.
+      // 2. Force re-TTS with the chosen voice + model + settings.
       const res = await fetch('/api/trailer/post-production', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           offerId: film.id,
           voiceId,
+          modelId,
+          voiceSettings: {
+            stability,
+            similarity_boost: similarityBoost,
+            style,
+            use_speaker_boost: speakerBoost,
+          },
           force: { voAudio: true },
         }),
       })
@@ -3991,6 +4069,38 @@ function ProjectVoView({ film }: { film: Film }) {
       setStatus(`Regenerate failed: ${err instanceof Error ? err.message : err}`)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function previewSample() {
+    const snippet = scriptText.trim().split(/\n+/).slice(0, 2).join(' ').slice(0, 400) || 'Sample voiceover for bMovies.'
+    setPreviewing(true)
+    setStatus('Sampling voice… no revision burned.')
+    setPreviewUrl(null)
+    try {
+      const res = await fetch('/api/trailer/vo/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: snippet,
+          voiceId,
+          modelId,
+          voiceSettings: {
+            stability,
+            similarity_boost: similarityBoost,
+            style,
+            use_speaker_boost: speakerBoost,
+          },
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`)
+      setPreviewUrl(body.audioDataUrl)
+      setStatus('Preview ready below. Adjust settings + re-sample, or click Regenerate when you like it.')
+    } catch (err) {
+      setStatus(`Preview failed: ${err instanceof Error ? err.message : err}`)
+    } finally {
+      setPreviewing(false)
     }
   }
 
@@ -4057,12 +4167,36 @@ function ProjectVoView({ film }: { film: Film }) {
           <div className="text-[0.55rem] text-[#555]">{scriptText.length} chars</div>
         </div>
         <textarea
+          ref={scriptRef}
           value={scriptText}
           onChange={(e) => setScriptText(e.target.value)}
           rows={6}
           className="w-full bg-black border border-[#222] text-white p-3 text-sm font-mono leading-relaxed focus:outline-none focus:border-[#E50914]"
           placeholder="Write the script the narrator will read…"
         />
+
+        {/* Audio tags — v3 only. Older models ignore them so inserting
+            while on v2 doesn't break a render, but the buttons only
+            surface when v3 is the selected model to avoid confusion. */}
+        {isV3 && (
+          <div className="mt-3">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">
+              Audio tags · insert at cursor (v3 only)
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {AUDIO_TAGS.map((t) => (
+                <button
+                  key={t.label}
+                  type="button"
+                  onClick={() => insertAtCursor(t.insert)}
+                  className="px-2 py-1 text-[0.6rem] font-mono bg-[#1a1a1a] border border-[#333] text-[#ccc] hover:border-[#E50914] hover:text-[#E50914]"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Refine with AI */}
         <div className="mt-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
@@ -4084,28 +4218,103 @@ function ProjectVoView({ film }: { film: Film }) {
         </div>
       </div>
 
-      {/* Voice picker + regenerate */}
+      {/* Voice + model + settings + preview + regenerate */}
       <div className="border border-[#1a1a1a] bg-[#0a0a0a] p-4 mb-5">
-        <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">Voice</div>
-        <select
-          value={voiceId}
-          onChange={(e) => setVoiceId(e.target.value)}
-          className="w-full bg-black border border-[#222] text-white px-3 py-2 text-sm mb-3 focus:outline-none focus:border-[#E50914]"
-        >
-          {VOICES.map((v) => (
-            <option key={v.id} value={v.id}>{v.label}</option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">Voice</div>
+            <select
+              value={voiceId}
+              onChange={(e) => setVoiceId(e.target.value)}
+              className="w-full bg-black border border-[#222] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#E50914]"
+            >
+              {VOICES.map((v) => (
+                <option key={v.id} value={v.id}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-2">Model</div>
+            <select
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              className="w-full bg-black border border-[#222] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#E50914]"
+            >
+              {MODELS.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Advanced settings — collapsible */}
         <button
           type="button"
-          onClick={regenerateVo}
-          disabled={busy || revisionsLeft <= 0 || !scriptText.trim()}
-          className="w-full px-4 py-3 bg-[#E50914] text-white text-sm font-black uppercase tracking-wider hover:bg-[#b00610] disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="text-[0.55rem] uppercase tracking-[0.12em] text-[#888] font-bold hover:text-[#E50914] mb-2"
         >
-          {busy ? 'Working…' : revisionsLeft > 0
-            ? `Regenerate VO · ${revisionsLeft} revision${revisionsLeft === 1 ? '' : 's'} left`
-            : 'Out of free revisions — upload your own below'}
+          {showAdvanced ? '▼ Hide advanced settings' : '▶ Advanced voice settings'}
         </button>
+        {showAdvanced && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 border border-[#1a1a1a] bg-black mb-3">
+            <SliderField
+              label="Stability"
+              value={stability}
+              setValue={setStability}
+              hint="↑ consistent · ↓ emotional"
+            />
+            <SliderField
+              label="Similarity"
+              value={similarityBoost}
+              setValue={setSimilarityBoost}
+              hint="how close to the source voice"
+            />
+            <SliderField
+              label="Style"
+              value={style}
+              setValue={setStyle}
+              hint="trailer-voice exaggeration"
+            />
+            <label className="col-span-full flex items-center gap-2 text-xs text-[#ccc] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={speakerBoost}
+                onChange={(e) => setSpeakerBoost(e.target.checked)}
+                className="accent-[#E50914]"
+              />
+              <span>Speaker boost (enhanced clarity)</span>
+            </label>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-2">
+          <button
+            type="button"
+            onClick={previewSample}
+            disabled={previewing || busy || !scriptText.trim()}
+            className="px-4 py-3 bg-[#1a1a1a] border border-[#333] text-[#ccc] text-[0.7rem] font-bold uppercase tracking-wider hover:border-[#E50914] hover:text-[#E50914] disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Sample the current voice + settings on the first line or two — doesn't burn a revision"
+          >
+            {previewing ? 'Sampling…' : '🔊 Preview (free)'}
+          </button>
+          <button
+            type="button"
+            onClick={regenerateVo}
+            disabled={busy || revisionsLeft <= 0 || !scriptText.trim()}
+            className="px-4 py-3 bg-[#E50914] text-white text-sm font-black uppercase tracking-wider hover:bg-[#b00610] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {busy ? 'Working…' : revisionsLeft > 0
+              ? `Regenerate VO · ${revisionsLeft} revision${revisionsLeft === 1 ? '' : 's'} left`
+              : 'Out of free revisions — upload your own below'}
+          </button>
+        </div>
+
+        {previewUrl && (
+          <div className="mt-3 p-3 border border-[#1a3a1a] bg-[#0a1a0a]">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#6bff8a] font-bold mb-2">Preview (not saved)</div>
+            <audio controls src={previewUrl} className="w-full" style={{ filter: 'invert(0.85)' }} />
+          </div>
+        )}
       </div>
 
       {/* Upload own MP3 */}

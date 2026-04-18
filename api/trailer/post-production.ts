@@ -108,12 +108,36 @@ function stripFences(s: string): string {
 
 // Returns an audio URL (MP3) or null if the API key is missing / call
 // fails. We upload to Supabase storage so the URL is long-lived.
+// Voice settings a commissioner can tune per-VO. All optional; any
+// field omitted falls back to the trailer-announcer default.
+export interface VoiceSettings {
+  stability?: number;         // 0-1. higher = more consistent, less emotional
+  similarity_boost?: number;  // 0-1. higher = closer to original voice
+  style?: number;             // 0-1. "trailer voice" exaggeration (v2 + v3)
+  use_speaker_boost?: boolean;
+}
+
+// Model options. v2 is the quality default; turbo is cheapest/fastest;
+// v3 is the expressive alpha that understands audio tags like
+// [whispers] / [excited] / [pause 1s] inline in the script.
+export type ElevenModel = 'eleven_multilingual_v2' | 'eleven_turbo_v2_5' | 'eleven_v3';
+
+const DEFAULT_VOICE_SETTINGS: Required<VoiceSettings> = {
+  stability: 0.45,
+  similarity_boost: 0.85,
+  style: 0.35,
+  use_speaker_boost: true,
+};
+
 async function elevenLabsVO(
   apiKey: string | undefined,
   voiceId: string,
   script: string,
+  opts: { modelId?: ElevenModel; voiceSettings?: VoiceSettings } = {},
 ): Promise<{ audioBuf: Buffer; mime: string } | null> {
   if (!apiKey) return null;
+  const modelId: ElevenModel = opts.modelId || 'eleven_multilingual_v2';
+  const voiceSettings = { ...DEFAULT_VOICE_SETTINGS, ...(opts.voiceSettings || {}) };
   try {
     const res = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`,
@@ -126,16 +150,8 @@ async function elevenLabsVO(
         },
         body: JSON.stringify({
           text: script,
-          // v2 is the most expressive; "eleven_multilingual_v2" handles
-          // trailer narration well. Swap to "eleven_turbo_v2_5" if latency
-          // matters more than intensity.
-          model_id: 'eleven_multilingual_v2',
-          voice_settings: {
-            stability: 0.45,      // slight variation, cinematic
-            similarity_boost: 0.85,
-            style: 0.35,          // pushes into "trailer voice" territory
-            use_speaker_boost: true,
-          },
+          model_id: modelId,
+          voice_settings: voiceSettings,
         }),
         signal: AbortSignal.timeout(120_000),
       },
@@ -277,7 +293,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!xaiKey) { res.status(500).json({ error: 'XAI_API_KEY not set' }); return; }
   if (!supabaseUrl || !supabaseKey) { res.status(500).json({ error: 'Supabase not configured' }); return; }
 
-  let body: { offerId?: string; voiceId?: string; force?: { voAudio?: boolean } };
+  let body: {
+    offerId?: string;
+    voiceId?: string;
+    modelId?: ElevenModel;
+    voiceSettings?: VoiceSettings;
+    force?: { voAudio?: boolean };
+  };
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
   } catch {
@@ -473,7 +495,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // (Intentionally left as a no-op here; ElevenLabs block overwrites.)
     }
     if ((!existingVoAudio || body.force?.voAudio || body.voiceId) && voScript && elevenKey) {
-      const vo = await elevenLabsVO(elevenKey, elevenVoice, voScript);
+      const vo = await elevenLabsVO(elevenKey, elevenVoice, voScript, {
+        modelId: body.modelId,
+        voiceSettings: body.voiceSettings,
+      });
       if (vo) {
         // Store in Supabase storage and reference by public URL.
         const filename = `vo/${offerId}-${Date.now()}.mp3`;
