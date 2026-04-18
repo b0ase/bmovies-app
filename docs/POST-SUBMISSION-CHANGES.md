@@ -116,7 +116,7 @@ rolls over.
   **`judges.html` count stripped.** The tour card `The 73 agents` →
   `The agent roster`. Same reason.
 
-- **`<pending>`** — `fix(post-submission): nav ordering — Produce between Pitch and Fund, commission.html H1 rename`
+- **`bd8b9df`** — `fix(post-submission): nav ordering — Produce between Pitch and Fund, commission.html H1 rename`
 
   Two related changes landing together so they make sense as one message:
 
