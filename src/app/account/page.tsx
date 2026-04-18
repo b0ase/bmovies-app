@@ -383,8 +383,41 @@ function AccountContent() {
   }
 
   // Default: Studio view
+  //
+  // The commissioned=1 URL flag means the user just came back from a
+  // successful pitch/trailer/short/feature Stripe checkout. Show a
+  // prominent success banner instead of letting them bounce onto the
+  // generic studio page wondering what happened. Title / ticker / tier
+  // are threaded through by /api/checkout's success_url params.
+  const commissionedFlag = searchParams.get('commissioned') === '1'
+  const commissionedTitle = searchParams.get('title') || ''
+  const commissionedTier = (searchParams.get('tier') || 'pitch').toLowerCase()
   return (
     <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12">
+      {commissionedFlag && (
+        <div className="mb-6 border border-[#1a5a1a] bg-[#0c1f0c] p-4 flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#6bff8a] font-bold mb-1">
+              ✓ {commissionedTier} commissioned
+            </div>
+            <div className="text-white text-sm leading-relaxed">
+              {commissionedTitle ? (
+                <>
+                  <strong>{decodeURIComponent(commissionedTitle).replace(/^Title:\s*/i, '')}</strong>{' '}
+                  is in production. The swarm is running through ~15 deliverables — you can
+                  watch live on the project&apos;s Room tab as each agent lands its artifact.
+                </>
+              ) : (
+                <>Your commission is in production. Open it below to watch the swarm work.</>
+              )}
+            </div>
+            <div className="text-[#6bff8a] text-[0.65rem] font-mono mt-2">
+              No studio required — pitches are hosted under a default founding studio
+              until you spin up your own ($0.99, below).
+            </div>
+          </div>
+        </div>
+      )}
       <StudioView
         user={user}
         accountId={accountId}
@@ -4410,6 +4443,24 @@ function StudioInfoSection({
 
   useEffect(() => {
     if (!sessionIdFromUrl || !user || studio) return
+    // ─── Guard against cross-flow hijack ───
+    // BOTH pitch-commission and studio-create return with ?session_id=
+    // in the URL. The old effect fired /api/studio/complete on every
+    // return, which ate pitch-commission session ids and rendered
+    // "Provisioning studio..." indefinitely because the session metadata
+    // didn't have the studio-provisioning fields. The two return paths
+    // are distinguishable by other URL params:
+    //
+    //   pitch return:  /account?commissioned=1&session_id=...&title=...&ticker=...&tier=pitch
+    //   studio return: /account?tab=studio&session_id=...
+    //
+    // Only fire /api/studio/complete when we have a clean studio-create
+    // return (no commissioned flag, no tab/tool/project context).
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const isCommissionReturn = params?.get('commissioned') === '1'
+    const isToolOrProject = Boolean(params?.get('tool') || params?.get('project'))
+    if (isCommissionReturn || isToolOrProject) return
+
     let cancelled = false
     async function provision() {
       setProvisioning(true)
