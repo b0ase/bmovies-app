@@ -86,7 +86,7 @@ const NAV_LINKS = [
   // much of that work.
   { href: '/about.html',       label: 'About' },
   { href: '/commission.html',  label: 'Pitch' },
-  { href: '/exchange.html',    label: 'Raise' },
+  { href: '/exchange.html',    label: 'Fund' },
   { href: '/productions.html', label: 'Produce' },
   { href: '/market.html',      label: 'Market' },
   { href: '/release.html',     label: 'Release' },
