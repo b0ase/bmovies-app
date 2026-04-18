@@ -145,7 +145,12 @@ export default async function handler(
     const { HandCashConnect } = await import('@handcash/handcash-connect');
     const hc = new HandCashConnect({ appId, appSecret });
     redirectionUrl = hc.getRedirectionUrl({
-      permissions: 'PAY',
+      // HandCash Connect serialises an array → "PAY,USER_PUBLIC_PROFILE"
+      // which is the format the authorize page parses. Passing a bare
+      // string 'PAY' was letting the auth complete but NOT granting the
+      // Pay scope on the resulting auth token — so wallet.pay() later
+      // threw "Permission not established". Explicit array fixes it.
+      permissions: ['PAY', 'USER_PUBLIC_PROFILE'],
       redirectUrl: `${APP_ORIGIN}/api/handcash/callback`,
       state,
     });

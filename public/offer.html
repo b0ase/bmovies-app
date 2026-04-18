@@ -400,7 +400,12 @@
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
-    import { TRANCHES, getCurrentTranche, renderTrancheTable, formatUsd, cumulativeRaised } from './js/bonding-curve.js';
+    import { TRANCHES as TRANCHES_BASE, scaledTranches, getCurrentTranche, renderTrancheTable, formatUsd, cumulativeRaised } from './js/bonding-curve.js';
+    // TRANCHES is the active tier-scaled array — it's set once the
+    // offer loads (we need offer.tier to pick the scale) and then used
+    // for every price lookup on the page. Pre-offer render it defaults
+    // to the short-tier baseline so early paints don't crash.
+    let TRANCHES = TRANCHES_BASE;
     import { openPayPicker } from './js/pay-picker.js';
     const supabase = createClient('https://api.b0ase.com',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
@@ -484,6 +489,46 @@
     const params = new URLSearchParams(window.location.search);
     const offerId = params.get('id');
 
+    // Surface HandCash callback outcomes (if the user just came back
+    // from a HandCash authorize → wallet.pay() round-trip). Previously
+    // a 'Permission not established' failure left the user on a quiet
+    // page with only the query string as feedback.
+    (function handlePurchaseOutcome() {
+      const outcome = params.get('purchase');
+      if (!outcome) return;
+      const reason = params.get('reason') || '';
+      const box = document.createElement('div');
+      box.setAttribute('role', 'status');
+      const isSuccess = outcome === 'success';
+      const isPermissionErr = /Permission not established/i.test(reason);
+      box.style.cssText = `
+        position: sticky; top: 0; z-index: 30;
+        padding: 0.9rem 1.2rem; margin: 0 0 1rem;
+        border: 1px solid ${isSuccess ? '#2d9b44' : '#b33'};
+        background: ${isSuccess ? 'rgba(45,155,68,0.08)' : 'rgba(179,51,51,0.08)'};
+        color: ${isSuccess ? '#7be58e' : '#ffb3b3'};
+        font-size: 0.82rem; line-height: 1.5;
+      `;
+      if (isSuccess) {
+        const tx = params.get('tx') || '';
+        box.innerHTML = `<strong>Purchase successful.</strong> Your shares are on-chain${tx ? ` — <a href="https://whatsonchain.com/tx/${tx}" target="_blank" style="color:inherit;text-decoration:underline;">tx ${tx.slice(0,12)}…</a>` : '.'}`;
+      } else if (isPermissionErr) {
+        box.innerHTML = `<strong>HandCash payment blocked — Permission not established.</strong><br>
+          This means the HandCash token we hold for your wallet doesn't have the Pay scope.
+          We've updated the authorize step to request it — please click <em>Buy</em> again and
+          re-grant permissions on HandCash when asked. If it keeps failing, the HandCash app
+          dashboard may need the Pay permission enabled.`;
+      } else {
+        box.innerHTML = `<strong>Purchase failed.</strong> ${reason ? `Reason: ${reason}` : 'No reason returned.'} You can try again below.`;
+      }
+      const insert = () => {
+        const root = document.getElementById('root') || document.body;
+        root.prepend(box);
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', insert);
+      else insert();
+    })();
+
     async function loadUserState() {
       const { data: { session } } = await supabase.auth.getSession();
       currentSession = session;
@@ -521,7 +566,13 @@
       const ticketsSold = Number(statsRes.data?.tickets_sold || 0);
       const shareHolders = (ticketsRes.data || []).length;
 
-      currentTranche = getCurrentTranche(pctSold);
+      // Now that we know the offer's tier, pick the tier-scaled tranche
+      // curve. Short-tier offers keep the baseline ($99/1% at tier 1,
+      // so 10% → $990 toward the feature upgrade). Lower tiers scale
+      // down 10× per step so "Fund short · $99" actually buys 10% of
+      // a trailer, not 1%. Higher tiers scale up.
+      TRANCHES = scaledTranches(currentOffer.tier);
+      currentTranche = getCurrentTranche(pctSold, TRANCHES);
       render(currentOffer, pctSold, grossUsd, ticketsSold, shareHolders);
     }
 
@@ -550,7 +601,7 @@
       // Priority: POSTER_MAP override → non-ephemeral poster artifact →
       // non-ephemeral storyboard frame.
       const heroImage = posterUrl || posterArt?.url || storyboard?.url || null;
-      const totalRaised = cumulativeRaised(pctSold);
+      const totalRaised = cumulativeRaised(pctSold, TRANCHES);
 
       document.title = `bMovies — Invest in ${offer.title}`;
 

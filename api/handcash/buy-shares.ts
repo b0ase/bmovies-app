@@ -134,7 +134,7 @@ export default async function handler(
       const { HandCashConnect } = await import('@handcash/handcash-connect');
       const hc = new HandCashConnect({ appId, appSecret });
       const authorizeUrl = hc.getRedirectionUrl({
-        permissions: 'PAY',
+        permissions: ['PAY', 'USER_PUBLIC_PROFILE'],
         redirectUrl: `${APP_ORIGIN}/api/handcash/callback`,
         state,
       });
@@ -196,7 +196,7 @@ export default async function handler(
     const { HandCashConnect } = await import('@handcash/handcash-connect');
     const hc = new HandCashConnect({ appId, appSecret });
     const authorizeUrl = hc.getRedirectionUrl({
-      permissions: 'PAY',
+      permissions: ['PAY', 'USER_PUBLIC_PROFILE'],
       redirectUrl: `${APP_ORIGIN}/api/handcash/callback`,
       state,
     });
