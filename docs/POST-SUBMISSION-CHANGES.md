@@ -367,3 +367,84 @@ These landed between my post-submission fixes. Listed here for timeline complete
 - **`324246a`** — `feat(productions): CTA row shows random existing films to fund`
 
 The `Raise / Fund` rename history is worth calling out: `01e9a39` shipped with `Raise`, the user renamed to `Fund` in `48eb9a7`, then later commits in the copy sweep settled the labelling. If a future reader is confused by which verb is canonical in which file, blame both.
+
+- **`fcc7c6e`** — `copy: scale short→5min, feature→50min (10× trailer, 10× short)`
+  Reporter: *"64 seconds for a short is not enough"*. Agreed. The
+  short/feature durations should match what a viewer understands those
+  words to mean, not the runtime of a 2026 AI-video-clip budget.
+  New scaling across `about.html`, `commission.html`, `terms.html`,
+  `pumponomics.html`, `pumponomics-print.html`, and
+  `pump-fun-for-movies.html`:
+
+  | Tier    | Length         | Scaling        |
+  |---------|----------------|----------------|
+  | Trailer | ~32 seconds    | (unchanged)    |
+  | Short   | ~5 minutes     | 10× trailer    |
+  | Feature | ~50 minutes    | 10× short      |
+
+  **Positioning only — see "Known scope gaps" below for the drift this
+  introduces against the shipped pipeline.**
+
+## Known scope gaps
+
+Aspirational positioning that the live deployment hasn't caught up to
+yet. Documented here rather than fixed because the post-submission
+guardrail is *fix bugs, don't ship new features* until BSVA results
+land (Apr 23). Once the review window closes these are fair game.
+
+- **Short & feature runtime vs. pipeline output** (introduced in
+  `fcc7c6e`). Copy promises ~5-minute shorts and ~50-minute features.
+  The pipeline today ships:
+  - Trailer: 4 × 8-second clips = ~32s (copy matches ✓)
+  - Short:   8 × 8-second clips = ~64s (copy promises ~5 min)
+  - Feature: stub in the 28-step design; preproduction + delivery
+    phases complete, scene-by-scene video generation is phase 2
+    (disclosed in `BSVA-SUBMISSION.md`).
+
+  Closing this means ~40 clips for a short and ~375 for a feature.
+  Substantial Grok video budget + wallclock — needs rate-limit and
+  concurrency work on the feature-worker before going live. I left
+  one honest cue in `commission.html`'s "What you get" short pack
+  (`~40 × 8-second clips`) so a detail-oriented commissioner can see
+  the current cap even while the headline says "~5 min".
+
+- **Marketing stage** (pre-existing, documented on `/market.html`).
+  Stage 4 of the nav lifecycle — film promotion, cap-table-funded
+  boosts, festival submissions, publicist agent — is explicitly
+  Phase 2 work. `/market.html` has the Phase-2 badge prominent.
+
+- **Feature-tier video pipeline** (pre-existing, documented in
+  `BSVA-SUBMISSION.md` under "What's shipped vs what's still
+  maturing"). Phases 0, 1, 3, 4 (mint + preproduction + post +
+  delivery) complete; Phase 2 (scene-by-scene generation) is the
+  gap between a 30-artifact feature pack and a watchable 50-minute
+  film.
+
+- **External BRC-77-signed bids on `/jobboard.html`**. The endpoint
+  exists (`/api/jobs/bid`), the signature verification is wired, the
+  UI surfaces the bids — but no external wallet has ever submitted
+  one. 288 internal-agent bids, 0 external. Judge-visible on the
+  `/judges.html` tour.
+
+- **Cross-chain USDC settlement worker**. Queued; the 1sat-ordinal-
+  delivery leg runs manually today. Disclosed in the submission PDF.
+
+- **Per-step agent payments use sentinel txids**. Not real BSV
+  transfers from a per-agent pool wallet yet. `feature-pay-*` prefix
+  distinguishes them from real 64-hex broadcast txids in any
+  WhatsOnChain lookup. Disclosed in the submission PDF.
+
+- **Studio token mint**. `/api/studio/complete` writes `bct_studios`
+  and `bct_agents` rows but does NOT mint an on-chain BSV-21 for
+  the studio. The KYC gate for that mint, when it ships, belongs
+  there (and is documented in the `3c91513` commit comment that
+  removed the misplaced KYC gate from `/api/studio/create`).
+
+- **Trailer auto-publish → released, not draft** (noted but not
+  fixed). The pipeline currently ends by flipping `bct_offers.status`
+  to `released`, which makes the trailer publicly visible on
+  `/watch` immediately. The workbench-until-manual-publish flow the
+  user wants needs a one-line change on the Hetzner worker
+  (`scripts/feature-worker.ts`). Logged here because it's a
+  behavioural change, not a bug fix, and fits the same review-window
+  hold as the other gaps above.
