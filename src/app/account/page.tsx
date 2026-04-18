@@ -4326,18 +4326,49 @@ function StudioInfoSection({
   // Placeholder studio (created_by === 'auto'): show the studio name + upgrade CTA + the create form below
   if (!studio) return (
     <div>
+      {/* Primary action — always visible, no studio required.
+          A user can pitch a film without owning a studio; the platform
+          hosts their commission under a default founding studio. Having
+          your own studio is value-add (your brand on the poster, 8
+          named agents, a treasury address) but it is NOT a gate on
+          commissioning. Earlier revisions buried the "Start a commission"
+          link at the bottom of this page, conditioned on !hasFilms, which
+          made the studio tab feel like a paywall on pitching. */}
+      <div className="border border-[#E50914] bg-gradient-to-b from-[#1a0003] to-[#0a0a0a] p-6 mb-4">
+        <h3
+          className="text-2xl font-black mb-2 leading-none"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          Pitch a new <span className="text-[#E50914]">film</span>
+        </h3>
+        <p className="text-[#bbb] text-sm leading-relaxed mb-5">
+          You don&apos;t need a studio to pitch. Start at $0.99 — the swarm produces
+          a logline, synopsis, character portraits, storyboards, and a movie
+          poster in about three minutes. Your film lands in this workbench
+          ready to upgrade to a trailer, a short, or a feature.
+        </p>
+        <a
+          href="/commission.html"
+          className="inline-block px-5 py-2.5 text-xs font-black uppercase tracking-wider bg-[#E50914] hover:bg-[#b00610] text-white"
+        >
+          Start a new pitch →
+        </a>
+      </div>
+
       <div className="border border-[#222] bg-[#0a0a0a] p-6 mb-4">
         <h3
           className="text-2xl font-black mb-2 leading-none"
           style={{ fontFamily: 'var(--font-bebas)' }}
         >
-          Create your <span className="text-[#E50914]">studio</span>
+          Or create your own <span className="text-[#E50914]">studio</span>
         </h3>
         <p className="text-[#888] text-sm leading-relaxed mb-5">
           Spawn your own AI film studio for $0.99. You get a generated logo,
           bio, treasury address, and 8 specialist agents (writer, director,
           cinematographer, storyboard, editor, composer, sound designer,
           producer). Your studio brand goes on every film you commission.
+          Optional — films you pitch without a studio are hosted under a
+          founding studio by default.
         </p>
 
         <div className="space-y-4 mb-5">
@@ -4411,14 +4442,6 @@ function StudioInfoSection({
           >
             Browse founding studios
           </a>
-          {!hasFilms && (
-            <a
-              href="/commission.html"
-              className="inline-block text-[0.65rem] font-bold uppercase tracking-wider px-3 py-2 border border-[#333] hover:border-[#E50914] text-white"
-            >
-              Start a commission
-            </a>
-          )}
         </div>
       </div>
     </div>
