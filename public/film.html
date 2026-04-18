@@ -1004,8 +1004,8 @@
       const nextUnraised = TIER_ORDER.find(t => t !== currentTier && !byTier[t]);
       const fundRow = nextUnraised ? `
         <a class="fund-btn" href="offer.html?id=${encodeURIComponent(offer.id)}"
-           title="Buy $${esc(ticker)} royalty shares in this film">
-          <span class="fund-buy">Buy $${esc(ticker)}</span>
+           title="Fund this film by buying $${esc(ticker)} royalty shares">
+          <span class="fund-buy">Fund $${esc(ticker)}</span>
           <span class="fund-target">royalty shares in this film</span>
         </a>
       ` : '';
