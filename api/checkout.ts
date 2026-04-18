@@ -213,7 +213,21 @@ export default async function handler(
         },
       ],
       customer_email: body.email || undefined,
-      success_url: `${origin}/commission-success.html?session_id={CHECKOUT_SESSION_ID}&title=${encodeURIComponent(title)}&ticker=${encodeURIComponent(ticker)}&tier=${tier}`,
+      // successPath override: callers that already know where they want
+      // the user to land (e.g. film.html's "Make TIER" direct-to-Stripe
+      // flow wants /account?tab=studio&commissioned=1, not the generic
+      // /commission-success.html page) can pass a path. We ALWAYS append
+      // session_id so the webhook-vs-landing race has a reconciliation
+      // handle, and always thread title/ticker/tier for the UI on both
+      // destination pages.
+      success_url: `${origin}${
+        (() => {
+          const raw = (body.successPath || '/commission-success.html').toString();
+          const path = raw.startsWith('/') ? raw : `/${raw}`;
+          const sep = path.includes('?') ? '&' : '?';
+          return `${path}${sep}session_id={CHECKOUT_SESSION_ID}&title=${encodeURIComponent(title)}&ticker=${encodeURIComponent(ticker)}&tier=${tier}`;
+        })()
+      }`,
       cancel_url: `${origin}/?cancelled=true`,
       metadata: {
         title,

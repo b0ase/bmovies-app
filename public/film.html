@@ -703,6 +703,89 @@
     const supabase = createClient('https://api.b0ase.com',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig');
 
+    // ─── Direct-to-Stripe handler for Make-tier buttons ───
+    //
+    // The tier-row on a film page knows everything needed to fire a
+    // Stripe checkout: the tier (from data-make-tier), the parent offer
+    // (data-make-parent), and the title/ticker/synopsis the new
+    // derivative should inherit. Previously these buttons href'd to
+    // /commission.html which re-asked the user for all that data and
+    // added a KYC detour. Now they click through to Stripe directly —
+    // and on success Stripe redirects back to /account?commissioned=1
+    // where the workbench shows a "commission in flight" banner while
+    // the webhook + pipeline produce the film.
+    //
+    // Event delegation at document level so this works across every
+    // re-render of the tier-row without needing to re-wire listeners.
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-make-tier]');
+      if (!btn) return;
+      e.preventDefault();
+      const tier      = btn.getAttribute('data-make-tier');
+      const parentId  = btn.getAttribute('data-make-parent');
+      const title     = btn.getAttribute('data-make-title') || '';
+      const ticker    = btn.getAttribute('data-make-ticker') || '';
+      const synopsis  = btn.getAttribute('data-make-synopsis') || '';
+      if (!tier || !parentId) return;
+
+      // Signed-in check — /api/checkout requires a supabaseUserId.
+      // When the user isn't signed in, bounce to /commission.html with
+      // everything pre-filled so the existing sign-in gate there can
+      // do its job; the user picks up the flow post-auth.
+      let session = null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        session = data?.session || null;
+      } catch { /* treat as signed-out */ }
+
+      if (!session) {
+        const qs = new URLSearchParams({
+          tier,
+          parentId,
+          title,
+          ticker,
+        }).toString();
+        window.location.href = `/commission.html?${qs}`;
+        return;
+      }
+
+      const originalLabel = btn.textContent;
+      btn.textContent = 'Redirecting to Stripe…';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier,
+            title,
+            ticker,
+            synopsis,
+            parentOfferId: parentId,
+            email: session.user?.email || undefined,
+            supabaseUserId: session.user?.id,
+            // Explicit override: land on /account after payment so
+            // the user sees their commission in flight, instead of
+            // the generic /commission-success.html page which is
+            // tuned for fresh pitches.
+            successPath: '/account?tab=studio&commissioned=1',
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `checkout failed (${res.status})`);
+        }
+        const { url } = await res.json();
+        if (!url) throw new Error('Stripe session URL missing from response');
+        window.location.href = url;
+      } catch (err) {
+        console.error('[film] make-tier checkout failed:', err);
+        btn.textContent = originalLabel;
+        btn.disabled = false;
+        alert((err && err.message) || 'Something went wrong starting the checkout. Please try again.');
+      }
+    });
+
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     // Poster overrides — local static JPGs under public/img/films/.
@@ -849,18 +932,35 @@
           label = `▶ Watch ${meta.label.toLowerCase()}`;
           href = `film.html?id=${encodeURIComponent(derivative.id)}`;
         } else {
-          // Primary action: MAKE TIER via Stripe — commission a new
-          // derivative owned by the funder. Routes to /commission.html
-          // with the parent pre-filled so Stripe checkout fires as a
-          // derivative commission. The BSV "buy shares" path moves
-          // into the secondary row below.
+          // Primary action: MAKE TIER via Stripe. When signed in, we
+          // skip /commission.html entirely — the user already picked
+          // the tier by clicking this button, and we already have the
+          // title / ticker / synopsis from the parent offer, so there
+          // is nothing left to ask. Go straight to Stripe, then land
+          // on /account?commissioned=1 so the workbench shows a live
+          // "commission in flight" banner + the new offer as soon as
+          // the webhook fires.
+          //
+          // When NOT signed in, fall back to /commission.html so the
+          // existing sign-in gate on that page still does its job —
+          // we don't have a session yet and /api/checkout requires
+          // one. The user can sign in there and pick up the tier
+          // flow from a pre-filled form.
           const price = meta.display || '';
           state = 'upgrade';
           label = `Make ${meta.label.toLowerCase()}${price ? ' · ' + price : ''}`;
-          href = `commission.html?tier=${encodeURIComponent(t)}`
-            + `&parentId=${encodeURIComponent(offer.id)}`
-            + `&title=${tierTitle}`
-            + `&ticker=${tierTicker}`;
+          // data-attributes drive the direct-to-Stripe handler below;
+          // the fallback href keeps the right-click-open-new-tab and
+          // no-JS paths working.
+          return `<button
+            class="tier-btn upgrade"
+            data-make-tier="${t}"
+            data-make-parent="${offer.id}"
+            data-make-title="${String(offer.title || '').replace(/"/g, '&quot;')}"
+            data-make-ticker="${offer.token_ticker || ''}"
+            data-make-synopsis="${String(offer.synopsis || '').replace(/"/g, '&quot;')}">
+            ${label}
+          </button>`;
         }
 
         if (href) {
