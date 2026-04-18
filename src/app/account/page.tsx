@@ -577,24 +577,53 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
   const tier  = searchParams.get('tier')  || ''
   const projectParent = searchParams.get('project') || ''
   const [dismissed, setDismissed] = useState(false)
+  const [childId, setChildId] = useState<string | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [phaseIdx, setPhaseIdx] = useState(0)
 
-  // Auto-dismiss + auto-navigate once the new offer appears.
+  // Five-stage progress narrative for the wait. Each stage is pegged
+  // to an elapsed-time boundary so the animation feels deterministic
+  // even though the actual pipeline is running on its own schedule.
+  const phases = [
+    { at:  0, label: 'Stripe payment received' },
+    { at:  5, label: 'Agent swarm booting' },
+    { at: 15, label: 'Writer drafting treatment' },
+    { at: 35, label: 'Director locking visual style' },
+    { at: 55, label: 'Storyboard + poster ready — first clips rendering' },
+  ]
+
+  useEffect(() => {
+    if (dismissed || commissioned !== '1') return
+    const id = window.setInterval(() => {
+      setElapsed((s) => {
+        const next = s + 1
+        let idx = 0
+        for (let i = 0; i < phases.length; i++) if (next >= phases[i].at) idx = i
+        setPhaseIdx(idx)
+        return next
+      })
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [dismissed, commissioned])
+  // phases is a module-scoped const so excluding it from deps is safe
+
+  // Auto-detect the new child offer. Once it exists, either auto-redirect
+  // to /production.html?id=<child> (live animated timeline — the exact
+  // experience the user asked for) or let them click through to it.
   //
   // Two modes depending on how the user got here:
   //
   //   (A) Upgrade from a project overview — URL has project=<parent>.
   //       Poll bct_offers for a row with parent_offer_id=<project> AND
-  //       tier=<tier>. When found, navigate to that offer's overview
-  //       so the user sees the new trailer/short/feature being built.
+  //       tier=<tier>. When found, surface the live-production CTA.
   //       Title match is unsafe here because upgrades inherit the
-  //       parent title ("Ashes of the Border" pitch → "Ashes of the
-  //       Border" trailer) and would false-positive immediately.
+  //       parent title and would false-positive immediately.
   //
-  //   (B) Fresh pitch / non-project commission — fallback to the
-  //       original title-match against the films[] list.
+  //   (B) Fresh pitch / non-project commission — match by title against
+  //       films[] loaded for this account.
   //
   // Both modes hard-cap at 5 minutes so a degraded webhook doesn't
-  // leave the banner pulsing forever.
+  // leave the modal pulsing forever.
   useEffect(() => {
     if (dismissed || commissioned !== '1') return
     let cancelled = false
@@ -612,13 +641,16 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
           .maybeSingle()
         if (cancelled) return
         if (data?.id) {
-          // The trailer/short/feature is a facet of the parent pitch,
-          // not a project of its own. Stay on the pitch's overview so
-          // the user's mental model ("my Ashes of the Border project")
-          // stays intact. The TierLadder on the overview already shows
-          // "▶ Watch trailer" once the child is ready.
-          setDismissed(true)
-          router.replace(`/account?project=${encodeURIComponent(projectParent)}&tab=overview`, { scroll: false })
+          setChildId(data.id)
+          // Auto-redirect to the live production timeline so the user
+          // can watch the swarm build their trailer in real time.
+          // The page auto-refreshes every 5s; poster → storyboard →
+          // clips populate as they land in bct_artifacts. 3-second
+          // pause gives the modal a "Production started" beat so the
+          // user registers what happened before the redirect.
+          await new Promise((r) => setTimeout(r, 3000))
+          if (cancelled) return
+          window.location.href = `/production.html?id=${encodeURIComponent(data.id)}`
           return
         }
         await new Promise((r) => setTimeout(r, 4000))
@@ -653,56 +685,160 @@ function CommissionInFlightBanner({ films }: { films: Film[] }) {
 
   if (commissioned !== '1' || dismissed) return null
 
-  const decodedTitle = decodeURIComponent(title)
+  const decodedTitle = decodeURIComponent(title).replace(/^Title:\s*/i, '')
   const decodedTier = (decodeURIComponent(tier) || 'film').toLowerCase()
-  const isProjectUpgrade = Boolean(projectParent && tier)
+  const mm = Math.floor(elapsed / 60)
+  const ss = String(elapsed % 60).padStart(2, '0')
 
   return (
     <div
-      className="mb-6 border border-[#E50914] bg-gradient-to-r from-[#1a0003] to-[#0a0a0a] p-4 flex items-start gap-3"
-      role="status"
-      aria-live="polite"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${decodedTier} in production`}
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto"
+      style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)' }}
     >
-      <span
-        className="inline-block w-2 h-2 rounded-full bg-[#E50914] mt-1.5 flex-shrink-0"
-        style={{ animation: 'bm-pulse 1s ease-in-out infinite' }}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="text-[0.55rem] font-black uppercase tracking-wider text-[#E50914] mb-1">
-          Commission in flight
-        </div>
-        <div className="text-white text-sm font-bold leading-tight">
-          {decodedTier === 'film'
-            ? `Your commission is queued`
-            : <>Your {decodedTier}{decodedTitle ? <> — &ldquo;{decodedTitle}&rdquo;</> : ''} is queued</>}
-        </div>
-        <div className="text-[#aaa] text-xs leading-relaxed mt-1">
-          {isProjectUpgrade
-            ? <>Stripe payment received. The agent swarm is spinning up your {decodedTier} now. We&apos;ll take you to the new production page as soon as it&apos;s ready — usually 30-60 seconds. You can close this tab — production continues on the server.</>
-            : <>Stripe payment received. The agent swarm is spinning up; your film will appear in the Pipeline section below in a minute or two. You can close this tab — production continues on the server.</>
-          }
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={() => {
-          setDismissed(true)
-          const target = isProjectUpgrade
-            ? `/account?project=${encodeURIComponent(projectParent)}&tab=overview`
-            : '/account?tab=studio'
-          router.replace(target, { scroll: false })
-        }}
-        className="text-[#666] hover:text-white text-xs px-2 py-1"
-        aria-label="Dismiss"
+      <div
+        className="relative w-full max-w-2xl mx-4 my-12 border border-[#E50914] bg-gradient-to-br from-[#1a0003] to-[#0a0a0a] p-8"
+        style={{ boxShadow: '0 0 60px rgba(229,9,20,0.25)' }}
       >
-        ×
-      </button>
-      <style jsx>{`
-        @keyframes bm-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50%      { opacity: 0.35; transform: scale(1.4); }
-        }
-      `}</style>
+        <button
+          type="button"
+          onClick={() => {
+            setDismissed(true)
+            const target = projectParent
+              ? `/account?project=${encodeURIComponent(projectParent)}&tab=overview`
+              : '/account?tab=studio'
+            router.replace(target, { scroll: false })
+          }}
+          className="absolute top-3 right-3 text-[#666] hover:text-white text-lg px-2 py-1 leading-none"
+          aria-label="Dismiss and return to workbench"
+        >
+          ×
+        </button>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-1">
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full bg-[#E50914]"
+            style={{ animation: 'bm-pulse 1s ease-in-out infinite' }}
+          />
+          <span className="text-[0.6rem] font-black uppercase tracking-[0.2em] text-[#E50914]">
+            {childId ? 'Production started' : `Commissioning your ${decodedTier}…`}
+          </span>
+        </div>
+        <h2
+          className="text-4xl font-black text-white leading-none mb-1 mt-2"
+          style={{ fontFamily: 'var(--font-bebas)' }}
+        >
+          {decodedTitle || 'Your film'}
+        </h2>
+        <div className="text-[#888] text-sm mb-6">
+          {decodedTier.charAt(0).toUpperCase() + decodedTier.slice(1)}
+          {' · '}
+          <span className="font-mono text-[#E50914]">{mm}:{ss}</span>
+        </div>
+
+        {/* Animated pipeline phases */}
+        <div className="space-y-2 mb-6">
+          {phases.map((p, i) => {
+            const done = i < phaseIdx
+            const active = i === phaseIdx
+            return (
+              <div
+                key={p.at}
+                className="flex items-center gap-3 text-sm"
+                style={{ opacity: done ? 0.6 : active ? 1 : 0.3 }}
+              >
+                <span
+                  className="inline-block w-4 h-4 rounded-full flex-shrink-0"
+                  style={{
+                    background: done ? '#6bff8a' : active ? '#E50914' : '#2a2a2a',
+                    animation: active ? 'bm-pulse 1.2s ease-in-out infinite' : 'none',
+                  }}
+                />
+                <span className={done ? 'text-[#6bff8a]' : active ? 'text-white font-bold' : 'text-[#666]'}>
+                  {p.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Primary CTA + exploration links */}
+        {childId ? (
+          <a
+            href={`/production.html?id=${encodeURIComponent(childId)}`}
+            className="block w-full text-center px-5 py-3 bg-[#E50914] hover:bg-[#b00610] text-white text-sm font-black uppercase tracking-wider mb-4"
+          >
+            ▶ Watch production live (redirecting…)
+          </a>
+        ) : (
+          <div className="border border-dashed border-[#333] bg-[#050505] p-4 mb-4">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-2">
+              What&apos;s happening right now
+            </div>
+            <p className="text-[#aaa] text-xs leading-relaxed">
+              Your Stripe payment is confirmed. The agent swarm is booting —
+              writer, director, storyboard, cinematographer, composer,
+              editor — and they&apos;ll spend the next 60-90 seconds producing
+              the treatment, style bible, storyboard frames, poster, and
+              four 8-second video clips that become your {decodedTier}.
+              <br /><br />
+              We&apos;ll drop you into the live production timeline as soon
+              as the first artifact lands. You can close this tab — it all
+              keeps running on the server.
+            </p>
+          </div>
+        )}
+
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
+          While you wait
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {projectParent && (
+            <a
+              href={`/account?project=${encodeURIComponent(projectParent)}&tab=overview`}
+              className="block px-3 py-2.5 border border-[#333] bg-[#0a0a0a] hover:border-[#E50914] text-[#bbb] hover:text-white text-xs"
+            >
+              <div className="text-[0.55rem] uppercase tracking-wider text-[#666] mb-0.5">Your project</div>
+              <div className="font-bold">Back to overview</div>
+            </a>
+          )}
+          {projectParent && (
+            <a
+              href={`/account?project=${encodeURIComponent(projectParent)}&tab=captable`}
+              className="block px-3 py-2.5 border border-[#333] bg-[#0a0a0a] hover:border-[#E50914] text-[#bbb] hover:text-white text-xs"
+            >
+              <div className="text-[0.55rem] uppercase tracking-wider text-[#666] mb-0.5">Ownership</div>
+              <div className="font-bold">Cap table &amp; shares</div>
+            </a>
+          )}
+          <a
+            href="/account?tab=studio"
+            className="block px-3 py-2.5 border border-[#333] bg-[#0a0a0a] hover:border-[#E50914] text-[#bbb] hover:text-white text-xs"
+          >
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#666] mb-0.5">Workbench</div>
+            <div className="font-bold">All your films</div>
+          </a>
+          <a
+            href="/watch.html"
+            target="_blank"
+            rel="noopener"
+            className="block px-3 py-2.5 border border-[#333] bg-[#0a0a0a] hover:border-[#E50914] text-[#bbb] hover:text-white text-xs"
+          >
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#666] mb-0.5">Explore</div>
+            <div className="font-bold">Browse the cinema</div>
+          </a>
+        </div>
+
+        <style jsx>{`
+          @keyframes bm-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%      { opacity: 0.35; transform: scale(1.4); }
+          }
+        `}</style>
+      </div>
     </div>
   )
 }
