@@ -253,14 +253,25 @@
             you choose when to publish to <code style="font-size:0.8rem;color:#E50914;">/watch</code> or
             list royalty shares on the exchange.
           </p>
+          <!-- Three CTAs, pitch → trailer → feature. Instead of linking
+               to a blank /commission.html form, each button jumps to
+               a RANDOM existing production at the appropriate tier so
+               the visitor sees an actual film they could fund (or move
+               up a tier). Hrefs are populated by pickRandomCtas() on
+               load — fallback href stays /commission.html so crawlers
+               without JS still land somewhere sensible. -->
           <div style="margin-top:1.5rem;display:flex;gap:0.8rem;flex-wrap:wrap;">
-            <a href="/commission.html?tier=trailer"
+            <a id="cta-pitch"   href="/commission.html?tier=pitch"
+               style="display:inline-block;padding:1rem 1.6rem;background:transparent;color:#ccc;text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #333;">
+              Pitch first · $0.99
+            </a>
+            <a id="cta-trailer" href="/commission.html?tier=trailer"
                style="display:inline-block;padding:1rem 1.6rem;background:#E50914;color:#fff;text-decoration:none;font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #E50914;">
               Produce a trailer · $9.99 →
             </a>
-            <a href="/commission.html"
+            <a id="cta-feature" href="/commission.html?tier=feature"
                style="display:inline-block;padding:1rem 1.6rem;background:transparent;color:#ccc;text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #333;">
-              Pitch first · $0.99
+              Produce a feature · $999
             </a>
           </div>
           <p style="font-size:0.7rem;color:#666;margin-top:1rem;max-width:620px;">
@@ -381,6 +392,37 @@
       if (currentPage > pages) currentPage = pages;
 
       renderPage();
+      pickRandomCtas();
+    }
+
+    // Repoint the 3 hero buttons at a random existing production of
+    // the relevant tier, so each button showcases something the user
+    // could actually fund rather than dumping them at a blank commission
+    // form. Logic:
+    //   - Pitch CTA    → random pitch-tier offer (they can fund the next step)
+    //   - Trailer CTA  → random pitch-tier offer (upgrade path: Make Trailer)
+    //   - Feature CTA  → random trailer/short-tier offer (upgrade path: Make Feature)
+    // If no matching offer exists the button keeps its commission.html
+    // fallback so nothing breaks.
+    function pickRandomCtas() {
+      function pickOne(filterFn) {
+        const pool = allOffers.filter(filterFn);
+        if (pool.length === 0) return null;
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+      const pitch   = pickOne(o => o.tier === 'pitch');
+      const trailer = pickOne(o => o.tier === 'pitch') || pitch;
+      const feature = pickOne(o => o.tier === 'trailer' || o.tier === 'short')
+                   || pickOne(o => o.tier === 'pitch');
+
+      function setHref(id, offer) {
+        const el = document.getElementById(id);
+        if (!el || !offer?.id) return;
+        el.href = `/film.html?id=${encodeURIComponent(offer.id)}`;
+      }
+      setHref('cta-pitch',   pitch);
+      setHref('cta-trailer', trailer);
+      setHref('cta-feature', feature);
     }
 
     function renderPage() {
