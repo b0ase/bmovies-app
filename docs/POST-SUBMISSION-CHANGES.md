@@ -150,3 +150,64 @@ rolls over.
   still does what it did. The MARKET nav item the user proposed (for
   film promotion post-production) is NOT being built — that's explicit
   new scope and belongs to post-hackathon work per the guardrails.
+
+- **`<pending>`** — `feat(post-submission): full lifecycle nav + Market/Release explainer pages + footer index`
+
+  **Primary nav is now the full film lifecycle.** Pure five-verb journey,
+  left to right:
+
+  ```
+  Pitch · Produce · Raise · Market · Release
+  ```
+
+  Each label is a stage a film moves through, and each page documents
+  or runs that stage. The narrative — "pitch an idea, watch it get
+  produced, raise capital, market the finished film, release to the
+  audience" — is the site's thesis and now lives in the nav itself
+  rather than being buried in About or a landing-page diagram.
+
+  **`Fund` → `Raise`.** The /exchange.html page hosts the cap-table
+  action. "Fund" is the investor-side verb; "Raise" is the creator-side
+  verb. bMovies is creator-first (hero: "pitch your movie for $0.99"),
+  so Raise matches the rest of the voice. Same page, more consistent
+  label.
+
+  **About and Judge moved to the footer** (new `FOOTER_LINKS` array in
+  `nav-session.js` rendered by a new `mountFooterLinks()` injector).
+  About is secondary — most visitors land on a hero that explains the
+  product already. Judge was a scoped shortcut for one audience; it now
+  sits alongside About, Studios, Agents, Jobboard, Treasury, Invest,
+  x402, Watch catalog, Leaderboard, and the BSVA submission doc in a
+  single discoverable footer index.
+
+  **New explainer pages** — NOT new product functionality:
+  - `/market.html` documents the Phase 2 film-promotion roadmap (cap-
+    table-funded trailer boosts, audience discoverer inscriptions,
+    festival submissions, Publicist-agent press kits). Stage 4 of the
+    lifecycle is deliberately deferred to post-hackathon; this page
+    explains what it will be, not what it does today. Phase-2 badge
+    prominently displayed so visitors aren't misled.
+  - `/release.html` documents the EXISTING workbench + Publish tool
+    flow on `/account`. Four-bucket diagram (Workbench → Pipeline →
+    Live → Archived) explains the offer status machine, the two
+    Publish actions (list shares on exchange, publish to /watch), the
+    KYC gate on securities issuance, and what happens after release
+    (per-ticket fan-out, IP ladder cascades). All of this was already
+    built; `/release.html` just makes it discoverable.
+
+  **`ACTIVE_ALIASES` rewritten** so deep-links highlight the right
+  stage:
+  - `/watch.html` now highlights Release (it's the public face of
+    released films; the nav item is the explainer page but /watch
+    itself is part of that stage)
+  - `/film.html`, `/production.html`, `/marketplace.html`, `/deck.html`
+    highlight Produce
+  - `/offer.html`, `/trade.html` highlight Raise
+  - Footer pages are intentionally unaliased — no nav item lights up
+    when you're on a footer page, which is honest about where you are
+
+  **`mountJudgesLink` → `mountFooterLinks`.** The old lonely
+  "For BSVA judges →" link is replaced by a broader footer index that
+  renders every FOOTER_LINKS entry (with the current page filtered out
+  to avoid self-links). Judge is still discoverable; it's just one of
+  eleven footer entries now instead of the only one.

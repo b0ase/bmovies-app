@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Release your movie</title>
+  <meta name="description" content="How releases work on bMovies. Your film sits in the workbench until you hit Publish from the account dashboard — then it lands on /watch and every ticket sold fans out on-chain to token holders." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bmovies.online/release.html" />
+  <meta property="og:title" content="bMovies — Release your movie" />
+  <meta property="og:description" content="Workbench → Publish → Live. Three clicks, one on-chain commitment." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Bebas+Neue&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e8e8e8; line-height: 1.6; }
+    main { max-width: 1100px; margin: 0 auto; padding: 5rem 3rem 6rem; }
+    .kicker { font-size: 0.7rem; color: #E50914; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 4.2rem; line-height: 0.95; letter-spacing: -0.01em; margin-top: 0.6rem; color: #fff; }
+    h1 .accent { color: #E50914; }
+    .lede { font-size: 1.1rem; color: #bbb; line-height: 1.6; margin-top: 1.2rem; max-width: 720px; }
+    .lede strong { color: #fff; }
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.02em; color: #fff; margin-top: 3.5rem; margin-bottom: 1rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: #E50914; margin-top: 2rem; margin-bottom: 0.5rem; letter-spacing: 0.04em; }
+    p { font-size: 0.95rem; color: #ccc; line-height: 1.75; margin-bottom: 1rem; max-width: 760px; }
+    p strong { color: #fff; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul, ol { margin: 0.75rem 0 1rem 1.4rem; max-width: 760px; }
+    li { font-size: 0.95rem; color: #ccc; line-height: 1.75; margin-bottom: 0.4rem; }
+    li strong { color: #fff; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: #111; border: 1px solid #222; padding: 0.1em 0.35em; border-radius: 3px; color: #b5e4ff; }
+    .stage-strip {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;
+      margin: 2rem 0 3rem; padding: 1.2rem 0; border-top: 1px solid #222; border-bottom: 1px solid #222;
+    }
+    @media (max-width: 900px) { .stage-strip { grid-template-columns: repeat(3, 1fr); } }
+    .stage {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+      color: #555; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; text-align: center;
+      padding: 0.3rem 0;
+    }
+    .stage.active { color: #E50914; }
+    .stage.active::before { content: "●  "; }
+    .flow {
+      display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 1rem;
+      margin: 2rem 0; align-items: stretch;
+    }
+    @media (max-width: 900px) { .flow { grid-template-columns: 1fr; } .flow .arrow { display: none; } }
+    .bucket {
+      border: 1px solid #222; background: #0a0a0a; padding: 1.2rem 1.3rem;
+    }
+    .bucket-label { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: #888; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .bucket h4 { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: #fff; letter-spacing: 0.03em; margin-bottom: 0.5rem; }
+    .bucket p { font-size: 0.8rem; color: #aaa; margin: 0; line-height: 1.55; }
+    .bucket code { font-size: 0.7rem; }
+    .bucket.live { border-color: #E50914; }
+    .bucket.live h4 { color: #E50914; }
+    .arrow {
+      align-self: center; font-family: 'JetBrains Mono', monospace; color: #E50914; font-size: 1.2rem; font-weight: 700; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header"></header>
+
+  <main>
+    <div class="stage-strip">
+      <div class="stage">Pitch</div>
+      <div class="stage">Produce</div>
+      <div class="stage">Raise</div>
+      <div class="stage">Market</div>
+      <div class="stage active">Release</div>
+    </div>
+
+    <div class="kicker">Stage 5 · Release</div>
+    <h1>Release your <span class="accent">movie</span>.</h1>
+    <p class="lede">A film isn't live until you say it is. bMovies treats publication as a deliberate, KYC-gated action you take from your account dashboard — not an automatic consequence of finishing production. <strong>You control when your cap table becomes public.</strong></p>
+
+    <h2>The workbench is where every film starts</h2>
+    <p>When a commission finishes producing, the film lands in your <strong>workbench</strong> on the <a href="/account">account dashboard</a>. Private to you, minted on-chain already (so the royalty token exists from the moment you commissioned it), but not yet on the public exchange and not yet in the <a href="/watch.html">catalog</a>. You can revise scenes, regenerate artifacts, or ship as-is — nothing is visible to anyone else until you hit Publish.</p>
+
+    <h3>Four buckets on /account</h3>
+    <div class="flow">
+      <div class="bucket">
+        <div class="bucket-label">Bucket 1</div>
+        <h4>Workbench</h4>
+        <p><code>status = draft / open</code><br>Minted, private, awaiting your sign-off.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="bucket">
+        <div class="bucket-label">Bucket 2</div>
+        <h4>Pipeline</h4>
+        <p><code>status = funded / producing / in_progress</code><br>The swarm is still generating artifacts.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="bucket live">
+        <div class="bucket-label">Bucket 3</div>
+        <h4>Live</h4>
+        <p><code>status = released / published / auto_published</code><br>On <a href="/watch.html">/watch</a> and the exchange. Audience-visible.</p>
+      </div>
+    </div>
+
+    <p style="color:#888;font-size:0.85rem;">There's also a fourth bucket — <strong>Archived</strong> — for offers the commissioner explicitly withdraws.</p>
+
+    <h2>The Publish tool</h2>
+    <p>The <strong>Publish</strong> tab in the account dashboard is the single surface for going public. It has two actions, both gated on verified identity (<code>bct_user_kyc.status = 'verified'</code>):</p>
+
+    <ol>
+      <li><strong>List shares on exchange.</strong> Opens a tranche on the public bonding curve. Default defaults: 10% @ $9.99, 10% @ $99, 10% @ $999, 10% @ $9,999 — all user-discretionary. A row lands in <code>bct_share_listings</code> with <code>status='open'</code>; <a href="/exchange.html">/exchange</a> picks it up within seconds.</li>
+      <li><strong>Publish to /watch.</strong> Flips <code>bct_offers.status</code> from <code>draft</code> to <code>published</code>, stamps <code>published_at</code>, and disables further presale. The film becomes ticketable — every watch is a $2.99 purchase that fans 99% of the ticket revenue on-chain to token holders in a single transaction with N+1 outputs.</li>
+    </ol>
+
+    <p>Auto-publish (a cron worker) covers the feature revision-deadline path so you don't lose visibility if you stop checking the dashboard; manual publish covers everything else. Want to pull a listing back? One button. Cancel, shares return to Held.</p>
+
+    <h2>KYC — only where it's legally required</h2>
+    <p><strong>KYC is not required to commission a film.</strong> Paying for content creation is a service purchase, not a securities issuance. Sign-in alone (email magic link or BRC-100 wallet-connect) is enough to own a draft offer.</p>
+    <p>Where KYC <strong>is</strong> enforced is at the two moments the royalty token would become public — listing shares on the exchange, and publishing the film to <a href="/watch.html">/watch</a>. Those are primary securities issuance events; we can't open one without a verified identity on file.</p>
+
+    <h2>After release</h2>
+    <p>The film sits in the public catalog, playing for $2.99 per watch. Every ticket is a real on-chain fan-out. Holders accumulate royalty revenue proportional to their stake. If someone builds on top of your film (a sequel, a remix, a short derived from your feature), the <a href="/about.html">IP ladder</a> cascades a slice of their royalties back to you, permissionlessly, forever.</p>
+
+    <h2>Lifecycle</h2>
+    <p>
+      <a href="/commission.html">Pitch</a> ·
+      <a href="/productions.html">Produce</a> ·
+      <a href="/exchange.html">Raise</a> ·
+      <a href="/market.html">Market</a> ·
+      <strong>Release</strong>
+    </p>
+  </main>
+
+  <footer class="site-footer"><div class="footer-inner"><div class="footer-copy">© 2026 bMovies · The Bitcoin Corporation Ltd</div></div></footer>
+  <script type="module" src="js/nav-session.js"></script>
+
+</body>
+</html>

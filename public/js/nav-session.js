@@ -47,57 +47,71 @@
 
 const LOGO_HTML = '<a href="/" class="logo">b<span>Movies</span></a>';
 
-// Five items, ordered as a user journey — primary market first, then
-// the live production floor, then the secondary market:
+// Five items, the full film lifecycle from pitch to release:
 //
-//   About    → what is this?
-//   Pitch    → pay to have a film made ($0.99+). PRIMARY MARKET.
-//   Produce  → the live feed of films currently being produced.
-//              Monitoring/spectator page — users "see what's in production".
-//   Fund     → buy shares in someone else's film. SECONDARY MARKET.
-//   Judge    → BSVA-judge shortcut with the free-trailer coupon
+//   Pitch    → pay to have a film made ($0.99+). Primary market.
+//   Produce  → the live production floor — films being made right now.
+//   Raise    → cap table / investors — bring in capital against royalty shares.
+//   Market   → film promotion and distribution (Phase 2 explainer today).
+//   Release  → publish to the audience (workbench + Publish tool explainer).
 //
-// Why Pitch and Fund are separate even though both involve paying:
-// They're genuinely different commercial actions. Pitch is a consumer
-// action (I pay, a film gets made for me, I happen to receive 99% of the
-// BSV-21 royalty token as the byproduct). Fund is an investor action
-// (I buy shares in a film someone ELSE is making — explicit cap-table
-// participation). The earlier "Commission" label conflated these; split
-// them so each nav item has one clear action.
+// This IS the lifecycle of a film, left to right. Every label is a verb
+// the user can perform or a stage the user can observe. The narrative
+// logic — "pitch your idea, watch it produced, raise capital, market it,
+// release to the audience" — is the site's whole thesis, so it belongs
+// in the nav itself, not buried in About or a landing-page diagram.
 //
-// Why Produce sits between Pitch and Fund: narrative ordering. You pitch
-// an idea → it gets produced (you watch it happen live) → you can fund
-// others' productions in the same stream. The journey reads left to right.
+// About and Judge moved to FOOTER_LINKS below so the primary nav is a
+// clean five-item journey. About is secondary (most visitors don't click
+// it — they land directly on a hero that explains the product); Judge
+// is a scoped shortcut for BSVA reviewers that doesn't need top-billing
+// for regular users.
 //
-// /productions.html is the canonical live-production feed. /watch.html
-// (completed-films catalog) is aliased to Produce below so visitors with
-// bookmarks still see the nav highlight correctly.
+// /market.html and /release.html are static explainer pages, both new:
+//   - market.html documents the post-submission Phase 2 roadmap for
+//     film promotion — spend from the cap table, vertical cuts, festival
+//     submissions, publicist agent — because the marketing stage isn't
+//     shippable before the BSVA review window closes.
+//   - release.html documents the existing workbench + Publish tool flow
+//     on /account, so a visitor can understand how a film goes from
+//     "mid-production" to "audience-visible on /watch".
+// Both are documentation pages, not new product functionality.
 //
-// Studios and Agents are deliberately NOT in the nav:
-//   - /studios.html is a directory, not a user flow (we haven't established
-//     what a user DOES with studios beyond browsing).
-//   - /agents.html has drifting hardcoded counts and no judge-flow purpose.
-//   Both remain as deep-link pages and are surfaced on the /judges.html
-//   tour for BSVA review.
-//
-// Jobboard (the agent job market that satisfies the BSVA "create a market
-// for agents" criterion) also lives on the /judges.html tour rather than
-// the consumer nav — a judge gets curated discovery, regular users don't
-// see an empty-looking page.
-//
-// All hrefs are ROOT-relative (leading "/") so the same nav works whether
-// this script runs on /index.html, /watch.html, or a nested page like
-// /legal/platform-token-prospectus.html.
+// All hrefs are ROOT-relative so this nav works everywhere including
+// nested pages like /legal/*.html.
 const NAV_LINKS = [
-  { href: '/about.html',       label: 'About' },
   { href: '/commission.html',  label: 'Pitch' },
   { href: '/productions.html', label: 'Produce' },
-  { href: '/exchange.html',    label: 'Fund' },
-  { href: '/judges.html',      label: 'Judge' },
+  { href: '/exchange.html',    label: 'Raise' },
+  { href: '/market.html',      label: 'Market' },
+  { href: '/release.html',     label: 'Release' },
+  // About → footer. Judge → footer. See FOOTER_LINKS below.
   // "My studio" used to live here as an external link to app.bmovies.online
   // but it went to exactly the same place as the Sign In CTA to its right,
   // so it was pulled to avoid two adjacent links pointing at the same URL.
   // The Sign In button is now the single entry point to the authenticated app.
+];
+
+// Secondary nav — rendered in the footer as a compact link row. These
+// are pages that don't belong in the primary lifecycle:
+//   - About is meta (how the site works)
+//   - Watch, Studios, Agents, Leaderboard are directory/catalog deep-links
+//   - Treasury, Invest, x402 are protocol/financial disclosure pages
+//   - Judges + BSVA submission are scoped shortcuts for one audience
+// Keeping them in the footer rather than the nav lets the primary nav
+// stay a clean five-verb film-lifecycle journey.
+const FOOTER_LINKS = [
+  { href: '/about.html',           label: 'About' },
+  { href: '/watch.html',           label: 'Watch catalog' },
+  { href: '/studios.html',         label: 'Studios' },
+  { href: '/agents.html',          label: 'Agents' },
+  { href: '/jobboard.html',        label: 'Job board' },
+  { href: '/leaderboard.html',     label: 'Leaderboard' },
+  { href: '/treasury.html',        label: 'Treasury' },
+  { href: '/invest.html',          label: 'Invest in $bMovies' },
+  { href: '/x402.html',            label: 'x402 protocol' },
+  { href: '/judges.html',          label: 'For BSVA judges' },
+  { href: '/bsva-submission.html', label: 'BSVA submission' },
 ];
 
 // Pages that should map to a specific active nav link (beyond the
@@ -108,32 +122,26 @@ const NAV_LINKS = [
 // live outside the consumer nav (agents, studios, jobboard, x402, etc.)
 // intentionally have NO active nav item so nothing misleads.
 const ACTIVE_ALIASES = {
-  // Produce: productions.html is the canonical live-production feed;
-  // /watch.html (completed catalog), /film.html (individual film page),
-  // /marketplace.html (legacy), /production.html (single-production view),
-  // and /deck.html (printable investor deck) all highlight Produce.
-  'watch.html':            'productions.html',
+  // Produce: live production floor. Deep-link views of specific films
+  // or individual productions all highlight Produce.
   'film.html':             'productions.html',
   'marketplace.html':      'productions.html',
   'production.html':       'productions.html',
   'production-room.html':  'productions.html',
   'deck.html':             'productions.html',
-  // Fund: the cap-table / equity pages all highlight Fund.
+  // Release: the watch catalog is the public face of released films,
+  // so /watch.html highlights Release (the nav item is the explainer
+  // page but the catalog itself is part of the Release stage).
+  'watch.html':            'release.html',
+  // Raise: the cap-table / equity pages all highlight Raise.
   'offer.html':            'exchange.html',
   'trade.html':            'exchange.html',
-  'invest.html':           'exchange.html',
   // Pitch: the legacy pitch.html still aliases to Pitch (commission.html).
   'pitch.html':            'commission.html',
-  // Judge: the jobboard, x402 protocol explainer, and bsva-submission
-  // documents are all reached via the Judge tour, so highlight Judge when
-  // a visitor deep-links into any of them.
-  'jobboard.html':         'judges.html',
-  'x402.html':             'judges.html',
-  'bsva-submission.html':  'judges.html',
-  // studios.html, agents.html, agent.html, studio.html, leaderboard.html
-  // are intentionally unaliased — no nav item highlights when you're on
-  // them. They're deep-link destinations surfaced from the Judge tour and
-  // the per-film pages, not consumer nav targets.
+  // Pages that live in the footer (About, Studios, Agents, Jobboard,
+  // x402, Treasury, Invest, Judges, BSVA submission, Leaderboard) are
+  // intentionally unaliased — the primary nav has no item to highlight
+  // when you're on a footer page, which is honest about where you are.
 };
 
 function currentPageFile() {
@@ -312,32 +320,31 @@ function mountLegalRow() {
 }
 
 /**
- * Discreet "For BSVA judges →" link mounted under the legal row.
- * Not in any primary nav — this page is linked from the BSVA
- * submission form as the "start here" URL for reviewers. Regular
- * visitors won't notice it; judges who land here from the submission
- * packet can still find it from the footer of any page.
+ * Secondary page links row — About, directory pages, disclosure pages,
+ * and the BSVA judge shortcut. This replaces the old solo "For BSVA
+ * judges →" link and absorbs it into a broader footer index. Every page
+ * that used to hide in a nav corner (Studios, Agents, Jobboard, x402,
+ * Treasury, Invest, etc.) is now discoverable from the footer of any
+ * page, while the primary nav stays a clean five-verb lifecycle.
+ *
+ * Suppressed on /legal/ pages because the legal footer is its own
+ * self-contained thing and this row would be noise there.
  */
-function mountJudgesLink() {
+function mountFooterLinks() {
   const footer = document.querySelector('footer.site-footer .footer-inner');
   if (!footer) return;
-  if (footer.querySelector('.footer-judges')) return;
-  // Don't render on /judges.html itself — the page already has its
-  // own header + BSVA coupon CTA, the extra link would be noise.
-  if (/\/judges\.html$/.test(window.location.pathname)) return;
-  // Also hide when we're on a legal page — the legal footer is its
-  // own thing and this link doesn't belong there.
+  if (footer.querySelector('.footer-pages')) return;
   if (/\/legal\//.test(window.location.pathname)) return;
-  const insideLegal = /\/legal\//.test(window.location.pathname);
-  const prefix = insideLegal ? '../' : '';
   const row = document.createElement('div');
-  row.className = 'footer-judges';
-  row.style.cssText = 'text-align:center;margin-top:1rem;font-size:0.7rem;';
-  row.innerHTML = `
-    <a href="${prefix}judges.html" style="color:#666;text-decoration:none;">
-      For BSVA judges <span style="color:#E50914;">→</span>
-    </a>
-  `;
+  row.className = 'footer-pages';
+  row.style.cssText = 'display:flex;gap:0.8rem;flex-wrap:wrap;justify-content:center;margin-top:1.2rem;font-size:0.72rem;line-height:1.8;';
+  // Don't render the link for the page the user is already on — self-links
+  // in a footer are footer clutter, and the visitor already knows they're here.
+  const here = window.location.pathname.replace(/^\//, '').toLowerCase();
+  row.innerHTML = FOOTER_LINKS
+    .filter(l => l.href.replace(/^\//, '').toLowerCase() !== here)
+    .map(l => `<a href="${l.href}" style="color:#888;text-decoration:none;">${l.label}</a>`)
+    .join('<span style="color:#333;">·</span>');
   footer.appendChild(row);
 }
 
@@ -388,7 +395,7 @@ function updateNav() {
 mountNav();
 mountSocialRow();
 mountLegalRow();
-mountJudgesLink();
+mountFooterLinks();
 updateNav();
 
 // Load the floating bMovies agent chat widget on every page.

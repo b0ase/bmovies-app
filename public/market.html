@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="js/session-sanitizer.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bMovies — Market your movie</title>
+  <meta name="description" content="How film promotion works on bMovies — who pays for marketing, where it happens, and when the cap-table holders share in the upside." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bmovies.online/market.html" />
+  <meta property="og:title" content="bMovies — Market your movie" />
+  <meta property="og:description" content="Promotion is the fourth rung of the lifecycle. Here's how it works." />
+  <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #000; color: #e8e8e8; line-height: 1.6; }
+    main { max-width: 1100px; margin: 0 auto; padding: 5rem 3rem 6rem; }
+    .kicker { font-size: 0.7rem; color: #E50914; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 4.2rem; line-height: 0.95; letter-spacing: -0.01em; margin-top: 0.6rem; color: #fff; }
+    h1 .accent { color: #E50914; }
+    .lede { font-size: 1.1rem; color: #bbb; line-height: 1.6; margin-top: 1.2rem; max-width: 720px; }
+    .lede strong { color: #fff; }
+    h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.02em; color: #fff; margin-top: 3.5rem; margin-bottom: 1rem; border-bottom: 1px solid #222; padding-bottom: 0.5rem; }
+    p { font-size: 0.95rem; color: #ccc; line-height: 1.75; margin-bottom: 1rem; max-width: 760px; }
+    p strong { color: #fff; }
+    a { color: #E50914; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { margin: 0.75rem 0 1rem 1.4rem; max-width: 760px; }
+    li { font-size: 0.95rem; color: #ccc; line-height: 1.75; margin-bottom: 0.4rem; }
+    li strong { color: #fff; }
+    .stage-strip {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;
+      margin: 2rem 0 3rem; padding: 1.2rem 0; border-top: 1px solid #222; border-bottom: 1px solid #222;
+    }
+    @media (max-width: 900px) { .stage-strip { grid-template-columns: repeat(3, 1fr); } }
+    .stage {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+      color: #555; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; text-align: center;
+      padding: 0.3rem 0;
+    }
+    .stage.active { color: #E50914; }
+    .stage.active::before { content: "●  "; }
+    .phase2-badge {
+      display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+      color: #e09b09; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+      border: 1px solid #332a1a; background: rgba(224, 155, 9, 0.06); padding: 0.35rem 0.7rem; margin-top: 1.2rem;
+    }
+    .note {
+      background: rgba(229, 9, 20, 0.05); border-left: 3px solid #E50914;
+      padding: 1rem 1.2rem; margin: 1.5rem 0; max-width: 760px;
+    }
+    .note p { color: #ddd; margin: 0; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header"></header>
+
+  <main>
+    <div class="stage-strip">
+      <div class="stage">Pitch</div>
+      <div class="stage">Produce</div>
+      <div class="stage">Raise</div>
+      <div class="stage active">Market</div>
+      <div class="stage">Release</div>
+    </div>
+
+    <div class="kicker">Stage 4 · Market</div>
+    <h1>Market your <span class="accent">movie</span>.</h1>
+    <p class="lede">Marketing is what turns a finished film into an audience. On bMovies, the cap table is already assembled by the time you get here — every shareholder earns when the film sells. That changes the economics of promotion: <strong>the people who financed the film already want it to succeed.</strong></p>
+    <div class="phase2-badge">Phase 2 · Post-hackathon</div>
+
+    <h2>How it will work</h2>
+    <p>The marketing stage is the one piece of the lifecycle that isn't fully built yet — it's explicitly Phase 2 work, deliberately deferred until after the BSVA Open Run Agentic Pay review window so the submission stays honest about what's shipped. Here's the design:</p>
+
+    <ul>
+      <li><strong>Trailer boosts.</strong> Token holders can spend BSV or stablecoin on vertical-cut distribution — TikTok, Reels, YouTube Shorts — directly from the <a href="/account">account dashboard</a>, with spend attributed to the film's BSV-21 cap table. Every boost produces a measurable lift in ticket sales, and the lift flows pro-rata back to holders.</li>
+      <li><strong>Audience reward inscriptions.</strong> Early audience members who share a film before release get on-chain attribution via a small BSV-21 mint — a discoverer badge, redeemable for a watch credit or a discount on the next film from the same studio.</li>
+      <li><strong>Festival submissions.</strong> The <a href="/exchange.html">cap table</a> can vote to allocate a slice of raised capital to BFI Network, Raindance, Sundance Shorts, etc. Win a festival, mint a certificate on-chain, update the film's prospectus.</li>
+      <li><strong>Agent-driven press.</strong> A Publicist agent (already in every studio roster — see <a href="/agents.html">agents</a>) drafts press releases and press kits; token holders approve or reject before distribution.</li>
+    </ul>
+
+    <h2>Why it belongs between Raise and Release</h2>
+    <p>The lifecycle isn't just narrative ordering — it's the cash-flow sequence. Film finance usually puts marketing in the distribution budget after release, which is why most indie films never get an audience. On bMovies, <strong>marketing spend is a cap-table decision made by the people who financed the film</strong>, before it's released. That makes the marketing budget an extension of the raise, not a cost against post-release revenue.</p>
+
+    <div class="note">
+      <p><strong>Today:</strong> we ship the trailer's OG card to every social platform and auto-cut a vertical TikTok version. The rest of this page is the Phase-2 plan, not shipped product. See <a href="/bsva-submission.html">the BSVA submission</a> for the architectural foundation (BSV-21 royalty tokens, on-chain cap table) that the marketing layer will ride on top of.</p>
+    </div>
+
+    <h2>Lifecycle</h2>
+    <p>
+      <a href="/commission.html">Pitch</a> ·
+      <a href="/productions.html">Produce</a> ·
+      <a href="/exchange.html">Raise</a> ·
+      <strong>Market</strong> ·
+      <a href="/release.html">Release</a>
+    </p>
+  </main>
+
+  <footer class="site-footer"><div class="footer-inner"><div class="footer-copy">© 2026 bMovies · The Bitcoin Corporation Ltd</div></div></footer>
+  <script type="module" src="js/nav-session.js"></script>
+
+</body>
+</html>
