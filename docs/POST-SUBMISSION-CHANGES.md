@@ -211,3 +211,50 @@ rolls over.
   renders every FOOTER_LINKS entry (with the current page filtered out
   to avoid self-links). Judge is still discoverable; it's just one of
   eleven footer entries now instead of the only one.
+
+- **`<pending>`** — `fix(post-submission): remove client-side KYC gate before Stripe checkout`
+
+  **Reported by a real prospective customer** (Bailey) who tried to buy
+  a trailer and "didn't encounter a Stripe option anywhere. Ended up
+  going through Veriff to verify identity." Exact symptom: click trailer
+  tier → `commission()` runs → hits `ensureKyc()` → opens Veriff in a
+  new tab → user never sees Stripe.
+
+  **Root cause.** `public/commission.html` had a client-side KYC gate
+  that fired for trailer / short / feature tiers (not pitch):
+
+  ```js
+  if (tier !== 'pitch') {
+    if (!(await ensureKyc())) return;
+  }
+  ```
+
+  This contradicted the stated architecture (commission = no KYC,
+  publish = KYC). The server-side `/api/checkout.ts` already correctly
+  requires only sign-in, NOT KYC — the comment block at line 112
+  explicitly states "Sign-in gate (KYC is NOT required at commission
+  time)". So the client was enforcing a stricter gate than the server,
+  and blocking users from ever reaching the server.
+
+  **Fix.** Removed the client-side KYC gate. Commission now goes:
+  sign-in check → Stripe checkout → webhook creates offer → pipeline
+  produces film → film lands in commissioner's /account workbench.
+  KYC is still enforced server-side at the two downstream moments
+  where it's legally required:
+
+  - `/api/feature/list-shares.ts` — opening a share tranche on the
+    public bonding curve (primary securities issuance).
+  - `/api/feature/publish.ts` — flipping the offer to
+    `status='published'` so the royalty token becomes tradable
+    (also primary securities issuance).
+
+  **Every commission entry point routes through this same function,**
+  so this one change unblocks:
+  - The primary `/commission.html` nav link (now "Pitch")
+  - Per-film upgrade buttons on `/film.html` ("Make trailer/short/feature")
+  - `/pitch.html`, `/ponzinomics.html`, and the homepage CTAs
+  - `/commission-success.html` "Commission another" repeat
+  - Agents, exchange, leaderboard, watch, studios page CTAs
+
+  No change to API contracts, no new features, no schema changes.
+  Pure removal of a wrong-layer gate.

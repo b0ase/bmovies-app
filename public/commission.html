@@ -1600,12 +1600,23 @@
       // Sign-in gate
       if (!(await ensureSignedIn())) return;
 
-      // KYC gate — trailer / short / feature only. Pitch ($0.99) is
-      // an impulse flow; KYC friction kills conversion. Pitch upgrades
-      // will hit KYC at the upgrade step.
-      if (tier !== 'pitch') {
-        if (!(await ensureKyc())) return;
-      }
+      // NO KYC gate here at any tier.
+      //
+      // Commissioning pays for a service — the swarm produces a film
+      // and delivers it to the commissioner's /account workbench as a
+      // draft. The 1B royalty-share token mints alongside but sits
+      // PRIVATE until the commissioner chooses to publish. That later
+      // act (publishing to /watch or listing shares on the exchange)
+      // IS where KYC is legally required, and both endpoints —
+      // api/feature/publish.ts and api/feature/list-shares.ts —
+      // enforce bct_user_kyc.status='verified' server-side there.
+      //
+      // An earlier version of this function fired a client-side KYC
+      // check before Stripe for trailer / short / feature tiers. That
+      // contradicted the stated architecture (commission = no KYC,
+      // publish = KYC) and routed a real prospective customer through
+      // Veriff before they ever saw a checkout button. Removed.
+      // Post-submission smoke test commit 2026-04-18.
 
       const email = emailEl.value.trim() || currentSession.user.email;
       disableAllTierBtns(true);
