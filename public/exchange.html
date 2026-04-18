@@ -680,7 +680,7 @@
   <main>
     <div class="page-intro">
       <div class="kicker">Raise · The Film Financing Floor</div>
-      <h2>Sell royalty shares in your film. Raise capital to produce and market it.</h2>
+      <h2>Sell royalty shares in your film.</h2>
       <p>
         Every film on bMovies is a <strong>BSV-21 token</strong> with a fixed <strong>1 billion supply</strong>, divided into
         <strong>10 tiers × 10 tranches</strong> (100 tranches of 1% / 10M tokens each) on a bonding curve — each tier steps the price up. Commissioners keep 99% and list
@@ -1331,6 +1331,11 @@
       if (!f || !isHexTxid(f.token_mint_txid)) return;
       const container = document.getElementById('tab-content');
       const tokenId = `${f.token_mint_txid}_0`;
+      // Scroll back to the top so the user actually sees the order-book
+      // view they just opened (otherwise the viewport stays parked on
+      // the row they clicked, mid-table, with nothing apparently
+      // happening).
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
       container.innerHTML = `
         <div style="margin-bottom:1.5rem;">
@@ -1550,6 +1555,16 @@
     document.querySelectorAll('.tabs button').forEach(btn => {
       btn.addEventListener('click', () => renderTab(btn.dataset.tab));
     });
+
+    // Expose handlers called from inline onclick attributes. This file
+    // is loaded as <script type="module"> so top-level declarations are
+    // scoped to the module, NOT the global window. Inline onclicks like
+    //   onclick="showFilmOrderBook('foo')"
+    // are resolved against window, so without this the order-book row
+    // clicks silently did nothing. Same applies to renderFilmsTab
+    // (used by the Back link in the order-book view).
+    window.showFilmOrderBook = showFilmOrderBook;
+    window.renderFilmsTab    = renderFilmsTab;
 
     // --- Bootstrap ---
     async function bootstrap() {
