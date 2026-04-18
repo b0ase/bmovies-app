@@ -4431,10 +4431,49 @@ function StudioInfoSection({
         .select('*')
         .eq('owner_account_id', accountId)
         .maybeSingle()
-      if (!cancelled) {
-        if (error) console.warn('[studio-tab] load error:', error.message)
-        setStudio(data as StudioData | null)
+      if (cancelled) return
+      if (error) console.warn('[studio-tab] load error:', error.message)
+      if (data) {
+        setStudio(data as StudioData)
         setStudioLoading(false)
+        return
+      }
+      // ─── No studio yet → auto-create a free default ───
+      // Every signed-in user gets a minimal studio on first account
+      // visit so pitches/commissions always have a brand to hang off.
+      // The $0.99 paid "custom studio" flow (logo + bio + 8 agents)
+      // remains as an upgrade from the banner on the populated card.
+      try {
+        const { data: session } = await bmovies.auth.getSession()
+        const accessToken = session.session?.access_token
+        if (!accessToken) {
+          setStudio(null)
+          setStudioLoading(false)
+          return
+        }
+        const res = await fetch('/api/studio/ensure-default', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: '{}',
+        })
+        const json = await res.json()
+        if (cancelled) return
+        if (!res.ok) {
+          console.warn('[studio-tab] ensure-default failed:', json?.error || res.status)
+          setStudio(null)
+        } else {
+          setStudio(json.studio as StudioData)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('[studio-tab] ensure-default threw:', err instanceof Error ? err.message : String(err))
+          setStudio(null)
+        }
+      } finally {
+        if (!cancelled) setStudioLoading(false)
       }
     }
     loadStudio()
@@ -4442,7 +4481,12 @@ function StudioInfoSection({
   }, [accountId])
 
   useEffect(() => {
-    if (!sessionIdFromUrl || !user || studio) return
+    if (!sessionIdFromUrl || !user) return
+    // An auto-created placeholder studio (created_by === 'auto') is NOT
+    // a real studio — the $0.99 upgrade return should still fire
+    // /api/studio/complete so Grok can fill in the logo/bio/agents.
+    // Only bail when we already have a fully-provisioned row.
+    if (studio && studio.created_by !== 'auto') return
     // ─── Guard against cross-flow hijack ───
     // BOTH pitch-commission and studio-create return with ?session_id=
     // in the URL. The old effect fired /api/studio/complete on every

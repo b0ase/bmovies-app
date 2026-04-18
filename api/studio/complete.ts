@@ -327,14 +327,38 @@ export default async function handler(
   // ─── Generate studio assets in parallel where possible ───
   console.log(`[studio/complete] provisioning studio "${studioName}" for account ${accountId}`);
 
-  const ticker = await pickUniqueTicker(supabase, studioName);
-  const studioId = `user-studio-${accountId}-${Date.now()}`;
+  // ─── Detect auto-placeholder ───
+  // /api/studio/ensure-default creates a minimal studio row
+  // (created_by='auto') for every signed-in user. When the user pays
+  // $0.99 to upgrade, we don't want to insert a second studio — the
+  // schema has no UNIQUE on owner_account_id but the UI relies on
+  // .maybeSingle(), so two rows would break the account page. We
+  // reuse the placeholder's id, token_ticker, and treasury_address
+  // (the ticker is already inscribed/quoted in any welcome UX), and
+  // fill in everything else with the Grok-generated assets below.
+  const { data: placeholder } = await supabase
+    .from('bct_studios')
+    .select('id, token_ticker, treasury_address, created_by')
+    .eq('owner_account_id', accountId)
+    .maybeSingle();
+  const isUpgrade = placeholder?.created_by === 'auto';
+
   const aestheticLabel = aesthetic || 'eclectic and bold';
 
-  // Generate treasury address
+  // Generate treasury address (only if this is a brand-new studio —
+  // an upgrade reuses the placeholder's existing treasury so BSV
+  // received during the placeholder phase lands in the same wallet).
   const { PrivateKey } = await import('@bsv/sdk');
-  const treasuryKey = PrivateKey.fromRandom();
-  const treasuryAddress = treasuryKey.toAddress().toString();
+  const treasuryAddress = isUpgrade
+    ? (placeholder!.treasury_address as string)
+    : PrivateKey.fromRandom().toAddress().toString();
+
+  const ticker = isUpgrade
+    ? (placeholder!.token_ticker as string)
+    : await pickUniqueTicker(supabase, studioName);
+  const studioId = isUpgrade
+    ? (placeholder!.id as string)
+    : `user-studio-${accountId}-${Date.now()}`;
 
   // ─── Batch 1 (parallel): logo + bio + agent names ───
   // These three have no interdependencies — fire simultaneously.
@@ -421,7 +445,9 @@ export default async function handler(
     personas.push('A versatile specialist ready for any production challenge.');
   }
 
-  // ─── Insert studio row ───
+  // ─── Upsert studio row ───
+  // For upgrades (placeholder → paid) we UPDATE in place to preserve
+  // id/ticker/treasury. For fresh studios we INSERT.
   const studioRow = {
     id: studioId,
     name: studioName,
@@ -439,9 +465,22 @@ export default async function handler(
     stripe_session_id: sessionId,
   };
 
-  const { error: studioErr } = await supabase
-    .from('bct_studios')
-    .insert(studioRow);
+  const studioErr = isUpgrade
+    ? (await supabase
+        .from('bct_studios')
+        .update({
+          name: studioName,
+          bio: bio || null,
+          logo_url: logoUrl || null,
+          poster_url: posterUrl || null,
+          poster_prompt: posterPrompt,
+          aesthetic: aesthetic || null,
+          created_by: 'user',
+          logo_prompt: logoPrompt,
+          stripe_session_id: sessionId,
+        })
+        .eq('id', studioId)).error
+    : (await supabase.from('bct_studios').insert(studioRow)).error;
 
   if (studioErr) {
     // Could be a race condition — check for existing row by session_id
@@ -459,7 +498,7 @@ export default async function handler(
       res.status(200).json({ studio: raceStudio, agents: raceAgents || [], cached: true });
       return;
     }
-    console.error('[studio/complete] studio insert failed:', studioErr);
+    console.error('[studio/complete] studio write failed:', studioErr);
     res.status(500).json({ error: 'Studio creation failed' });
     return;
   }
