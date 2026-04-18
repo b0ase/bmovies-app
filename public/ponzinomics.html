@@ -397,8 +397,8 @@
     <div class="stat-strip">
       <div class="stat accent">
         <div class="stat-label">Pitch to go live</div>
-        <div class="stat-val">1,000</div>
-        <div class="stat-sub">sats · one-shot · non-refundable</div>
+        <div class="stat-val">$0.99</div>
+        <div class="stat-sub">Stripe or BSV · mints a 1B token the moment you pay</div>
       </div>
       <div class="stat">
         <div class="stat-label">Token supply per film</div>
@@ -406,15 +406,24 @@
         <div class="stat-sub">BSV-21 · 1,000,000,000 fixed at mint · one per production</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Financier cap / sub</div>
-        <div class="stat-val">2,500</div>
-        <div class="stat-sub">sats · subscribe, get a slice of 40%</div>
+        <div class="stat-label">Commissioner holds</div>
+        <div class="stat-val">99%</div>
+        <div class="stat-sub">hardcoded · <code>bct_offers.commissioner_percent</code></div>
       </div>
       <div class="stat accent">
-        <div class="stat-label">Platform cut on streaming</div>
-        <div class="stat-val">0%</div>
-        <div class="stat-sub">100% of piece budget → token holders</div>
+        <div class="stat-label">Platform cut</div>
+        <div class="stat-val">1%</div>
+        <div class="stat-sub">hardcoded · the only fixed split on the whole platform</div>
       </div>
+    </div>
+
+    <div class="section" style="background:rgba(224,155,9,0.04);border:1px solid #332a1a;padding:1.4rem 1.6rem;margin-top:2rem;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#e09b09;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;margin-bottom:0.5rem;">
+        ⚠ Honesty banner
+      </div>
+      <p style="color:#cfc5a7;font-size:0.82rem;line-height:1.65;margin:0;">
+        <strong>Only two numbers on this page are hardcoded</strong>: 1B tokens per film, and the 99/1 commissioner/platform split. <strong>Everything else about how revenue routes between commissioners, studios, agents, and pitchers is configurable</strong> — the commissioner sets it by assigning weights in the <code>bct_subscriptions</code> table that the piece-payment fan-out splits by. Earlier versions of this page invented specific percentages (10% pitcher, 30% producer, 20% crew, 40% financier); those numbers <em>are not in the code anywhere</em>. Any figure below framed as an "example split" is one way you could wire it, not the way it IS wired.
+      </p>
     </div>
 
     <div class="section">
@@ -446,31 +455,31 @@
       <div class="roles">
         <div class="role">
           <div class="n">01</div>
-          <div class="tag">THE PITCHER</div>
-          <h3>You bring the idea</h3>
-          <p>Pay the pitch fee. Describe the film in a sentence. If a financier swarm bites and a producer converts your pitch, a token gets minted and you walk away with a founder's slice.</p>
-          <div class="alloc">alloc · 10% (100M tokens)</div>
+          <div class="tag">COMMISSIONER</div>
+          <h3>You pay for the film</h3>
+          <p>Pay $0.99 to mint a pitch (or $9.99 for a trailer, $99 short, $999 feature). The swarm produces it; the 1B BSV-21 token mints on BSV mainnet the moment Stripe fires. You own 99% of the supply.</p>
+          <div class="alloc">owns · 99% (hardcoded)</div>
         </div>
         <div class="role">
           <div class="n">02</div>
-          <div class="tag">THE FINANCIER</div>
-          <h3>You fund the shoot</h3>
-          <p>Subscribe to open offers. Your sats become the budget the producer splits across writer, director, storyboard and composer. Get tokens proportional to your subscription size.</p>
-          <div class="alloc">alloc · 40% (split pro-rata by subscription)</div>
+          <div class="tag">SHAREHOLDER</div>
+          <h3>You buy tranches on the curve</h3>
+          <p>The commissioner lists a float from their 99%. You buy 1% tranches ($0.99 → $9,999 up a 10-tier bonding curve). Every ticket sold thereafter triggers a real on-chain fan-out TX; your share of the royalty pool is your % of bought tranches.</p>
+          <div class="alloc">earns · pro-rata on every ticket, forever</div>
         </div>
         <div class="role">
           <div class="n">03</div>
-          <div class="tag">THE PRODUCER</div>
-          <h3>You dispatch the crew</h3>
-          <p>A producer agent you've funded collects the raised capital, splits it into four equal pots, and fires each pot at BSVAPI to produce a treatment, shot list, hero frame and theme. Real txids or it didn't happen.</p>
-          <div class="alloc">alloc · 30% (300M tokens)</div>
+          <div class="tag">AGENT HOLDER</div>
+          <h3>You back the crew</h3>
+          <p>Every agent (writer, director, editor, composer…) is a BSV-21 token tradeable on <a href="https://1sat.market" target="_blank" rel="noopener">1sat.market</a>. Agents earn sats on every job they do. Fan-out from agent wallet to its token holders is Phase-2 glue — the primitive exists (same as film fan-out), the cascade loop isn't wired yet.</p>
+          <div class="alloc">earns · pro-rata when the cascade ships</div>
         </div>
         <div class="role">
           <div class="n">04</div>
-          <div class="tag">THE HODLER</div>
-          <h3>You buy the token later</h3>
-          <p>Somebody else did the work. You show up on the secondary market, pick a token whose film you believe in, and collect streaming royalties per piece while other people watch. Classic degen move.</p>
-          <div class="alloc">alloc · however much you can buy</div>
+          <div class="tag">STUDIO</div>
+          <h3>You own the house</h3>
+          <p>Studios are tokenised too ($BOT21, $BOLTD, $CLNKR, $DREAM, $NRLSP, $PRMNT — plus whatever you spin up for $0.99). A studio is a meta-shareholder: if the commissioner routes their 99% via the studio token, studio holders earn from every film in the roster. Routing is opt-in, via the same <code>bct_subscriptions</code> weights.</p>
+          <div class="alloc">earns · whatever the commissioner assigns</div>
         </div>
       </div>
     </div>
@@ -481,83 +490,96 @@
       <p class="lede">
         Everything below is a real BSV mainnet transaction. No escrow, no promises, no "settlement in T+2". You can pull the txids out of WhatsOnChain and verify every hop yourself.
       </p>
-      <div class="flow"><span class="hot">visitor</span> ──(1,000 sats)──▶ <span class="dim">bct_pitches</span>           <span class="dim"># pitch fee</span>
-                                  │
-                                  ▼
-                             PitchVerifier
-                                  │
-                                  ▼
-                          <span class="dim">bct_offers (open)</span>
-                                  │
-<span class="hot">financier</span> ──(≤2,500 sats)──▶   │                     <span class="dim"># subscription</span>
-<span class="hot">financier</span> ──(≤2,500 sats)──▶   │
-<span class="hot">financier</span> ──(≤2,500 sats)──▶   │
-                                  ▼
-                         <span class="dim">bct_offers (funded)</span>
-                                  │
-                                  ▼
-                    <span class="win">producer agent</span> splits pot 4 ways
-                                  │
-             ┌──────────┬─────────┼─────────┬──────────┐
-             ▼          ▼         ▼         ▼          ▼
-         <span class="win">writer</span>   <span class="win">director</span>  <span class="win">storyboard</span>  <span class="win">composer</span>
-             │          │         │          │
-             └─── BSVAPI x402 per role ──────┘
-                                  │
-                                  ▼
-                    <span class="win">bct_artifacts × 4</span>    <span class="dim"># real on-chain outputs</span>
-                                  │
-                                  ▼
-                          streaming loop
-                                  │
-                   ┌──────────────┴──────────────┐
-                   ▼                             ▼
-          <span class="hot">viewer pays (10 sats/piece)</span>    <span class="win">token holders collect</span>
-                                                 <span class="dim"># 100% of piece budget, no house cut</span></div>
+      <div class="flow"><span class="hot">commissioner</span> ──($0.99–$999 via Stripe)──▶  <span class="dim">bct_offers</span>
+                                                   │
+                                                   ▼
+                                   <span class="win">BSV-21 token mint (1B)</span>  <span class="dim"># step 1 of pipeline</span>
+                                                   │
+                                                   ▼
+                         <span class="win">8 agents produce artifacts</span>  <span class="dim"># writer, dir, storyboard,</span>
+                                                   │          <span class="dim"># cine, editor, composer,</span>
+                                                   ▼          <span class="dim"># sound, producer</span>
+                                          <span class="dim">bct_artifacts</span>
+                                                   │
+                                                   ▼
+                                        film lands in workbench
+                                                   │
+                                                   ▼
+                                 commissioner clicks <span class="win">PUBLISH</span>
+                                                   │
+                         ┌─────────────────────────┼─────────────────────────┐
+                         ▼                         ▼                         ▼
+                   <span class="dim">/watch</span>                     <span class="dim">/exchange</span>                  <span class="dim">/marketplace</span>
+             film ticketable              cap-table open                1sat.market
+                         │                         │
+                         ▼                         ▼
+<span class="hot">viewer pays $2.99</span> ──▶  <span class="win">fan-out TX</span>           <span class="hot">shareholder buys</span> ──▶  <span class="win">joins fanout</span>
+                         │                         │
+                         ▼                         ▼
+         <span class="win">99% to holder set</span> (pro-rata by <code>bct_subscriptions</code> weights)
+                         │
+                         ▼
+          holders can be: commissioner wallet · studio token · agent tokens · pitcher
+                         <span class="dim"># commissioner configures the routing. THIS is where the mogul loop lives.</span></div>
     </div>
 
     <div class="section">
       <div class="section-label">Chapter 4 · The cap table</div>
-      <h2>Founder's allocation at mint</h2>
+      <h2>What's actually hardcoded</h2>
       <p class="lede">
-        Every production's token has the same shape. 1B supply minted once, distributed once, never inflated. If a producer agent proposes the film autonomously (no human pitcher) the 10% pitcher slot folds into the financier pool.
+        Just two numbers. Every other percentage on this page is a commissioner choice made via <code>bct_subscriptions</code> weights.
       </p>
       <div class="tok">
-        <div class="tok-row big"><div class="l">Total supply</div><div class="v">100,000,000 per production</div></div>
-        <div class="tok-row"><div class="l">Producer allocation</div><div class="v">30% · 300,000,000</div></div>
-        <div class="tok-row"><div class="l">Crew allocation (writer + director + storyboard + composer)</div><div class="v">20% · 50,000,000 each</div></div>
-        <div class="tok-row"><div class="l">Pitcher allocation</div><div class="v">10% · 100,000,000</div></div>
-        <div class="tok-row"><div class="l">Financier pool</div><div class="v">40% · distributed pro-rata by subscription</div></div>
-        <div class="tok-row"><div class="l">Standard (BSV-21)</div><div class="v">non-rebaseable, non-mintable post-issuance</div></div>
-        <div class="tok-row"><div class="l">Redeemable for</div><div class="v">streaming royalties · viewing rights · literally nothing else</div></div>
-        <div class="tok-row"><div class="l">Platform cut on streaming</div><div class="v">0% · 100% of piece budget goes to holders</div></div>
+        <div class="tok-row big"><div class="l">Total supply</div><div class="v">1,000,000,000 per production</div></div>
+        <div class="tok-row"><div class="l">Commissioner</div><div class="v">99% · 990,000,000 (hardcoded)</div></div>
+        <div class="tok-row"><div class="l">Platform</div><div class="v">1% · 10,000,000 (hardcoded)</div></div>
+        <div class="tok-row"><div class="l">Standard</div><div class="v">BSV-21 · non-rebaseable · non-mintable post-issuance</div></div>
+        <div class="tok-row"><div class="l">Mint moment</div><div class="v">Stripe fires → pipeline step 1 inscribes to BSV mainnet</div></div>
+        <div class="tok-row"><div class="l">Redeemable for</div><div class="v">pro-rata of every $2.99 ticket sold for this film, forever</div></div>
       </div>
+
+      <h3 style="font-family:'Bebas Neue',sans-serif;color:#fff;font-size:1.6rem;margin-top:2.5rem;margin-bottom:1rem;letter-spacing:0.02em;">The mogul loop — how to build a compounding studio</h3>
+      <p style="color:#aaa;font-size:0.9rem;line-height:1.7;max-width:820px;">
+        This is the economic loop the platform is <em>designed</em> to support, built on primitives that either already exist or are a small amount of glue away. A savvy commissioner can execute this today with a combination of manual subscriptions + the existing pipeline; automation is the Phase-2 work.
+      </p>
+      <div class="tok" style="margin-top:1rem;">
+        <div class="tok-row"><div class="l">① Ticket sold</div><div class="v">$2.99 → on-chain fan-out TX (live)</div></div>
+        <div class="tok-row"><div class="l">② Fan-out splits</div><div class="v">by <code>bct_subscriptions</code> weights (live)</div></div>
+        <div class="tok-row"><div class="l">③ Commissioner routes 99%</div><div class="v">→ their studio token treasury (opt-in, manual today)</div></div>
+        <div class="tok-row"><div class="l">④ Studio treasury cascades</div><div class="v">→ its 8 agent tokens pro-rata (glue — same fan-out primitive, recursed)</div></div>
+        <div class="tok-row"><div class="l">⑤ Agent tokens fan out</div><div class="v">→ human holders on 1sat.market (glue)</div></div>
+        <div class="tok-row"><div class="l">⑥ Studio balance triggers</div><div class="v">→ auto-commissions the next tier when treasury &gt; price (glue — <code>feature-worker.ts</code> shell exists)</div></div>
+        <div class="tok-row"><div class="l">Net effect</div><div class="v">a studio grows like a compounding business the mogul runs from the cap-table layer</div></div>
+      </div>
+      <p style="color:#888;font-size:0.78rem;line-height:1.65;margin-top:1.2rem;max-width:820px;">
+        <strong style="color:#e09b09;">Three glue pieces</strong> separate today's build from the full loop: (3) commissioner→studio routing, (4)(5) studio→agent→holder cascades, and (6) treasury-triggered commissioning. Each is one small worker on top of the existing piece-payment primitive. None require a new primitive.
+      </p>
     </div>
 
     <div class="section">
       <div class="section-label">Chapter 5 · Mogul maths</div>
       <h2>What actually happens when you bet</h2>
       <p class="lede">
-        Illustrative only. Streaming royalties depend on real viewership at 10 sats per piece, 5 pieces per second default. Secondary market price is whatever the next buyer is willing to pay — there is no bonded curve, no AMM, no buyback.
+        Illustrative. Tickets are $2.99 each; 99% of each ticket fans out to holders pro-rata by <code>bct_subscriptions</code> weights. Secondary-market price is whatever the next buyer pays on the bonding curve — 10 tiers × 10 tranches, each 1% step. No AMM, no buyback, no promise.
       </p>
       <div class="scenarios">
         <div class="sc hit">
           <div class="tag">★ the hit</div>
           <h3>Film goes viral</h3>
-          <p>Pitched for 1k sats. Financier stack hits 50k sats. Viewers stream 10k pieces in week one. Secondary market bids 3× mint.</p>
-          <div class="math">pitcher 100M tokens · royalties so far ≈ 10k × 10 × (10/100) = 10k sats · paper gain on secondary 3×</div>
+          <p>Commissioned as a trailer for $9.99. Shareholders buy 30% of the float as the curve moves up. 10,000 viewers pay $2.99 each in week one. Secondary tranches trade 3× mint.</p>
+          <div class="math">10,000 tickets × $2.99 × 99% = ~$29,600 fanned out · holder with 1% earns ~$296 · commissioner keeps what they didn't list</div>
         </div>
         <div class="sc mid">
           <div class="tag">≈ the cult classic</div>
           <h3>Slow burn, small fans</h3>
-          <p>Film never trends but gets 500 viewers a month, steadily. You hold, collect dust-sized royalties, flip in year two when a niche discovers it.</p>
-          <div class="math">holder with 5M tokens · recurring ~500 × 100 × (5/100) = 2.5k sats/month · low but real</div>
+          <p>Film never trends but picks up 500 viewers a month, steadily. You bought the cheapest tranche at $0.99. Hold, collect micro-payouts on every ticket, flip in year two when a niche discovers it.</p>
+          <div class="math">500 tickets/mo × $2.99 × 99% × 1% = ~$14.80/mo on a 1% tranche bought for $0.99 · 15× payback in year one</div>
         </div>
         <div class="sc flop">
-          <div class="tag">✖ the rug</div>
-          <h3>Production fails upstream</h3>
-          <p>Composer role can't reach Replicate. Producer still ships with three surviving artifacts, but the film is a mess. Viewers bounce. Your subscription is gone. Phase 3 will add a burn-and-refund path. Not yet.</p>
-          <div class="math">financier sub 2,500 sats · ships with degraded output · zero viewers · zero royalties · tokens still valid access licence</div>
+          <div class="tag">✖ the flop</div>
+          <h3>Nobody watches</h3>
+          <p>Film ships. Trailer gets 40 views. No ticket sales. Your shares earn nothing. You can list on 1sat.market but liquidity is thin. The commissioner's 99% also earns nothing until an audience shows up — aligned with you.</p>
+          <div class="math">0 tickets · 0 fan-out · token still exists and is still tradeable · every party equally bored</div>
         </div>
       </div>
     </div>
@@ -566,14 +588,15 @@
       <div class="section-label">Chapter 6 · How the house rakes nothing</div>
       <h2>Where the sats <span>actually</span> go</h2>
       <p class="lede">
-        Two distinct revenue events. The pitch fee pays for server and gas and never gets redistributed. The streaming royalties have zero platform cut. The only way bMovies makes money is via $bMovies, the separate <a href="invest.html" style="color:#E50914;text-decoration:none;border-bottom:1px dashed #E50914;">platform share token</a> — which captures 1% of every film. That's on its own page, not this one.
+        The platform's only fixed cut is the 1% held by the $bMovies <a href="invest.html" style="color:#E50914;text-decoration:none;border-bottom:1px dashed #E50914;">platform share token</a> — same bonding-curve structure, captures 1% of every film minted on the platform. Everything else flows where the commissioner points it.
       </p>
       <div class="tok">
-        <div class="tok-row"><div class="l">Pitch fee (1,000 sats)</div><div class="v">100% → operator (server, agent gas, BSVAPI float)</div></div>
-        <div class="tok-row"><div class="l">Financier subscription (≤2,500 sats)</div><div class="v">100% → producer wallet → 4 role budgets</div></div>
-        <div class="tok-row"><div class="l">Production spend</div><div class="v">100% → BSVAPI upstream providers (Grok / AtlasCloud / Replicate)</div></div>
-        <div class="tok-row"><div class="l">Streaming piece budget (10 sats/piece default)</div><div class="v">100% → pro-rata to every token holder at moment of broadcast</div></div>
-        <div class="tok-row big"><div class="l">Platform rake on streaming</div><div class="v">0%</div></div>
+        <div class="tok-row"><div class="l">Commission fee ($0.99–$999 Stripe)</div><div class="v">→ pays Grok / ElevenLabs / Replicate / BSVAPI (production cost) + mints the token</div></div>
+        <div class="tok-row"><div class="l">1% platform allocation at mint</div><div class="v">→ $bMovies treasury · the one fixed cut</div></div>
+        <div class="tok-row"><div class="l">99% commissioner allocation at mint</div><div class="v">→ commissioner can hold, list on exchange, route to studio, route to agents</div></div>
+        <div class="tok-row"><div class="l">$2.99 ticket sale</div><div class="v">→ fan-out TX splits 99% by <code>bct_subscriptions</code> weights, 1% to platform</div></div>
+        <div class="tok-row"><div class="l">Secondary market</div><div class="v">→ peer-to-peer on 1sat.market, platform takes nothing on resale</div></div>
+        <div class="tok-row big"><div class="l">Platform rake post-mint</div><div class="v">0% on resales · 1% on ticket fan-outs (via its token holding)</div></div>
       </div>
     </div>
 
@@ -583,35 +606,35 @@
       <div class="tiers">
         <div class="tier">
           <h3>The Runner</h3>
-          <div class="price">~1,000 sats</div>
+          <div class="price">$0.99</div>
           <ul>
-            <li>One pitch, one film, one shot</li>
-            <li>10% founder's slice if it ships</li>
-            <li>You get to tell people you produced a movie</li>
+            <li>Pitch one idea, see if it sticks</li>
+            <li>Own 99% of a 1B BSV-21 token</li>
+            <li>Upgrade later to trailer / short / feature</li>
             <li>Odds of hitting: low</li>
             <li>Odds of having fun: high</li>
           </ul>
         </div>
         <div class="tier feature">
-          <h3>The Financier</h3>
-          <div class="price">~25,000 sats across 10 films</div>
+          <h3>The Mogul</h3>
+          <div class="price">~$20 across 20 pitches</div>
           <ul>
-            <li>Spray capital across ten open offers</li>
-            <li>Get a slice of each 40% financier pool</li>
-            <li>Diversified exposure to the swarm's catalog</li>
-            <li>If one film hits, it carries the other nine</li>
-            <li>Closest thing to a real mogul portfolio</li>
+            <li>Commission 20 pitches at $0.99 each, see which catch</li>
+            <li>Promote the three best to trailers ($9.99)</li>
+            <li>Promote the best trailer to a short ($99)</li>
+            <li>Use revenue from the short to fund the next feature</li>
+            <li>Closest thing to how a real mini-major operates</li>
           </ul>
         </div>
         <div class="tier">
-          <h3>The Kingmaker</h3>
-          <div class="price">~250,000+ sats on one film</div>
+          <h3>The Shareholder</h3>
+          <div class="price">$0.99 per 1% tranche</div>
           <ul>
-            <li>Back one production to the wall</li>
-            <li>Dominate the financier pool · 30%+ of 40%</li>
-            <li>Top of the cap table, top of the payouts</li>
-            <li>If the film flops, you flop with it</li>
-            <li>For sharps with strong conviction</li>
+            <li>Buy early tranches on films other commissioners pitched</li>
+            <li>Earn a slice of every ticket that film ever sells</li>
+            <li>Diversify by buying tranches across a dozen films</li>
+            <li>Flip on 1sat.market any time</li>
+            <li>No commissioning required</li>
           </ul>
         </div>
       </div>
