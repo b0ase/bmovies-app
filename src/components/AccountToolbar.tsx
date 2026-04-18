@@ -74,6 +74,7 @@ const PROJECT_ALL_TABS = [
   { id: 'titles',      label: 'Titles',     type: 'tool' as const },
   { id: 'score',       label: 'Score',      type: 'tool' as const },
   { id: 'voiceover',   label: 'Voiceover',  type: 'tool' as const },
+  { id: 'alt',         label: 'Alt',        type: 'tool' as const },
   { id: 'preview',     label: 'Preview',    type: 'tool' as const },
   { id: 'publish',     label: 'Publish',    type: 'tool' as const },
 ] as const

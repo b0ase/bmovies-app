@@ -367,7 +367,7 @@
       const { data, error } = await supabase
         .from('bct_offers')
         .select(`
-          id, title, status, token_ticker, tier, parent_offer_id, created_at,
+          id, title, status, token_ticker, tier, parent_offer_id, created_at, pipeline_state,
           bct_artifacts ( id, kind, url, role )
         `)
         .in('status', ['published', 'auto_published', 'released'])
@@ -376,7 +376,10 @@
         .order('created_at', { ascending: false })
         .limit(120);
       if (error) throw error;
-      return data || [];
+      // Drop private alt trailers — they live in the commissioner's
+      // Alt tab and aren't meant to appear on the public cinema feed
+      // unless/until the commissioner promotes one to canonical.
+      return (data || []).filter((r) => !(r.pipeline_state && r.pipeline_state.is_alt === true));
     }
 
     // Tier ordering — higher wins when collapsing a family.

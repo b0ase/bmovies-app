@@ -1795,15 +1795,21 @@ function TierLadder({ film }: { film: Film }) {
         const nextIdx = TIER_ORDER.indexOf(parentTier) + 1
         if (nextIdx <= 0 || nextIdx >= TIER_ORDER.length) break
         const nextTier = TIER_ORDER[nextIdx]
-        const { data }: { data: LineageOffer | null } = await bmovies
+        // A pitch can have multiple trailer children when the user
+        // has commissioned alt trailers from the Alt tab. Filter to
+        // the canonical (non-alt) child. If none is canonical — e.g.
+        // user has only made alts so far — break and leave the tier
+        // unfilled in the ladder.
+        const { data: children } = await bmovies
           .from('bct_offers')
-          .select('id, tier, title, token_ticker, status')
+          .select('id, tier, title, token_ticker, status, pipeline_state')
           .eq('parent_offer_id', parentId)
           .eq('tier', nextTier)
-          .maybeSingle()
-        if (!data) break
-        found[nextTier] = data
-        parentId = data.id
+        const canonical = (children as Array<LineageOffer & { pipeline_state?: { is_alt?: boolean } }> | null)
+          ?.find((c) => !c.pipeline_state?.is_alt)
+        if (!canonical) break
+        found[nextTier] = canonical
+        parentId = canonical.id
         parentTier = nextTier
       }
       return found
@@ -5986,6 +5992,7 @@ const TOOL_LABELS: Record<string, string> = {
   editor: 'Movie Editor',
   titles: 'Title Designer',
   score: 'Score Composer',
+  alt: 'Alt Trailers',
   preview: 'Preview',
   publish: 'Publish',
 }
@@ -6008,8 +6015,197 @@ function ToolView({
       {tool === 'editor' && <MovieEditorView projectId={projectId} projectTitle={projectTitle} projectTier={projectTier} />}
       {tool === 'titles' && <TitleDesignerView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'score' && <ScoreComposerView projectId={projectId} projectTitle={projectTitle} />}
+      {tool === 'alt' && <AltTrailersView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'preview' && <PreviewView projectId={projectId} projectTitle={projectTitle} />}
       {tool === 'publish' && <PublishView projectId={projectId} projectTitle={projectTitle} />}
+    </div>
+  )
+}
+
+/* ── Alt Trailers ──
+ *
+ * PRIVATE alternative trailers. A project can have exactly one
+ * canonical trailer (the one that shows up in the TierLadder, gets
+ * published to /watch.html, and acts as the upgrade basis for the
+ * short/feature). The Alt tab lets the commissioner spin up
+ * additional trailer variants privately — same script, different
+ * direction — so they can compare takes before picking a winner.
+ *
+ * Data shape: identical to canonical trailers (bct_offers row with
+ * parent_offer_id = pitch + tier = trailer), plus pipeline_state.is_alt
+ * = true. Every query that surfaces public trailers
+ * (TierLadder, films loader, /watch.html) filters these out. Only
+ * this tab, and a future "promote alt to canonical" action, sees them.
+ *
+ * Forward-looking: the eventual "studios bid on pitches" flow will
+ * mint a swarm of alt trailers per pitch, each produced by a
+ * different studio's style bible. The winner gets promoted to
+ * canonical and becomes the basis for a short or feature commission.
+ * Starting with the manual "commissioner makes alts for themselves"
+ * flow gives us the data model without having to solve studio
+ * bidding economics yet.
+ */
+
+interface AltOffer {
+  id: string
+  title: string
+  status: string
+  trailer_video_url: string | null
+  created_at: string
+  pipeline_state: { is_alt?: boolean } | null
+}
+
+function AltTrailersView({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
+  const [alts, setAlts] = useState<AltOffer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [pending, setPending] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data } = await bmovies
+      .from('bct_offers')
+      .select('id, title, status, trailer_video_url, created_at, pipeline_state')
+      .eq('parent_offer_id', projectId)
+      .eq('tier', 'trailer')
+      .order('created_at', { ascending: false })
+    setAlts((data as AltOffer[] || []).filter((a) => a.pipeline_state?.is_alt === true))
+    setLoading(false)
+  }, [projectId])
+
+  useEffect(() => { load() }, [load])
+
+  async function commissionAlt() {
+    setPending(true)
+    setErr(null)
+    try {
+      const { data: s } = await bmovies.auth.getSession()
+      const session = s?.session
+      if (!session) throw new Error('Sign in required')
+
+      // Look up the parent pitch's title + ticker so the webhook has
+      // everything it needs to clone the pitch metadata into the new
+      // alt trailer row (same as the canonical Make-trailer path).
+      const { data: pitch } = await bmovies
+        .from('bct_offers')
+        .select('title, token_ticker, synopsis')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (!pitch) throw new Error('Parent pitch not found')
+
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier: 'trailer',
+          title: pitch.title,
+          ticker: pitch.token_ticker || '',
+          synopsis: pitch.synopsis || '',
+          parentOfferId: projectId,
+          isAlt: true,
+          email: session.user?.email,
+          supabaseUserId: session.user?.id,
+          successPath: `/account?project=${encodeURIComponent(projectId)}&tool=alt&commissioned=1`,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || `checkout failed (${res.status})`)
+      if (!body.url) throw new Error('Stripe URL missing')
+      window.location.href = body.url
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      setErr(msg)
+      setPending(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <div className="text-[0.55rem] uppercase tracking-[0.2em] text-[#E50914] font-bold mb-1">
+          Alt trailers · private
+        </div>
+        <h2 className="text-3xl font-black leading-none text-white mb-3" style={{ fontFamily: 'var(--font-bebas)' }}>
+          {projectTitle}
+        </h2>
+        <p className="text-[#aaa] text-sm leading-relaxed max-w-2xl">
+          Commission alternative trailers for the same pitch — same
+          script, different direction. Alts stay private to your
+          workbench; they don&apos;t appear on <span className="text-white">/watch.html</span>, in the
+          TierLadder, or in any public listing. Future &ldquo;promote alt
+          to canonical&rdquo; action will let you pick the winner.
+        </p>
+      </div>
+
+      <div className="border border-dashed border-[#E50914] bg-[#0a0000] p-5 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-0.5">
+              Commission an alt · $9.99
+            </div>
+            <p className="text-[#bbb] text-sm leading-relaxed">
+              Fires a fresh trailer generation against the same script.
+              Different style bible, different shot plan, different cuts.
+              Private by default — mark as canonical later if you want it public.
+            </p>
+          </div>
+          <button
+            onClick={commissionAlt}
+            disabled={pending}
+            className="px-4 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.65rem] font-bold uppercase tracking-wider shrink-0 disabled:opacity-50"
+          >
+            {pending ? 'Redirecting…' : 'Commission alt · $9.99'}
+          </button>
+        </div>
+        {err && (
+          <div className="text-[#ff6b7a] text-[0.65rem] mt-2">Failed: {err}</div>
+        )}
+      </div>
+
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
+        Existing alts · {alts.length}
+      </div>
+      {loading ? (
+        <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-40 bg-[#0a0a0a] border border-[#1a1a1a]" />
+          ))}
+        </div>
+      ) : alts.length === 0 ? (
+        <div className="border border-[#222] bg-[#050505] p-6 text-center text-[#666] text-sm">
+          No alt trailers yet. Commission one above to spin up a second take.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {alts.map((a) => (
+            <div key={a.id} className="border border-[#222] bg-[#0a0a0a] overflow-hidden">
+              {a.trailer_video_url ? (
+                <video
+                  src={a.trailer_video_url}
+                  controls
+                  preload="metadata"
+                  className="w-full aspect-video bg-black"
+                />
+              ) : (
+                <div className="aspect-video bg-[#050505] flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="text-[0.55rem] uppercase tracking-wider text-[#666]">In production</div>
+                  </div>
+                </div>
+              )}
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-mono">{a.status}</span>
+                  <span className="text-[0.55rem] text-[#666] font-mono">{new Date(a.created_at).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div className="text-white text-sm font-bold truncate">{a.title}</div>
+                <div className="text-[#666] text-[0.55rem] font-mono mt-1">{a.id}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -6801,15 +6997,17 @@ function MovieEditorView({
       const lineageIds: string[] = [projectId]
       let cursor: string = projectId
       for (let i = 0; i < 3; i++) {
-        const { data }: { data: { id: string } | null } = await bmovies
+        // Skip alt trailers — they're private and shouldn't show up
+        // in the canonical editor. Alts have their own tab.
+        const { data: children } = await bmovies
           .from('bct_offers')
-          .select('id')
+          .select('id, pipeline_state')
           .eq('parent_offer_id', cursor)
-          .limit(1)
-          .maybeSingle()
-        if (!data) break
-        lineageIds.push(data.id)
-        cursor = data.id
+        const canonical = (children as Array<{ id: string; pipeline_state?: { is_alt?: boolean } }> | null)
+          ?.find((c) => !c.pipeline_state?.is_alt)
+        if (!canonical) break
+        lineageIds.push(canonical.id)
+        cursor = canonical.id
       }
       const { data } = await bmovies
         .from('bct_artifacts')
@@ -8383,16 +8581,17 @@ function PreviewView({ projectId, projectTitle }: { projectId: string; projectTi
       let leafTier: string = 'pitch'
       let cursor: string = projectId
       for (let i = 0; i < 3; i++) {
-        const { data }: { data: { id: string; tier: string } | null } = await bmovies
+        // Skip alt trailers — private to the Alt tab only.
+        const { data: children } = await bmovies
           .from('bct_offers')
-          .select('id, tier')
+          .select('id, tier, pipeline_state')
           .eq('parent_offer_id', cursor)
-          .limit(1)
-          .maybeSingle()
-        if (!data) break
-        lineageIds.push(data.id)
-        leafTier = data.tier
-        cursor = data.id
+        const canonical = (children as Array<{ id: string; tier: string; pipeline_state?: { is_alt?: boolean } }> | null)
+          ?.find((c) => !c.pipeline_state?.is_alt)
+        if (!canonical) break
+        lineageIds.push(canonical.id)
+        leafTier = canonical.tier
+        cursor = canonical.id
       }
       if (lineageIds.length === 1) {
         const { data: rootOffer }: { data: { tier: string } | null } = await bmovies

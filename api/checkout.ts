@@ -91,7 +91,7 @@ export default async function handler(
     return;
   }
 
-  let body: { title?: string; ticker?: string; synopsis?: string; tier?: string; email?: string; parentOfferId?: string; source?: string; supabaseUserId?: string; successPath?: string };
+  let body: { title?: string; ticker?: string; synopsis?: string; tier?: string; email?: string; parentOfferId?: string; source?: string; supabaseUserId?: string; successPath?: string; isAlt?: boolean };
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body as typeof body) ?? {};
   } catch {
@@ -238,6 +238,7 @@ export default async function handler(
         source: body.source || 'bmovies-commission',
         ...(parentOfferId ? { parentOfferId } : {}),
         ...(body.supabaseUserId ? { supabaseUserId: body.supabaseUserId } : {}),
+        ...(body.isAlt ? { isAlt: '1' } : {}),
       },
     });
 

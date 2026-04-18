@@ -410,6 +410,11 @@ export default async function handler(
   if (tier === 'trailer' || tier === 'short') {
     const offerId = `${tier}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const parentOfferId = (meta as { parentOfferId?: string }).parentOfferId || null;
+    // Alt trailer flag — fired from the Alt Trailers tab on the
+    // account workbench. Stays in pipeline_state so every downstream
+    // filter (TierLadder leaf pick, /watch.html listing, workbench
+    // dedup) can treat it as private.
+    const isAlt = (meta as { isAlt?: string }).isAlt === '1';
     const { error: offerErr } = await supabase.from('bct_offers').insert({
       id: offerId,
       producer_id: `stripe-${tier}`,
@@ -424,6 +429,7 @@ export default async function handler(
       commissioner_percent: commissionerPercent,
       account_id: accountId,
       parent_offer_id: parentOfferId,
+      pipeline_state: isAlt ? { source: 'stripe-webhook', is_alt: true, stripeSessionId: session.id } : { source: 'stripe-webhook', stripeSessionId: session.id },
     });
     if (offerErr) {
       console.error(`[stripe-webhook] ${tier} offer insert failed:`, offerErr);
