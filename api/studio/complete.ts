@@ -506,8 +506,72 @@ export default async function handler(
       `(session ${sessionId}, account ${accountId})`,
   );
 
+  // ─── Welcome pitch — one free pitch included with the $0.99 studio ───
+  //
+  // Fire-and-forget. The studio-create purchase covers a complimentary
+  // pitch commission so the new studio has a film in its workbench the
+  // moment it lands on /account. Title is auto-generated from the
+  // studio name; the commissioner can rename / revise from the film
+  // page at any point before publishing. Mirrors the judge-coupon
+  // path (same bct_offers schema, same trailer pipeline dispatch,
+  // minus the IP rate-limit row).
+  //
+  // If this insert or dispatch fails for any reason we still return
+  // 200 from the outer handler — the studio is already provisioned,
+  // the welcome pitch is a bonus and the user can always commission
+  // one manually. Failure is logged as a warning.
+  let welcomePitch: { offerId: string; title: string } | null = null;
+  try {
+    const pitchTitle = `${studioName} — Opening Pitch`;
+    const pitchTicker = `${generateBaseTicker(studioName).slice(0, 4)}P`;
+    const pitchId = `pitch-studio-welcome-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const { error: pitchErr } = await supabase.from('bct_offers').insert({
+      id: pitchId,
+      producer_id: 'studio-welcome',
+      producer_address:
+        process.env.PITCH_RECEIVE_ADDRESS || '15q3UKrYYNuXRSg3gtb52pEnbaeiGK4m7b',
+      title: pitchTitle,
+      synopsis:
+        `The opening pitch for ${studioName}. ` +
+        `The swarm produces a logline, synopsis, character portraits, ` +
+        `storyboards, and a movie poster. Rename and revise at any time ` +
+        `before upgrading to a trailer.`,
+      required_sats: 1000,
+      raised_sats: 1000,
+      status: 'funded',
+      token_ticker: pitchTicker,
+      tier: 'pitch',
+      commissioner_percent: 99,
+      parent_offer_id: null,
+      account_id: accountId,
+      pipeline_state: {
+        source: 'studio-welcome',
+        studioId,
+        stripeSessionId: sessionId,
+      },
+    });
+    if (pitchErr) {
+      console.warn('[studio/complete] welcome-pitch insert failed:', pitchErr.message);
+    } else {
+      welcomePitch = { offerId: pitchId, title: pitchTitle };
+      // Kick off the pitch pipeline inline — same dispatch path as the
+      // Stripe-webhook $0.99 pitch. Fire-and-forget.
+      fetch('https://bmovies.online/api/trailer/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerId: pitchId }),
+      }).catch((err) => {
+        console.warn('[studio/complete] welcome-pitch dispatch failed:', err?.message || err);
+      });
+      console.log(`[studio/complete] welcome pitch queued: ${pitchId}`);
+    }
+  } catch (err) {
+    console.warn('[studio/complete] welcome-pitch block threw:', err);
+  }
+
   res.status(200).json({
     studio: studioRow,
     agents: agentRows,
+    welcomePitch,
   });
 }
