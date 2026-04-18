@@ -132,7 +132,27 @@ export default async function handler(
     return;
   }
 
-  // Extract the verification decision
+  // Veriff sends TWO webhook shapes:
+  //
+  //   1. Decision webhook — the one we care about.
+  //      { verification: { id, status: 'approved'|'declined'|..., vendorData, person, ... } }
+  //
+  //   2. Event webhook — flow-state pings sent during the session:
+  //      'started', 'submitted', 'resubmitted_feedback_sent', etc.
+  //      Shape: { status: 'success', verification: { id, attemptId, vendorData, status, code, action, feature } }
+  //      or:    { vendorData, attemptId, feature, code, action } (top-level event, no verification object)
+  //
+  // Earlier versions of this handler rejected event webhooks with 400
+  // because they don't always carry a full verification object. Veriff
+  // then retried those events on a schedule, which is why Vercel logs
+  // show /api/kyc-webhook 400 firing every ~30s during any active
+  // session. That also meant a REAL decision webhook arriving after
+  // the user's session closed could land after hours of retry
+  // failures had already clogged the Veriff outbox.
+  //
+  // Fix: if there is no verification object OR the verification has no
+  // decision status we recognise, 200 the request so Veriff stops
+  // retrying. Only ACT (flip DB status) on an approved decision.
   const verification = body.verification as {
     id?: string;
     status?: string;
@@ -150,7 +170,12 @@ export default async function handler(
   } | undefined;
 
   if (!verification) {
-    res.status(400).json({ error: 'No verification object' });
+    console.log('[kyc-webhook] Event webhook (no verification object), acknowledging:', {
+      action: body.action,
+      code: body.code,
+      vendorData: body.vendorData,
+    });
+    res.status(200).json({ received: true, type: 'event' });
     return;
   }
 
