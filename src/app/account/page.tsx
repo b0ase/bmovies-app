@@ -434,6 +434,14 @@ function StudioView({
         </p>
       </header>
 
+      {/* "Your commission is in flight" banner — rendered only when
+          the URL has ?commissioned=1, which is how film.html's
+          direct-to-Stripe Make-tier flow (api/checkout.ts successPath)
+          brings the user back after payment. Auto-dismisses when a
+          matching new offer appears in the films list, and falls back
+          to a 90-second timeout if the webhook is slow. */}
+      <CommissionInFlightBanner films={films} />
+
       {/* Stats strip */}
       <StatsStrip
         filmsCount={stats.count}
@@ -453,6 +461,105 @@ function StudioView({
         filmsError={filmsError}
       />
     </>
+  )
+}
+
+/* ─── Commission-in-flight banner ─────────────────────────────────────
+ *
+ * Bridge UI for the direct-to-Stripe "Make TIER" flow on film.html.
+ * Stripe redirects to /account?tab=studio&commissioned=1&title=…&tier=…
+ * after payment. The webhook then takes a few seconds to write the
+ * new bct_offers row. This banner fills that gap so the user sees a
+ * visible "yes, we got your commission, it's on the way" signal
+ * instead of landing on /account with no evidence anything happened.
+ *
+ * Dismiss rules:
+ *   1. When an offer with a matching title appears in `films`
+ *      (webhook landed, the Pipeline bucket below now shows it).
+ *   2. After 90 seconds regardless — belt-and-braces if the webhook
+ *      is degraded or the title match fails (titles get processed
+ *      by the webhook so casing/whitespace could drift).
+ *   3. When the user clicks the dismiss ×.
+ *
+ * Lives inside the client component so it participates in the normal
+ * React render loop; no need for a separate toast library.
+ */
+function CommissionInFlightBanner({ films }: { films: Film[] }) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const commissioned = searchParams.get('commissioned')
+  const title = searchParams.get('title') || ''
+  const tier  = searchParams.get('tier')  || ''
+  const [dismissed, setDismissed] = useState(false)
+
+  // Auto-dismiss once a matching offer shows up OR after 90s
+  useEffect(() => {
+    if (dismissed || commissioned !== '1') return
+    const decoded = decodeURIComponent(title).toLowerCase().trim()
+    const matched = films.some(
+      (f) => (f.title || '').toLowerCase().trim() === decoded,
+    )
+    if (matched) {
+      setDismissed(true)
+      // Strip query params so a refresh doesn't re-summon the banner
+      router.replace('/account?tab=studio', { scroll: false })
+      return
+    }
+    const id = window.setTimeout(() => {
+      setDismissed(true)
+      router.replace('/account?tab=studio', { scroll: false })
+    }, 90_000)
+    return () => window.clearTimeout(id)
+  }, [dismissed, commissioned, title, films, router])
+
+  if (commissioned !== '1' || dismissed) return null
+
+  const decodedTitle = decodeURIComponent(title)
+  const decodedTier = (decodeURIComponent(tier) || 'film').toLowerCase()
+
+  return (
+    <div
+      className="mb-6 border border-[#E50914] bg-gradient-to-r from-[#1a0003] to-[#0a0a0a] p-4 flex items-start gap-3"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        className="inline-block w-2 h-2 rounded-full bg-[#E50914] mt-1.5 flex-shrink-0"
+        style={{ animation: 'bm-pulse 1s ease-in-out infinite' }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="text-[0.55rem] font-black uppercase tracking-wider text-[#E50914] mb-1">
+          Commission in flight
+        </div>
+        <div className="text-white text-sm font-bold leading-tight">
+          {decodedTier === 'film'
+            ? `Your commission is queued`
+            : <>Your {decodedTier}{decodedTitle ? <> — &ldquo;{decodedTitle}&rdquo;</> : ''} is queued</>}
+        </div>
+        <div className="text-[#aaa] text-xs leading-relaxed mt-1">
+          Stripe payment received. The agent swarm is spinning up; your
+          film will appear in the Pipeline section below in a minute or two.
+          You can close this tab — production continues on the server.
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDismissed(true)
+          router.replace('/account?tab=studio', { scroll: false })
+        }}
+        className="text-[#666] hover:text-white text-xs px-2 py-1"
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+      <style jsx>{`
+        @keyframes bm-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.35; transform: scale(1.4); }
+        }
+      `}</style>
+    </div>
   )
 }
 
