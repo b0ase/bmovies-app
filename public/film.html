@@ -176,19 +176,28 @@
       max-width: 720px;
     }
     .fund-btn {
-      padding: 0.85rem 0.7rem; font-family: inherit;
-      font-size: 0.78rem; font-weight: 900; letter-spacing: 0.06em;
-      text-transform: uppercase;
+      padding: 0.7rem; font-family: inherit;
       background: transparent; color: #ccc;
       border: 1px solid #2a1414;
       text-align: center; text-decoration: none;
       transition: all 0.2s;
-      line-height: 1.1;
+      display: flex; flex-direction: column; gap: 0.15rem;
+      align-items: center; justify-content: center;
+    }
+    .fund-btn .fund-buy {
+      font-size: 0.85rem; font-weight: 900; letter-spacing: 0.04em;
+      text-transform: uppercase; line-height: 1.1;
+    }
+    .fund-btn .fund-target {
+      font-size: 0.55rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; line-height: 1.2;
+      color: #777; opacity: 0.8;
     }
     .fund-btn:hover {
       border-color: #E50914; color: #E50914;
       background: rgba(229, 9, 20, 0.06);
     }
+    .fund-btn:hover .fund-target { color: #E50914; opacity: 1; }
     .fund-btn.placeholder {
       visibility: hidden;
     }
@@ -977,11 +986,15 @@
         `;
       }).join('');
 
-      // Row 2 — Secondary action: BUY royalty shares in the parent
-      // pitch via BSV wallet. Different path entirely from the Make
-      // button above. One slot per tier that doesn't exist and
-      // isn't the current page; current/existing tiers get a spacer
-      // so the 3-column grid stays aligned.
+      // Row 2 — Secondary action: BUY royalty shares in THIS film via
+      // BSV wallet. Different path entirely from the Make button
+      // above. Every tier slot leads to the same cap table (you're
+      // buying shares in the current film regardless of which tier
+      // level is being raised toward) but the ?target=<tier> hint
+      // tells offer.html which raise target to pre-select on the
+      // slider. Button labels the film's own token ticker so the
+      // user sees exactly what they're buying.
+      const ticker = offer.token_ticker || 'shares';
       const fundRowButtons = TIER_ORDER.map(t => {
         const meta = TIER_META[t];
         const isCurrent = t === currentTier;
@@ -989,13 +1002,11 @@
         if (isCurrent || derivative) {
           return `<div class="fund-btn placeholder" aria-hidden="true"></div>`;
         }
-        // ?target=<tier> hints the offer page about the tranche size
-        // the commissioner is raising toward, so the default slider
-        // lands in the right neighbourhood.
         const href = `offer.html?id=${encodeURIComponent(offer.id)}&target=${t}`;
         return `
-          <a class="fund-btn" href="${href}">
-            Fund ${meta.label.toLowerCase()} · BSV
+          <a class="fund-btn" href="${href}" title="Buy $${esc(ticker)} royalty shares — raise target: ${esc(meta.label.toLowerCase())}">
+            <span class="fund-buy">Buy $${esc(ticker)}</span>
+            <span class="fund-target">fund the ${esc(meta.label.toLowerCase())}</span>
           </a>
         `;
       }).join('');
