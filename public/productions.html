@@ -244,57 +244,64 @@
         <div>
           <div class="kicker" style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:#E50914;font-weight:700;margin-bottom:0.8rem;">Step 2 · Produce</div>
           <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.2rem,5vw,3.6rem);line-height:0.95;letter-spacing:-0.01em;color:#fff;margin:0;text-transform:uppercase;">
-            Produce your trailer<br><span style="color:#E50914;">for $9.99.</span>
+            Produce a film.<br><span style="color:#E50914;">From $0.99.</span>
           </h1>
-          <p style="font-size:1rem;color:#bbb;line-height:1.6;margin-top:1rem;max-width:620px;">
-            Ready your pitch for a real audience. <strong style="color:#fff;">32 seconds of AI-generated video</strong>
-            conditioned on your pitch art — 6 storyboard frames, a one-page treatment,
-            a refreshed poster, voice and score. Lands in your workbench as a draft;
-            you choose when to publish to <code style="font-size:0.8rem;color:#E50914;">/watch</code> or
-            list royalty shares on the exchange.
+          <p style="font-size:1rem;color:#bbb;line-height:1.6;margin-top:1rem;max-width:640px;">
+            Two ways in. <strong style="color:#fff;">Start a new production</strong> at any tier
+            — pitch, trailer, short, or feature — and an eight-agent AI crew (writer, director,
+            storyboard, cinematographer, editor, composer, sound, producer) kicks off the moment
+            Stripe clears. Or <strong style="color:#fff;">pick a film from the grid below</strong> and
+            bump it up a tier — every card has a Make Trailer / Make Short / Make Feature button.
+            Everything lands as a draft in your workbench; you choose when to publish to
+            <code style="font-size:0.8rem;color:#E50914;">/watch</code> or list royalty shares on
+            the exchange.
           </p>
-          <!-- Three CTAs, pitch → trailer → feature. Instead of linking
-               to a blank /commission.html form, each button jumps to
-               a RANDOM existing production at the appropriate tier so
-               the visitor sees an actual film they could fund (or move
-               up a tier). Hrefs are populated by pickRandomCtas() on
-               load — fallback href stays /commission.html so crawlers
-               without JS still land somewhere sensible. -->
+          <!-- Four CTAs, one per tier. Each button jumps to a RANDOM
+               existing production at that tier (set by pickRandomCtas()
+               on load) so the visitor sees an actual film they could
+               fund or move up a tier. Fallback hrefs route to
+               /commission.html?tier=X so crawlers without JS still
+               land on the right commission form. -->
           <div style="margin-top:1.5rem;display:flex;gap:0.8rem;flex-wrap:wrap;">
             <a id="cta-pitch"   href="/commission.html?tier=pitch"
                style="display:inline-block;padding:1rem 1.6rem;background:transparent;color:#ccc;text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #333;">
-              Pitch first · $0.99
+              Pitch · $0.99
             </a>
             <a id="cta-trailer" href="/commission.html?tier=trailer"
                style="display:inline-block;padding:1rem 1.6rem;background:#E50914;color:#fff;text-decoration:none;font-size:0.75rem;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #E50914;">
-              Produce a trailer · $9.99 →
+              Trailer · $9.99 →
+            </a>
+            <a id="cta-short"   href="/commission.html?tier=short"
+               style="display:inline-block;padding:1rem 1.6rem;background:transparent;color:#ccc;text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #333;">
+              Short · $99
             </a>
             <a id="cta-feature" href="/commission.html?tier=feature"
                style="display:inline-block;padding:1rem 1.6rem;background:transparent;color:#ccc;text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border:1px solid #333;">
-              Produce a feature · $999
+              Feature · $999
             </a>
           </div>
-          <p style="font-size:0.7rem;color:#666;margin-top:1rem;max-width:620px;">
+          <p style="font-size:0.7rem;color:#666;margin-top:1rem;max-width:640px;">
             No KYC to commission. Token mints at minute 1. KYC only gates the
             later Publish + List-shares actions on <code style="font-size:0.65rem;color:#888;">/account</code>.
           </p>
         </div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;color:#555;letter-spacing:0.15em;text-transform:uppercase;white-space:nowrap;align-self:end;padding-bottom:0.5rem;">
-          Pitch → <span style="color:#E50914;">Trailer</span> → Short → Feature
+          Pitch → Trailer → <span style="color:#E50914;">Short</span> → Feature
         </div>
       </div>
     </section>
 
     <section class="intro">
-      <div class="kicker"><span class="pulse"></span>Produce · start a production</div>
-      <h2>Produce your trailer, short film, or feature.</h2>
+      <div class="kicker"><span class="pulse"></span>Produce · the live floor</div>
+      <h2>Produce anything below — or start your own.</h2>
       <p>
-        Every film below started life as a $0.99 pitch. Pick one, watch what's already made,
-        and click <strong>Make Trailer</strong> ($9.99), <strong>Make Short</strong> ($99), or
-        <strong>Make Feature</strong> ($999) to move it up a tier. Stripe takes payment, a team
-        of 8 AI agents (writer, director, storyboard, cinematographer, editor, composer,
-        sound, producer) starts production immediately, and the film lands as a flashing
-        draft card in your
+        Every film on this page started as a $0.99 pitch commissioned by someone like you.
+        Pick any of them and click <strong>Make Trailer</strong> ($9.99),
+        <strong>Make Short</strong> ($99), or <strong>Make Feature</strong> ($999) to move it
+        up a tier. Or use the buttons above to commission a brand-new production at any tier
+        from scratch. Either way, Stripe takes payment, a team of eight AI agents (writer,
+        director, storyboard, cinematographer, editor, composer, sound, producer) starts
+        production immediately, and the film lands as a flashing draft card in your
         <a href="/account" style="color:#E50914;font-weight:700;">workbench</a> — yours to
         publish the moment it's done. Full audit trail on every deliverable.
       </p>
@@ -395,13 +402,14 @@
       pickRandomCtas();
     }
 
-    // Repoint the 3 hero buttons at a random existing production of
+    // Repoint the 4 hero buttons at a random existing production of
     // the relevant tier, so each button showcases something the user
     // could actually fund rather than dumping them at a blank commission
     // form. Logic:
     //   - Pitch CTA    → random pitch-tier offer (they can fund the next step)
     //   - Trailer CTA  → random pitch-tier offer (upgrade path: Make Trailer)
-    //   - Feature CTA  → random trailer/short-tier offer (upgrade path: Make Feature)
+    //   - Short CTA    → random trailer-tier offer (upgrade path: Make Short)
+    //   - Feature CTA  → random short-tier offer  (upgrade path: Make Feature)
     // If no matching offer exists the button keeps its commission.html
     // fallback so nothing breaks.
     function pickRandomCtas() {
@@ -412,7 +420,10 @@
       }
       const pitch   = pickOne(o => o.tier === 'pitch');
       const trailer = pickOne(o => o.tier === 'pitch') || pitch;
-      const feature = pickOne(o => o.tier === 'trailer' || o.tier === 'short')
+      const short   = pickOne(o => o.tier === 'trailer')
+                   || pickOne(o => o.tier === 'pitch');
+      const feature = pickOne(o => o.tier === 'short')
+                   || pickOne(o => o.tier === 'trailer')
                    || pickOne(o => o.tier === 'pitch');
 
       function setHref(id, offer) {
@@ -422,6 +433,7 @@
       }
       setHref('cta-pitch',   pitch);
       setHref('cta-trailer', trailer);
+      setHref('cta-short',   short);
       setHref('cta-feature', feature);
     }
 
