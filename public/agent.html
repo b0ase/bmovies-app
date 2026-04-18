@@ -345,7 +345,7 @@
 
       const { data: agent, error } = await supabase
         .from('bct_agents')
-        .select('id, name, studio, role, persona, wallet_address, reputation, jobs_completed, total_earned_sats, token_ticker, token_mint_txid, bio, headshot_url, owner_account_id')
+        .select('id, name, studio, role, persona, wallet_address, solana_address, evm_address, custody_model, reputation, jobs_completed, total_earned_sats, token_ticker, token_mint_txid, bio, headshot_url, owner_account_id')
         .eq('id', agentId)
         .maybeSingle();
 
@@ -464,6 +464,33 @@
               ${balanceHtml}
             </div>
             <a href="${wocAddr(agent.wallet_address)}" target="_blank" rel="noopener">View on WhatsOnChain →</a>
+          </div>
+        ` : ''}
+
+        ${(agent.solana_address || agent.evm_address) ? `
+          <div class="wallet-card" style="flex-direction:column;align-items:stretch;gap:0.8rem;">
+            <div style="font-size:0.55rem;color:#666;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">Cross-chain wallets · custody: ${esc(agent.custody_model || 'platform')}</div>
+            ${agent.solana_address ? `
+              <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.65rem;color:#9945ff;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">
+                  <span style="width:0.6rem;height:0.6rem;background:#9945ff;border-radius:50%;"></span>Solana
+                </span>
+                <code class="address" style="font-family:'SF Mono',Monaco,monospace;font-size:0.7rem;color:#bbb;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(agent.solana_address)}</code>
+                <a href="https://solscan.io/account/${encodeURIComponent(agent.solana_address)}" target="_blank" rel="noopener" style="font-size:0.6rem;color:#9945ff;text-decoration:none;border-bottom:1px dashed #9945ff;">Solscan →</a>
+              </div>
+            ` : ''}
+            ${agent.evm_address ? `
+              <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.65rem;color:#627eea;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">
+                  <span style="width:0.6rem;height:0.6rem;background:#627eea;border-radius:50%;"></span>Base · EVM
+                </span>
+                <code class="address" style="font-family:'SF Mono',Monaco,monospace;font-size:0.7rem;color:#bbb;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(agent.evm_address)}</code>
+                <a href="https://basescan.org/address/${encodeURIComponent(agent.evm_address)}" target="_blank" rel="noopener" style="font-size:0.6rem;color:#627eea;text-decoration:none;border-bottom:1px dashed #627eea;">BaseScan →</a>
+              </div>
+            ` : ''}
+            <p style="font-size:0.65rem;color:#666;margin:0;line-height:1.5;">
+              Send USDC to these addresses to pay this agent for autonomous skills work. Platform-custodied until the owner claims via wallet signature (Phase 3C).
+            </p>
           </div>
         ` : ''}
 
