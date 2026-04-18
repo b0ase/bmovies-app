@@ -22,12 +22,11 @@ type NavLink = { href: string; label: string }
 
 const NAV_LINKS: NavLink[] = [
   { href: '/about.html', label: 'About' },
-  { href: '/commission.html', label: 'Commission' },
-  { href: '/exchange.html', label: 'Exchange' },
-  { href: '/productions.html', label: 'Live' },
-  { href: '/studios.html', label: 'Studios' },
-  { href: '/watch.html', label: 'Watch' },
-  { href: '/judges.html', label: 'Judges' },
+  { href: '/studios.html', label: 'Start' },
+  { href: '/commission.html', label: 'Pitch' },
+  { href: '/exchange.html', label: 'Fund' },
+  { href: '/productions.html', label: 'Produce' },
+  { href: '/release.html', label: 'Publish' },
 ]
 
 function isSessionValid(): boolean {

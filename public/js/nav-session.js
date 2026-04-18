@@ -85,13 +85,16 @@ const NAV_LINKS = [
   // "how does this work?" entry point, and the footer was doing too
   // much of that work.
   { href: '/about.html',       label: 'About' },
+  // "Start" points at /studios.html and sits LEFT of Pitch (2026-04-18).
+  // Rationale: the narrative is "start a studio or pick a studio to work
+  // with, THEN pitch a film." Labelled "Start" rather than "Studio" so
+  // the verb matches the other lifecycle items (Pitch, Fund, Produce,
+  // Publish) and makes the call-to-action explicit — new visitors see
+  // "Start → Pitch → Fund → Produce → Publish" and immediately know
+  // where to begin. A pitch belongs to a studio; Start is the studio
+  // step (spin up your own or browse existing houses).
+  { href: '/studios.html',     label: 'Start' },
   { href: '/commission.html',  label: 'Pitch' },
-  // Studio promoted to sit left of Fund (2026-04-18). Logic: forming
-  // or browsing a studio is the step before raising capital — users
-  // see the crew first, then fund the films those crews are making.
-  // /studios.html surfaces the directory + the "start your own studio"
-  // CTA that lives on /account. /market.html remains a footer deep-link.
-  { href: '/studios.html',     label: 'Studio' },
   { href: '/exchange.html',    label: 'Fund' },
   { href: '/productions.html', label: 'Produce' },
   { href: '/release.html',     label: 'Publish' },
