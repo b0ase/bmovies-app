@@ -259,7 +259,7 @@ rolls over.
   No change to API contracts, no new features, no schema changes.
   Pure removal of a wrong-layer gate.
 
-- **`<pending>`** — `fix(post-submission): auto-create bct_account on signup + remove KYC gate from studio create`
+- **`3c91513`** — `fix(post-submission): auto-create bct_account on signup + remove KYC gate from studio create`
 
   **Reported symptom** (user bitcoincorp11@gmail.com): signed into
   /account, tried to create a studio, hit 403 *"No bMovies account
