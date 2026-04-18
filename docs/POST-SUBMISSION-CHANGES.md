@@ -306,3 +306,64 @@ rolls over.
   Combined effect: bitcoincorp11 (and the other 23 orphans) can now
   hit /account, fill in a studio name, and land on the Stripe
   checkout for $0.99. No Veriff detour.
+
+### 2026-04-18 (continued — post-migration UX sweep)
+
+- **`cb03bfc`** — `fix(post-submission): market + release pages use single-column 820px layout`
+  The explainer pages had `main max-width:1100px` while paragraphs were individually capped at 720–760px, leaving a ~340px dead gutter on the right. Tightened `main` to 820px and removed per-element max-widths so content flows edge-to-edge within the container and reads as one column. (Later widened to 1400px by the user to match `/commission.html` — see `ad858ea`.)
+
+- **`627df4b`** — `fix(post-submission): studio Stripe success_url points at apex, not app.bmovies.online`
+  Reporter paid for a studio and got redirected to `app.bmovies.online/account?...` — a separate Vercel deployment that may have drifted from `main`. Brochure and authenticated app now share the single apex origin (`bmovies.online`), so the `success_url` now lands users back on the canonical site. Grep-verified no other active `app.bmovies.online` references remain (only in doc comments).
+
+- **`32bb57e`** — `fix(post-submission): pick a unique studio ticker on collision`
+  "Bitcoin Corporation Studios" and "Bitcoin Operating System Studios" both hashed to `BITCO` under the first-5-letters rule. The second registrant hit the `bct_studios.token_ticker_key` UNIQUE constraint, the handler 500'd, UI showed "Studio creation failed". Replaced single-shot `generateTicker(name)` with `pickUniqueTicker(supabase, name)` — probes the base, then `BITCO2`, `BITCO3`, … up to 99. The DB constraint remains the race-safe backstop.
+
+- **`0c866ff`** — `fix(post-submission): 'Start a new pitch' is the primary CTA on studio tab`
+  Reporter: *"I shouldn't need to have a studio to create a pitch."* Correct. The previous studio-tab layout buried the commission link at the bottom, conditioned on `!hasFilms`, so anyone who had already pitched never saw it again. Restructured the no-studio fallback as: (1) red-border primary card — "Pitch a new film" → `/commission.html`, always visible; (2) secondary — "Or create your own studio" with copy noting films can be hosted under a founding studio by default; (3) tertiary — founding-studios link.
+
+- **`b7d76e3`** — `feat(post-submission): studio creation includes one free pitch`
+  Reporter: *"actually I should get one free pitch when I create a studio."* The $0.99 studio-create purchase now auto-queues a welcome pitch (`pitch-studio-welcome-*`) after studio+agents are provisioned. Title derived from studio name (e.g. "Bitcoin Corporation Studios — Opening Pitch"); commissioner can rename/revise before upgrading. Fire-and-forget dispatch through the existing trailer-pipeline endpoint. Insert/dispatch failure logged as a warning — outer handler still returns 200 so the studio ships even if the bonus pitch hiccups.
+
+- **`8554827`** — `fix(post-submission): remove broken X/Twitter SSO from /login`
+  Supabase-side X provider config was returning callback errors on every click — users got dropped at an error page. Pulled the button and its OAuth handler rather than ship a known-broken SSO option. Comment left in-place documenting why, so a future dev can turn it back on when the X developer app is properly configured. Google SSO + email magic-link + BRC-100 wallet-connect all unaffected.
+
+- **`8796042`** — `fix(post-submission): commission chat + sample-idea button both work now`
+  Two bugs reported together on `/commission.html`:
+  1. Writers-room chat returned *"Supabase auth not configured"* for authenticated users. `/api/commission-chat` read `SUPABASE_ANON_KEY` which isn't set on the current Vercel project. Refactored `verifyUser()` to use service-role + `.auth.getUser(jwt)` — same pattern every other `/api/*` endpoint uses. One less env var to maintain.
+  2. "Sample idea" button just copied the textarea placeholder into the canvas — same string every click. Replaced with a new public endpoint `POST /api/commission/sample-idea` → Grok (temperature 1.0, `grok-3-mini`, `response_format: json_object`) → returns `{ title, ticker, logline, synopsis }`. Button pastes the synopsis into the canvas, stashes title+ticker on `window.__sampleIdeaMeta` for the refine step, shows a "Thinking…" state while the call is in flight, graceful fallback to the old placeholder if the API hiccups.
+
+- **`01e9a39`** — `fix(post-submission): Make-tier buttons go straight to Stripe, land on /account`
+  Reporter: clicking "Make trailer" on a film page bounced to `/commission.html` — a generic form asking the user to re-enter data we already had from the parent offer. Dead click. Three changes landed together:
+  1. `film.html` `renderTierRow()` emits `<button data-make-tier=…>` instead of `<a href=commission.html?…>`. Same pre-filled metadata, exposed as data-attributes.
+  2. Document-level click handler on `film.html` reads the data-attrs, grabs the Supabase session, POSTs `/api/checkout` directly, and window.location → Stripe URL. Signed-out users fall back to `/commission.html` with the pre-fills intact. Shows "Redirecting to Stripe…" during the fetch so double-clicks can't fire twice.
+  3. `/api/checkout` accepts an optional `body.successPath` override. Callers can pick their post-payment landing; `session_id` + title + ticker + tier are always appended so the target page can reconcile the webhook-vs-landing race. (Type signature fix added in `27eac41`.)
+
+- **`7328d13`** — `feat(post-submission): commission-in-flight banner on /account`
+  Bridge UI for the direct-to-Stripe flow. After Stripe redirects to `/account?tab=studio&commissioned=1&title=…&tier=…`, the user sees a pulsing red-dot banner at the top of StudioView:
+
+  > ● Commission in flight
+  > Your trailer — "…" is queued
+  > Stripe payment received. The agent swarm is spinning up; your film will appear in the Pipeline section below in a minute or two.
+
+  Three dismiss paths: (1) a film with matching title appears in `films` → strip URL query params so refresh doesn't re-summon; (2) 90-second belt-and-braces timeout; (3) manual × button. Self-contained component, styled-jsx-scoped keyframe (`bm-pulse`) to avoid global leaks.
+
+- **`fb39a16`** — `fix(post-submission): exchange.html order-book clicks actually work`
+  Classic `<script type="module">` gotcha. `function showFilmOrderBook(...)` was scoped to the module, not `window`. The inline `onclick="showFilmOrderBook(...)"` handlers on every film row silently failed to resolve. Explicitly assigned `window.showFilmOrderBook = showFilmOrderBook` + `window.renderFilmsTab = renderFilmsTab` before `bootstrap()`. Also: `window.scrollTo({top:0, smooth})` when the order-book view opens so the viewport isn't parked mid-table with nothing apparently happening. Design note for future readers recorded in the commit: exchange.html is a hybrid — internal order-book view built from GorillaPool's 1sat-api aggregate, external "Buy" button that hands off to 1sat.market for on-chain settlement.
+
+### Interleaved user-led commits (copy + IA work)
+
+These landed between my post-submission fixes. Listed here for timeline completeness; not changes I authored but context for why later SHAs live where they do in the log.
+
+- **`c5d83c6`** — `copy(exchange): reframe as 'Raise' — sell royalty shares, not hire agents`
+- **`ad858ea`** — `fix(market+release): widen content to match commission.html` (overrode the `cb03bfc` 820px tightening — user chose 1400px)
+- **`92bd9a0`** — `nav+copy: Raise left of Produce; fix tokenomics numbers on exchange` (reordered the nav from my `Pitch · Produce · Raise · Market · Release` to `Pitch · Raise · Produce · Market · Release`)
+- **`27eac41`** — `fix(ts): add successPath to checkout body type` (tightened the TypeScript body signature on the `successPath` override I added in `01e9a39`)
+- **`b44f3d1`** — `feat: CFO portrait + exchange title trim + productions hero rewrite`
+- **`201c895`** — `feat(nav+produce): About back to nav; Produce leads with $9.99 trailer CTA`
+- **`8aaf2e3`** — `copy(productions): lead with the dual watch-or-commission proposition`
+- **`7401a99`** — `copy(film): 'Fund TIER · BSV' → 'Buy $TICKER · fund the TIER'`
+- **`48eb9a7`** — `copy: flip exchange to buyer-focus; nav Raise → Fund`
+- **`b232728`** — `copy(productions): lead with 'Produce your trailer, short film, or feature'`
+- **`324246a`** — `feat(productions): CTA row shows random existing films to fund`
+
+The `Raise / Fund` rename history is worth calling out: `01e9a39` shipped with `Raise`, the user renamed to `Fund` in `48eb9a7`, then later commits in the copy sweep settled the labelling. If a future reader is confused by which verb is canonical in which file, blame both.
