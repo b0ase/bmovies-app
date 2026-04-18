@@ -163,7 +163,13 @@ export default async function handler(
   }
 
   const stripe = new Stripe(stripeKey, { apiVersion: '2026-03-25.dahlia' });
-  const appOrigin = 'https://app.bmovies.online';
+  // Brochure and app merged onto the single apex origin (bmovies.online).
+  // Earlier versions of this handler used 'https://app.bmovies.online' as
+  // the success_url, which still resolves but lands the user on the old
+  // app subdomain — a separate Vercel deployment that may have drifted
+  // from main. Pin to the apex so post-payment redirects always come
+  // back to the canonical site.
+  const appOrigin = 'https://bmovies.online';
 
   try {
     const session = await stripe.checkout.sessions.create({
