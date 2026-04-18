@@ -449,7 +449,7 @@ land (Apr 23). Once the review window closes these are fair game.
   behavioural change, not a bug fix, and fits the same review-window
   hold as the other gaps above.
 
-- **`<pending>`** — `nav+studios: Market → Studio; studios.html opens with the 'start studio → team raises' narrative`
+- **`647296a`** — `nav+studios: Market → Studio; studios.html opens with the 'start studio → team raises' narrative`
 
   Nav swap per reporter's direction: *"when you start a studio, you bring your
   team in, and then your team can raise. It's not a new feature, it's just
