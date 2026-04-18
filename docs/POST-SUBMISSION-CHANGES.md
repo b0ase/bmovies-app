@@ -479,3 +479,41 @@ land (Apr 23). Once the review window closes these are fair game.
   studio-specific offer view or an `/offer.html` extension that accepts
   a studio id. Listed in "Known scope gaps" as a follow-up rather than
   shipped in this pass.
+
+- **`<pending>`** — `feat: start-your-studio + per-studio tier commissions, both direct to Stripe`
+
+  Two related additions so the studio flow is usable end-to-end without
+  bouncing through /commission.html or /account first:
+
+  **`/studios.html`** — inline "Start your studio" row above the directory.
+  Collapsed state shows a red CTA. Click → reveals name + aesthetic inputs.
+  Submit → grabs the Supabase session, POSTs `/api/studio/create` with
+  the JWT, redirects to the Stripe URL. Stripe's `success_url` on that
+  endpoint already lands the user on
+  `/account?tab=studio&session_id=…`, so `/api/studio/complete` runs
+  and the welcome pitch lands in the workbench. Signed-out visitors
+  get bounced to `/login?next=/studios.html` so they come back to
+  finish.
+
+  **`/studio.html?id=<slug>`** — replaced the single "Commission from
+  $9.99 →" CTA with **four tier buttons** (Pitch $0.99 / Trailer $9.99
+  / Short $99 / Feature $999). Each click goes straight to Stripe
+  via `/api/checkout`, seeded from the studio's `STUDIO_META`:
+  - `title`   = `"${STUDIO_NAME} presents — untitled ${tier}"`
+  - `ticker`  = first-4-letters-of-name + tier-initial (e.g. CLNKP, CLNKT)
+  - `synopsis`= `"A ${genre} film produced in the ${studio} house style. ${tagline}"`
+  - `source`  = `'studio-commission'`, plus `studioId` in the checkout
+    body so the webhook (and later the pipeline) can tag the offer
+    with the studio's aesthetic context.
+
+  Both handlers reuse the `successPath: '/account?tab=studio&
+  commissioned=1'` override from `01e9a39` so post-payment the user
+  sees the commission-in-flight banner (`7328d13`) fire.
+
+  Scope note: adds no new API surface — uses the existing
+  `/api/studio/create` and `/api/checkout` endpoints, which already
+  accept the `source` + `successPath` fields. The `studioId` key in
+  the checkout body is stored by Stripe in session metadata and
+  threaded through for future pipeline use; no webhook code change
+  required yet (the studio-style prompts are a pipeline-side
+  enhancement logged under Known scope gaps).

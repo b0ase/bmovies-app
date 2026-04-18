@@ -141,7 +141,6 @@
       <h2>Start a studio. Bring your team. Raise on your films.</h2>
       <p>
         A studio is how a commissioner assembles a crew. Spin one up for $0.99
-        from your <a href="/account" style="color:#E50914;">account dashboard</a>
         and you get a generated logo, bio, treasury address, and a full
         specialist crew — writer, director, cinematographer, storyboard,
         editor, composer, sound designer, producer — each with their own BSV
@@ -157,7 +156,117 @@
         roster, token, and the same fund-this-work flow you see on any film's
         <a href="/offer.html" style="color:#E50914;">offer page</a>.
       </p>
+
+      <!-- Inline studio-create form — collapses into a button when idle.
+           Click "Start your studio" → reveal name + aesthetic inputs →
+           Create button POSTs /api/studio/create → Stripe. Stripe's
+           success_url on that endpoint is already /account?tab=studio&
+           session_id=... so the user lands back there after payment. -->
+      <div id="start-studio-row" style="margin-top:1.8rem;border:1px solid #1a1a1a;background:#0a0a0a;padding:1.4rem 1.5rem;max-width:760px;">
+        <div id="start-studio-idle" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <div style="font-size:0.55rem;color:#E50914;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">$0.99 · Straight to Stripe</div>
+            <div style="font-size:1rem;color:#fff;font-weight:700;margin-top:0.3rem;">Start your own studio now</div>
+            <div style="font-size:0.75rem;color:#888;margin-top:0.2rem;">Pick a name, pick a style, we generate everything else.</div>
+          </div>
+          <button id="start-studio-btn" style="padding:0.9rem 1.6rem;background:#E50914;color:#fff;border:none;font-size:0.75rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;">
+            Start your studio →
+          </button>
+        </div>
+        <div id="start-studio-form" style="display:none;margin-top:0.2rem;">
+          <div style="display:grid;grid-template-columns:1fr;gap:0.8rem;">
+            <div>
+              <label style="display:block;font-size:0.55rem;color:#888;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Studio name</label>
+              <input id="start-studio-name" type="text" maxlength="50" placeholder="e.g. Midnight Forge Pictures" style="width:100%;background:#1a1a1a;border:1px solid #333;padding:0.6rem 0.8rem;color:#fff;font-size:0.9rem;outline:none;" />
+            </div>
+            <div>
+              <label style="display:block;font-size:0.55rem;color:#888;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:0.3rem;">Style (optional)</label>
+              <textarea id="start-studio-aesthetic" rows="3" maxlength="500" placeholder="What kind of films does your studio make? Any genre, aesthetic, mood — as much or as little as you like." style="width:100%;background:#1a1a1a;border:1px solid #333;padding:0.6rem 0.8rem;color:#fff;font-size:0.9rem;outline:none;resize:vertical;"></textarea>
+            </div>
+          </div>
+          <div id="start-studio-err" style="color:#ff6b7a;font-size:0.8rem;margin-top:0.6rem;display:none;"></div>
+          <div style="display:flex;gap:0.6rem;margin-top:0.9rem;">
+            <button id="start-studio-submit" style="padding:0.8rem 1.4rem;background:#E50914;color:#fff;border:none;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;">
+              Create studio · $0.99
+            </button>
+            <button id="start-studio-cancel" style="padding:0.8rem 1.2rem;background:transparent;color:#888;border:1px solid #333;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <!-- Supabase client + direct-to-Stripe handler for the inline
+         start-studio form above. Signed-out users are bounced to
+         /login?next=/studios.html so they can come back and finish. -->
+    <script type="module">
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+      const supabase = createClient('https://api.b0ase.com',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+        { auth: { storageKey: 'bmovies-auth' } });
+      const idle    = document.getElementById('start-studio-idle');
+      const form    = document.getElementById('start-studio-form');
+      const err     = document.getElementById('start-studio-err');
+      const nameEl  = document.getElementById('start-studio-name');
+      const aeroEl  = document.getElementById('start-studio-aesthetic');
+      document.getElementById('start-studio-btn')?.addEventListener('click', () => {
+        idle.style.display = 'none';
+        form.style.display = 'block';
+        nameEl.focus();
+      });
+      document.getElementById('start-studio-cancel')?.addEventListener('click', () => {
+        form.style.display = 'none';
+        idle.style.display = 'flex';
+        err.style.display  = 'none';
+      });
+      document.getElementById('start-studio-submit')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const btn = e.currentTarget;
+        err.style.display = 'none';
+        const name = (nameEl.value || '').trim();
+        const aesthetic = (aeroEl.value || '').trim();
+        if (name.length < 2) {
+          err.textContent = 'Studio name must be at least 2 characters.';
+          err.style.display = 'block';
+          return;
+        }
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session || null;
+        if (!session) {
+          // Preserve the page so sign-in brings them back here.
+          window.location.href = '/login?next=' + encodeURIComponent('/studios.html');
+          return;
+        }
+        const originalLabel = btn.textContent;
+        btn.textContent = 'Redirecting to Stripe…';
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/studio/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ name, aesthetic }),
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(body.error || `create failed (${res.status})`);
+          }
+          if (!body.checkoutUrl) {
+            throw new Error('Stripe URL missing from response');
+          }
+          window.location.href = body.checkoutUrl;
+        } catch (ex) {
+          console.error('[studios] start-studio failed:', ex);
+          err.textContent = (ex && ex.message) || 'Something went wrong. Please try again.';
+          err.style.display = 'block';
+          btn.textContent = originalLabel;
+          btn.disabled = false;
+        }
+      });
+    </script>
 
     <div class="studio-grid">
 

@@ -211,8 +211,12 @@
 
       const teamHtml = sorted.map(a => {
         const img = agentImagePath(studioId, a.role, a.name);
+        // Each team card links to the agent's own page at /agent.html?id=<id>
+        // (agent.html loads the persona, reputation, headshot, and the list
+        // of films the agent has worked on via bct_artifacts.agent_id).
+        const agentHref = `agent.html?id=${encodeURIComponent(a.id)}`;
         return `
-          <div class="team-card">
+          <a class="team-card" href="${agentHref}" style="text-decoration:none;color:inherit;display:block;">
             <div class="team-photo">
               <img src="${esc(img)}" alt="${esc(a.name)}" onerror="this.style.display='none'" loading="lazy" />
             </div>
@@ -225,7 +229,7 @@
                 <span><strong>${a.jobs_completed}</strong> jobs</span>
               </div>
             </div>
-          </div>
+          </a>
         `;
       }).join('');
 
@@ -255,11 +259,94 @@
               to form an 11-specialist crew. Their ${meta.genre.toLowerCase()} style shapes
               everything from the script's tone to the score's mood.
             </p>
-            <a href="commission.html?studio=${esc(studioId)}" style="display:inline-block;margin-top:1.5rem;padding:1rem 2rem;background:#E50914;color:#fff;text-decoration:none;font-size:0.75rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;">
-              Commission from $9.99 →
-            </a>
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:0.6rem;margin-top:1.5rem;max-width:720px;">
+              <button class="studio-commission-btn" data-tier="pitch"   style="padding:1rem 0.6rem;background:transparent;color:#fff;border:1px solid #333;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">
+                <div>Pitch</div><div style="color:#E50914;font-size:0.65rem;margin-top:0.3rem;">$0.99</div>
+              </button>
+              <button class="studio-commission-btn" data-tier="trailer" style="padding:1rem 0.6rem;background:transparent;color:#fff;border:1px solid #333;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">
+                <div>Trailer</div><div style="color:#E50914;font-size:0.65rem;margin-top:0.3rem;">$9.99</div>
+              </button>
+              <button class="studio-commission-btn" data-tier="short"   style="padding:1rem 0.6rem;background:transparent;color:#fff;border:1px solid #333;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">
+                <div>Short</div><div style="color:#E50914;font-size:0.65rem;margin-top:0.3rem;">$99</div>
+              </button>
+              <button class="studio-commission-btn" data-tier="feature" style="padding:1rem 0.6rem;background:#E50914;color:#fff;border:1px solid #E50914;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">
+                <div>Feature</div><div style="color:#fff;font-size:0.65rem;margin-top:0.3rem;">$999</div>
+              </button>
+            </div>
+            <div id="studio-commission-err" style="color:#ff6b7a;font-size:0.8rem;margin-top:0.8rem;display:none;"></div>
+            <p style="color:#666;font-size:0.7rem;margin-top:0.8rem;max-width:720px;">
+              Every option routes straight to Stripe. After payment you land in your account with a
+              commission-in-flight banner; the swarm produces the film in <strong>${esc(meta.genre.toLowerCase())}</strong> style.
+            </p>
           </div>
         </main>
+
+        <script type="module">
+          // Direct-to-Stripe handler for the four tier buttons. Mirrors
+          // the /film.html Make-tier flow (01e9a39) but seeds title +
+          // synopsis from the studio's aesthetic so the resulting film
+          // reflects this studio's style rather than a blank commission.
+          import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+          const supa = createClient('https://api.b0ase.com',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig',
+            { auth: { storageKey: 'bmovies-auth' } });
+          const errEl = document.getElementById('studio-commission-err');
+          const STUDIO_NAME    = ${JSON.stringify(meta.name)};
+          const STUDIO_GENRE   = ${JSON.stringify(meta.genre)};
+          const STUDIO_TAGLINE = ${JSON.stringify(meta.tagline)};
+          const STUDIO_ID      = ${JSON.stringify(studioId)};
+          const TIER_ALPHA     = { pitch: 'P', trailer: 'T', short: 'S', feature: 'F' };
+          const STUDIO_TICKER_BASE = STUDIO_NAME.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'STDO';
+          document.querySelectorAll('.studio-commission-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const tier = btn.getAttribute('data-tier');
+              errEl.style.display = 'none';
+              const { data } = await supa.auth.getSession();
+              const session = data?.session || null;
+              if (!session) {
+                const next = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = '/login?next=' + next;
+                return;
+              }
+              const origLabel = btn.innerHTML;
+              btn.innerHTML = 'Redirecting to Stripe…';
+              btn.disabled = true;
+              try {
+                const title    = STUDIO_NAME + ' presents — untitled ' + tier;
+                const ticker   = (STUDIO_TICKER_BASE + TIER_ALPHA[tier]).slice(0, 5);
+                const synopsis = 'A ' + STUDIO_GENRE.toLowerCase() + ' film produced in the '
+                  + STUDIO_NAME + ' house style. ' + STUDIO_TAGLINE;
+                const res = await fetch('/api/checkout', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tier, title, ticker, synopsis,
+                    email: session.user?.email || undefined,
+                    supabaseUserId: session.user?.id,
+                    // Metadata hint for the webhook/pipeline so future
+                    // passes can tag the offer with a studio aesthetic.
+                    source: 'studio-commission',
+                    studioId: STUDIO_ID,
+                    successPath: '/account?tab=studio&commissioned=1',
+                  }),
+                });
+                if (!res.ok) {
+                  const body = await res.json().catch(() => ({}));
+                  throw new Error(body.error || 'checkout failed (' + res.status + ')');
+                }
+                const { url } = await res.json();
+                if (!url) throw new Error('Stripe URL missing from response');
+                window.location.href = url;
+              } catch (ex) {
+                console.error('[studio] commission failed:', ex);
+                errEl.textContent = (ex && ex.message) || 'Something went wrong. Please try again.';
+                errEl.style.display = 'block';
+                btn.innerHTML = origLabel;
+                btn.disabled = false;
+              }
+            });
+          });
+        </script>
       `;
     }
 
