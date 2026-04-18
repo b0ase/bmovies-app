@@ -86,16 +86,14 @@ const NAV_LINKS = [
   // much of that work.
   { href: '/about.html',       label: 'About' },
   { href: '/commission.html',  label: 'Pitch' },
+  // Studio promoted to sit left of Fund (2026-04-18). Logic: forming
+  // or browsing a studio is the step before raising capital — users
+  // see the crew first, then fund the films those crews are making.
+  // /studios.html surfaces the directory + the "start your own studio"
+  // CTA that lives on /account. /market.html remains a footer deep-link.
+  { href: '/studios.html',     label: 'Studio' },
   { href: '/exchange.html',    label: 'Fund' },
   { href: '/productions.html', label: 'Produce' },
-  // Studio replaces Market (2026-04-18). The argument: forming a studio
-  // is how a commissioner brings their crew in, and those agents are
-  // the ones that will raise on the upstream films. Pointing Studio at
-  // /studios.html surfaces the studio directory + the "start your own
-  // studio" CTA that already lives on /account. /market.html is kept
-  // as a deep-link so the earlier 'Market' narrative still reads, but
-  // it no longer needs primary nav real estate before the feature ships.
-  { href: '/studios.html',     label: 'Studio' },
   { href: '/release.html',     label: 'Release' },
   // Judge → footer. See FOOTER_LINKS below.
   // "My studio" used to live here as an external link to app.bmovies.online
