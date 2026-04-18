@@ -519,9 +519,36 @@ export default async function handler(
     // Mark as released when done
     await supabase.from('bct_offers').update({ status: 'released' }).eq('id', offerId);
 
+    // ── Chain the post-production layer ───────────────────────────
+    // /api/trailer/generate produces clips; /api/trailer/post-production
+    // adds title cards, VO narration, and a music bed. We can't
+    // fire-and-forget here because Vercel terminates outbound fetch
+    // when the function returns (same pitfall as the stripe-webhook).
+    // The Hetzner worker kicks a matching sweep if this fails or
+    // times out, so the post-production will always run — but when
+    // the generator has bandwidth, chaining inline gives the user a
+    // complete trailer on first visit instead of a second polling
+    // delay.
+    let postProduced = false;
+    try {
+      const postRes = await fetch('https://bmovies.online/api/trailer/post-production', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerId }),
+        signal: AbortSignal.timeout(90_000),
+      });
+      postProduced = postRes.ok;
+      if (!postRes.ok) {
+        console.warn(`[trailer] post-production returned ${postRes.status} — Hetzner sweep will retry`);
+      }
+    } catch (err) {
+      console.warn('[trailer] post-production chain failed:', err instanceof Error ? err.message : err);
+    }
+
     res.status(200).json({
       success: true,
       offerId,
+      postProduced,
       artifacts: artifacts.length,
       costUsd: Number(totalCost.toFixed(4)),
       breakdown: artifacts.map(a => ({ role: a.role, kind: a.kind, costUsd: a.costUsd })),
