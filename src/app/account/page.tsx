@@ -3810,27 +3810,221 @@ function ProjectDocumentsView({ film }: { film: Film }) {
 
 /* ─── Project Deck ─── */
 
+interface DeckVersion {
+  version: number
+  kind: 'deck' | 'pack'
+  note: string | null
+  pinned_at: string
+  share_token: string | null
+  share_url: string | null
+}
+
 function ProjectDeckView({ film }: { film: Film }) {
+  const [versions, setVersions] = useState<DeckVersion[]>([])
+  const [loadingVersions, setLoadingVersions] = useState(true)
+  const [pinning, setPinning] = useState(false)
+  const [pinErr, setPinErr] = useState<string | null>(null)
+  const [pinNote, setPinNote] = useState('')
+  const [showPinForm, setShowPinForm] = useState(false)
+  // Which version is shown in the iframe: null = live, otherwise a
+  // share_token that /deck.html renders via ?v=<token>.
+  const [activeToken, setActiveToken] = useState<string | null>(null)
+
+  const loadVersions = useCallback(async () => {
+    setLoadingVersions(true)
+    try {
+      const res = await fetch(`/api/deck/versions?offerId=${encodeURIComponent(film.id)}&kind=deck`)
+      const body = await res.json()
+      if (res.ok) setVersions(body.versions || [])
+    } catch (err) {
+      console.warn('[deck] versions fetch failed:', err)
+    } finally {
+      setLoadingVersions(false)
+    }
+  }, [film.id])
+
+  useEffect(() => { loadVersions() }, [loadVersions])
+
+  async function pinCurrent() {
+    setPinning(true)
+    setPinErr(null)
+    try {
+      const { data: s } = await bmovies.auth.getSession()
+      const token = s?.session?.access_token
+      if (!token) throw new Error('Sign in required')
+      const res = await fetch('/api/deck/pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ offerId: film.id, kind: 'deck', note: pinNote.trim() || null }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || `pin failed (${res.status})`)
+      setPinNote('')
+      setShowPinForm(false)
+      await loadVersions()
+      setActiveToken(body.share_token)
+    } catch (err) {
+      setPinErr(err instanceof Error ? err.message : String(err))
+    } finally {
+      setPinning(false)
+    }
+  }
+
+  const iframeSrc = activeToken
+    ? `/deck.html?v=${encodeURIComponent(activeToken)}&embed=1`
+    : `/deck.html?id=${encodeURIComponent(film.id)}&embed=1`
+  const openSrc = activeToken
+    ? `/deck.html?v=${encodeURIComponent(activeToken)}`
+    : `/deck.html?id=${encodeURIComponent(film.id)}`
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-[0.55rem] text-[#666] font-bold uppercase tracking-wider">
-          Investor deck &middot; {film.title}
+      <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+        <div>
+          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-[0.15em] mb-1">
+            Investor deck &middot; {film.title}
+          </div>
+          <div className="text-[#888] text-xs">
+            {activeToken ? (
+              <>Viewing a <strong className="text-white">pinned snapshot</strong> — frozen at the moment it was saved.</>
+            ) : (
+              <>Viewing <strong className="text-white">live</strong> — re-reads every load, will keep changing as production advances. Pin a version to freeze it for sharing.</>
+            )}
+          </div>
         </div>
-        <a
-          href={`/deck.html?id=${encodeURIComponent(film.id)}`}
-          target="_blank"
-          rel="noopener"
-          className="px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.6rem] font-bold uppercase tracking-wider shrink-0"
-        >
-          Open in new tab &middot; Print as PDF
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPinForm((s) => !s)}
+            className="px-3 py-1.5 border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white text-[0.6rem] font-bold uppercase tracking-wider shrink-0"
+          >
+            📌 Pin version
+          </button>
+          <a
+            href={openSrc}
+            target="_blank"
+            rel="noopener"
+            className="px-3 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.6rem] font-bold uppercase tracking-wider shrink-0"
+          >
+            Open in new tab &middot; Print as PDF
+          </a>
+        </div>
       </div>
+
+      {/* Pin form — appears when Pin version is clicked */}
+      {showPinForm && (
+        <div className="border border-[#E50914] bg-[#0a0000] p-4 mb-3">
+          <div className="text-[0.55rem] text-[#E50914] font-bold uppercase tracking-wider mb-2">
+            Pin this deck &middot; v{(versions[0]?.version || 0) + 1}
+          </div>
+          <p className="text-[#aaa] text-xs leading-relaxed mb-3">
+            Freezes the current state into a permanent snapshot with a
+            shareable link. Future changes to the live deck won&apos;t
+            affect this version — what you pin now is what recipients
+            see, forever.
+          </p>
+          <input
+            type="text"
+            value={pinNote}
+            onChange={(e) => setPinNote(e.target.value)}
+            maxLength={200}
+            placeholder="Optional note — e.g. 'Sent to Aster, 2026-04-18'"
+            className="w-full bg-[#1a1a1a] border border-[#333] focus:border-[#E50914] px-3 py-2 text-white text-xs outline-none placeholder:text-[#555] mb-3"
+          />
+          {pinErr && (
+            <div className="text-[#ff6b7a] text-xs mb-3">Failed: {pinErr}</div>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={pinCurrent}
+              disabled={pinning}
+              className="px-4 py-2 bg-[#E50914] hover:bg-[#b00610] text-white text-[0.6rem] font-bold uppercase tracking-wider disabled:opacity-50"
+            >
+              {pinning ? 'Pinning…' : 'Pin now'}
+            </button>
+            <button
+              onClick={() => { setShowPinForm(false); setPinErr(null); setPinNote('') }}
+              className="px-4 py-2 border border-[#333] text-[#aaa] hover:border-[#E50914] text-[0.6rem] font-bold uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Version tabs — live + pinned versions */}
+      {(loadingVersions || versions.length > 0) && (
+        <div className="flex items-center gap-1 mb-3 overflow-x-auto">
+          <button
+            onClick={() => setActiveToken(null)}
+            className={`px-3 py-1.5 text-[0.55rem] font-bold uppercase tracking-wider border shrink-0 ${
+              !activeToken ? 'border-[#E50914] bg-[#1a0003] text-[#E50914]' : 'border-[#333] bg-[#0a0a0a] text-[#888] hover:text-white'
+            }`}
+          >
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#E50914] mr-1.5" style={{ animation: !activeToken ? 'bm-pulse 1s ease-in-out infinite' : 'none' }} />
+            Live
+          </button>
+          {versions.map((v) => (
+            <button
+              key={v.version}
+              onClick={() => setActiveToken(v.share_token)}
+              title={v.note || `Pinned ${new Date(v.pinned_at).toLocaleString('en-GB')}`}
+              className={`px-3 py-1.5 text-[0.55rem] font-bold uppercase tracking-wider border shrink-0 ${
+                activeToken === v.share_token ? 'border-[#E50914] bg-[#1a0003] text-[#E50914]' : 'border-[#333] bg-[#0a0a0a] text-[#888] hover:text-white'
+              }`}
+            >
+              v{v.version}
+              <span className="ml-1.5 text-[0.5rem] opacity-70 font-mono">
+                {new Date(v.pinned_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
+              </span>
+            </button>
+          ))}
+          <style jsx>{`
+            @keyframes bm-pulse {
+              0%, 100% { opacity: 1; }
+              50%      { opacity: 0.35; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Active version metadata + share link */}
+      {activeToken && (() => {
+        const v = versions.find((x) => x.share_token === activeToken)
+        if (!v) return null
+        return (
+          <div className="border border-[#333] bg-[#0a0a0a] p-3 mb-3 flex items-start gap-3 flex-wrap text-xs">
+            <div className="flex-1 min-w-0">
+              <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-1">
+                Pinned v{v.version} &middot; {new Date(v.pinned_at).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </div>
+              {v.note && <div className="text-[#ddd] mb-1">&ldquo;{v.note}&rdquo;</div>}
+              {v.share_url && (
+                <div className="text-[#666] font-mono text-[0.6rem] break-all">
+                  {v.share_url}
+                </div>
+              )}
+            </div>
+            {v.share_url && (
+              <button
+                onClick={() => navigator.clipboard.writeText(v.share_url || '').catch(() => {})}
+                className="px-3 py-1.5 border border-[#333] hover:border-[#E50914] text-white text-[0.55rem] font-bold uppercase tracking-wider shrink-0"
+              >
+                Copy link
+              </button>
+            )}
+          </div>
+        )
+      })()}
+
       <iframe
-        src={`/deck.html?id=${encodeURIComponent(film.id)}&embed=1`}
+        key={iframeSrc}
+        src={iframeSrc}
         className="w-full border border-[#222]"
         style={{ minHeight: '85vh', background: '#000' }}
-        title={`Investor deck: ${film.title}`}
+        title={`Investor deck: ${film.title}${activeToken ? ' (pinned)' : ' (live)'}`}
       />
     </div>
   )

@@ -654,11 +654,66 @@
       `;
     }
 
+    // ─── Pinned-snapshot mode ───
+    //
+    // /deck.html?v=<share_token> renders a point-in-time snapshot of
+    // the deck stored in bct_deck_snapshots. /deck.html?id=<offerId>
+    // keeps the existing live mode. The snapshot payload carries the
+    // full offer + artifacts the renderer needs, so rendering from a
+    // snapshot is identical to rendering live except the data is
+    // frozen.
+    async function loadSnapshot(shareToken) {
+      const { data, error } = await supabase
+        .from('bct_deck_snapshots')
+        .select('version, kind, note, pinned_at, payload')
+        .eq('share_token', shareToken)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+
+    function offerFromSnapshot(snap) {
+      const p = snap.payload || {};
+      const offer = { ...(p.offer || {}) };
+      // Graft artifacts onto offer so renderDeck(offer) works
+      // unchanged. The snapshot arts array is already lineage-wide.
+      offer.bct_artifacts = p.artifacts || [];
+      offer.bct_subscriptions = [];
+      return offer;
+    }
+
     async function main() {
       const params = new URLSearchParams(window.location.search);
       const offerId = params.get('id');
+      const shareToken = params.get('v');
       const root = document.getElementById('root');
 
+      // ── Snapshot mode ──
+      if (shareToken) {
+        try {
+          const snap = await loadSnapshot(shareToken);
+          if (!snap) {
+            root.innerHTML = `<div class="state"><h2>Snapshot not found</h2><p>Share link <code>${esc(shareToken)}</code> is invalid or was revoked.</p></div>`;
+            return;
+          }
+          const offer = offerFromSnapshot(snap);
+          root.innerHTML = renderDeck(offer);
+          // Surface the snapshot banner so viewers know this is a
+          // frozen version — "as of Apr 18" rather than today's live
+          // state.
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background:#1a0003;border-bottom:1px solid #E50914;color:#E50914;padding:0.6rem 1.2rem;text-align:center;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;';
+          const pinnedDate = new Date(snap.pinned_at).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+          banner.innerHTML = `Pinned ${snap.kind} &middot; v${snap.version} &middot; ${pinnedDate}${snap.note ? ` &middot; ${esc(snap.note)}` : ''}`;
+          document.body.insertBefore(banner, document.body.firstChild);
+        } catch (err) {
+          console.error(err);
+          root.innerHTML = `<div class="state"><h2>Error</h2><p>${esc(err?.message || String(err))}</p></div>`;
+        }
+        return;
+      }
+
+      // ── Live mode ──
       if (!offerId) {
         root.innerHTML = `
           <div class="state">
