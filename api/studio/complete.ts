@@ -52,10 +52,50 @@ function setCors(res: VercelResponse): void {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-/** Generate a token ticker from a studio name. */
-function generateTicker(name: string): string {
+/** Generate a base token ticker from a studio name (5 alpha chars, X-padded). */
+function generateBaseTicker(name: string): string {
   const alpha = name.toUpperCase().replace(/[^A-Z]/g, '');
   return alpha.slice(0, 5).padEnd(3, 'X');
+}
+
+/**
+ * Pick a token ticker that's not already in bct_studios. Tries the
+ * base (first-5-letters-of-name) first; on collision tries the same
+ * letters with a numeric suffix (BITCO → BITCO2 → BITCO3 …). Bails
+ * out after 99 attempts — if a studio name collides that hard,
+ * something else is wrong and the caller should surface it.
+ *
+ * Added because 'Bitcoin Corporation Studios' and 'Bitcoin Operating
+ * System Studios' both map to BITCO under the simple first-5 rule,
+ * and the second user to register hit the UNIQUE constraint 500.
+ */
+async function pickUniqueTicker(
+  supabase: any,
+  name: string,
+): Promise<string> {
+  const base = generateBaseTicker(name);
+  // First try the plain base
+  {
+    const { data } = await supabase
+      .from('bct_studios')
+      .select('token_ticker')
+      .eq('token_ticker', base)
+      .maybeSingle();
+    if (!data) return base;
+  }
+  // Then try base + N until we find a free slot
+  for (let i = 2; i <= 99; i++) {
+    const candidate = `${base.slice(0, 5 - String(i).length)}${i}`;
+    const { data } = await supabase
+      .from('bct_studios')
+      .select('token_ticker')
+      .eq('token_ticker', candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+  }
+  throw new Error(
+    `Could not generate a unique ticker for "${name}" (first 99 variants taken)`,
+  );
 }
 
 /** Role abbreviations for agent token tickers. */
@@ -287,7 +327,7 @@ export default async function handler(
   // ─── Generate studio assets in parallel where possible ───
   console.log(`[studio/complete] provisioning studio "${studioName}" for account ${accountId}`);
 
-  const ticker = generateTicker(studioName);
+  const ticker = await pickUniqueTicker(supabase, studioName);
   const studioId = `user-studio-${accountId}-${Date.now()}`;
   const aestheticLabel = aesthetic || 'eclectic and bold';
 
