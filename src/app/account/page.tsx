@@ -375,15 +375,11 @@ function AccountContent() {
     )
   }
   if (section === 'pitch') {
-    // Pitch flow lives on the static /commission.html page (the refine +
-    // Make-tier path), not inside the account shell. Previously this
-    // branch rendered a <PitchView> component that never got written,
-    // breaking the typecheck. Redirect to the canonical page so the
-    // ?section=pitch deep-link still works.
-    if (typeof window !== 'undefined') {
-      window.location.replace('/commission.html')
-    }
-    return null
+    return (
+      <div className="min-h-[calc(100vh-4rem)] max-w-[1400px] mx-auto px-6 py-12">
+        <PitchView user={user} />
+      </div>
+    )
   }
 
   // Default: Studio view
@@ -638,7 +634,7 @@ function ProjectCards({
         </p>
         <div className="flex flex-wrap gap-2">
           <a
-            href="/commission.html"
+            href="/account?section=pitch"
             className="inline-block px-5 py-2.5 bg-[#E50914] hover:bg-[#b00610] text-white text-xs font-black uppercase tracking-wider"
           >
             Commission a film
@@ -914,6 +910,251 @@ function CouponsView() {
         >
           Buy a coupon
         </a>
+      </div>
+    </>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  PITCH VIEW — account-level "new pitch" surface
+ *
+ *  In-account analogue of /commission.html. Same two-step flow
+ *  (optional Refine with AI → 4 tier Make buttons → /api/checkout →
+ *  Stripe → /account?commissioned=1), but lives on /account?section=pitch
+ *  so the user never leaves their dashboard to commission a film.
+ *
+ *  APIs:
+ *    POST /api/refine    { idea }  → { title, ticker, synopsis }
+ *    POST /api/checkout  { title, ticker, synopsis, tier, email,
+ *                          supabaseUserId, successPath } → { url }
+ *
+ *  No KYC gate here — commission = no KYC by design. KYC is enforced
+ *  server-side on api/feature/publish + api/feature/list-shares.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+interface RefinedIdea {
+  title: string
+  ticker: string
+  synopsis: string
+}
+
+const TIER_COPY: Record<string, { label: string; price: string; blurb: string }> = {
+  pitch:   { label: 'Pitch',   price: '$0.99', blurb: 'One-line logline · poster · 1B royalty token. Mints on BSV.' },
+  trailer: { label: 'Trailer', price: '$9.99', blurb: '~32s AI video · storyboard · treatment · refreshed poster · score.' },
+  short:   { label: 'Short',   price: '$99',   blurb: '~5 min short film · full crew pass · draft in your workbench.' },
+  feature: { label: 'Feature', price: '$999',  blurb: '~50 min feature · full crew pass · draft in your workbench.' },
+}
+
+function PitchView({ user }: { user: User }) {
+  const [idea, setIdea] = useState('')
+  const [tone, setTone] = useState('')
+  const [refined, setRefined] = useState<RefinedIdea | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<{ kind: 'info' | 'error' | 'success'; msg: string } | null>(null)
+
+  async function handleRefine() {
+    const raw = idea.trim()
+    if (raw.length < 8) {
+      setStatus({ kind: 'error', msg: 'Write at least a sentence first.' })
+      return
+    }
+    const body = tone ? `Tone: ${tone}.\n\n${raw}` : raw
+    setBusy(true)
+    setStatus({ kind: 'info', msg: 'Refining your idea with AI…' })
+    try {
+      const res = await fetch('/api/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idea: body }),
+      })
+      if (!res.ok) {
+        let detail = String(res.status)
+        try {
+          const j = await res.json()
+          if (j?.error) detail = j.error
+        } catch {}
+        throw new Error(detail)
+      }
+      const json = await res.json()
+      setRefined({ title: json.title, ticker: json.ticker, synopsis: json.synopsis })
+      setStatus({ kind: 'success', msg: 'Refined. Click any Make button to commission.' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setStatus({ kind: 'error', msg: 'Refine failed: ' + msg })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleCommission(tier: 'pitch' | 'trailer' | 'short' | 'feature') {
+    let r = refined
+    if (!r) {
+      const raw = idea.trim()
+      if (raw.length < 8) {
+        setStatus({ kind: 'error', msg: 'Write at least a sentence first — then click Refine or any Make button.' })
+        return
+      }
+      const firstBreak = raw.search(/[\n.!?]/)
+      const firstLine = (firstBreak > 0 ? raw.slice(0, firstBreak) : raw).trim()
+      const derivedTitle = firstLine.slice(0, 80) || 'Untitled'
+      const derivedTicker = (derivedTitle.match(/[A-Z][a-z]*/g)?.join('') || derivedTitle)
+        .replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 6) || 'FILM'
+      r = { title: derivedTitle, ticker: derivedTicker, synopsis: raw }
+      setRefined(r)
+    }
+    setBusy(true)
+    setStatus({ kind: 'info', msg: 'Redirecting to checkout…' })
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: r.title,
+          ticker: r.ticker,
+          synopsis: r.synopsis,
+          tier,
+          email: user.email ?? undefined,
+          supabaseUserId: user.id,
+          successPath: '/account?commissioned=1',
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'checkout failed')
+      }
+      const { url } = await res.json()
+      if (!url) throw new Error('No checkout URL returned')
+      window.location.href = url
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setStatus({ kind: 'error', msg: 'Checkout failed: ' + msg })
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <header className="mb-8 pb-6 border-b border-[#1a1a1a]">
+        <h1
+          className="text-5xl font-black leading-none"
+          style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '-0.01em' }}
+        >
+          Pitch a new <span className="text-[#E50914]">film</span>
+        </h1>
+        <p className="text-[#888] text-sm mt-2 max-w-2xl">
+          Start at $0.99 — the swarm produces a one-page treatment, a poster,
+          and mints a royalty-share token on BSV. Upgrade later to a trailer,
+          short or feature from your workbench.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+        {/* ─── Left column: idea + refine ─── */}
+        <div className="border border-[#222] bg-[#0a0a0a] p-6">
+          <label className="block text-[0.65rem] font-bold uppercase tracking-widest text-[#888] mb-2">
+            Your idea
+          </label>
+          <textarea
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            placeholder="A blind cartographer in 2089, when GPS has died, maps cities by sound — and a defecting AI hires her to guide it across a continent that no longer exists on paper…"
+            rows={10}
+            className="w-full bg-[#050505] border border-[#222] text-white text-sm leading-relaxed p-4 focus:outline-none focus:border-[#E50914] transition-colors resize-y"
+            disabled={busy}
+          />
+
+          <label className="block text-[0.65rem] font-bold uppercase tracking-widest text-[#888] mt-4 mb-2">
+            Tone <span className="text-[#555] normal-case tracking-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={tone}
+            onChange={(e) => setTone(e.target.value)}
+            placeholder="e.g. noir thriller, heartfelt comedy, slow-burn sci-fi"
+            className="w-full bg-[#050505] border border-[#222] text-white text-sm p-3 focus:outline-none focus:border-[#E50914] transition-colors"
+            disabled={busy}
+          />
+
+          <div className="mt-5 flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={handleRefine}
+              disabled={busy}
+              className="px-5 py-2.5 border border-[#E50914] text-[#E50914] hover:bg-[#E50914] hover:text-white text-xs font-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Refine with AI
+            </button>
+            <span className="text-[#555] text-xs">or skip straight to a Make button →</span>
+          </div>
+
+          {refined && (
+            <div className="mt-6 border border-[#1a1a1a] bg-black p-5">
+              <div className="text-[0.6rem] font-bold uppercase tracking-widest text-[#888] mb-2">Preview</div>
+              <div
+                className="text-2xl font-black leading-tight mb-1"
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                {refined.title}
+              </div>
+              <div className="text-[#E50914] text-sm font-mono mb-3">${refined.ticker}</div>
+              <p className="text-[#bbb] text-sm leading-relaxed">{refined.synopsis}</p>
+            </div>
+          )}
+
+          {status && (
+            <div
+              className={`mt-5 text-sm ${
+                status.kind === 'error' ? 'text-[#ff6b7a]' :
+                status.kind === 'success' ? 'text-[#6bff8a]' :
+                'text-[#888]'
+              }`}
+            >
+              {status.msg}
+            </div>
+          )}
+        </div>
+
+        {/* ─── Right column: tier buttons ─── */}
+        <div className="border border-[#222] bg-[#0a0a0a] p-6">
+          <div className="text-[0.65rem] font-bold uppercase tracking-widest text-[#888] mb-4">
+            Commission tier
+          </div>
+          <div className="flex flex-col gap-3">
+            {(['pitch', 'trailer', 'short', 'feature'] as const).map((tier, i) => {
+              const t = TIER_COPY[tier]
+              return (
+                <button
+                  key={tier}
+                  type="button"
+                  onClick={() => handleCommission(tier)}
+                  disabled={busy}
+                  className={`text-left p-4 border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    i === 0
+                      ? 'border-[#E50914] bg-[#E50914] hover:bg-[#b00610] text-white'
+                      : 'border-[#222] bg-[#050505] hover:border-[#E50914] text-white'
+                  }`}
+                >
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span
+                      className="text-xl font-black uppercase"
+                      style={{ fontFamily: 'var(--font-bebas)', letterSpacing: '0.04em' }}
+                    >
+                      {t.label}
+                    </span>
+                    <span className="text-sm font-mono font-bold">{t.price}</span>
+                  </div>
+                  <div className={`text-xs leading-snug ${i === 0 ? 'text-white/85' : 'text-[#888]'}`}>
+                    {t.blurb}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[0.65rem] text-[#555] mt-4 leading-relaxed">
+            No KYC to commission. Token mints at minute 1. KYC only gates the
+            later Publish + List-shares actions on your workbench.
+          </p>
+        </div>
       </div>
     </>
   )
@@ -3855,7 +4096,7 @@ function WalletView({ user, accountId, films }: { user: User; accountId: string 
                     <span className="text-[#666] text-sm">No film holdings</span>
                   </div>
                   <a
-                    href="/commission.html"
+                    href="/account?section=pitch"
                     className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] hover:bg-[#b00610] text-white"
                   >
                     Commission your first film
@@ -4363,7 +4604,7 @@ function StudioInfoSection({
               </a>
             )}
             <a
-              href="/commission.html"
+              href="/account?section=pitch"
               className="text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1.5 bg-[#E50914] text-white"
             >
               Commission a film
@@ -4431,7 +4672,7 @@ function StudioInfoSection({
             ) : (
               <div className="text-[#666] text-sm">
                 No films yet.{' '}
-                <a href="/commission.html" className="text-[#E50914]">Commission your first →</a>
+                <a href="/account?section=pitch" className="text-[#E50914]">Commission your first →</a>
               </div>
             )}
           </div>
@@ -4466,7 +4707,7 @@ function StudioInfoSection({
           ready to upgrade to a trailer, a short, or a feature.
         </p>
         <a
-          href="/commission.html"
+          href="/account?section=pitch"
           className="inline-block px-5 py-2.5 text-xs font-black uppercase tracking-wider bg-[#E50914] hover:bg-[#b00610] text-white"
         >
           Start a new pitch →

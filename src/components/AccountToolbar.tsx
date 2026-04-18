@@ -55,6 +55,7 @@ type NavLevel = 'account' | 'project'
 
 const ACCOUNT_TABS = [
   { id: 'studio',  label: 'Studio' },
+  { id: 'pitch',   label: 'Pitch' },
   { id: 'wallet',  label: 'Wallet' },
 ] as const
 
