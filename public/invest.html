@@ -5,7 +5,7 @@
   <script src="js/session-sanitizer.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bMovies — Invest in the platform</title>
-  <meta name="description" content="Buy $bMovies platform shares with BSV. 1% of every film commissioned flows to holders. 1 billion supply. KYC-gated. Sold only on bmovies.online.">
+  <meta name="description" content="Buy $bMovies platform shares with BSV. 1B fixed supply. KYC-gated. The 1% per-film royalty allocation is the platform's design; the on-chain payout mechanism that distributes those royalties to holders is planned for Phase 2 and not yet live.">
   <meta property="og:title" content="bMovies — Invest in the platform">
   <meta property="og:description" content="1% of every film. 1 billion shares. Sold only here.">
   <meta property="og:image" content="https://bmovies.online/bmovies_og.jpg">
@@ -415,8 +415,11 @@
       <div class="hero-eyebrow">$bMovies -- the platform share</div>
       <h1>Own a slice of<br>every film <span>bMovies</span> makes</h1>
       <p class="sub">
-        Every film commissioned through bMovies -- trailer, short, feature, or pitch -- pays <b>1% of its royalty shares</b> into a shared pool held on behalf of $bMovies holders. You own a piece of every single one, for as long as you hold the $bMovies shares. Not a subscription. A fractional claim on the platform's entire catalog that follows the share — trade it, transfer it, and the claim moves with it.
+        Every film commissioned through bMovies — trailer, short, feature, or pitch — is designed to allocate <b>1% of its royalty shares</b> to a shared pool held on behalf of $bMovies holders. You own a fractional claim on the platform's entire catalog for as long as you hold the share — not a subscription, and the claim follows the share when you trade or transfer it.
       </p>
+      <div style="max-width:780px;margin:1.4rem auto 0;padding:0.9rem 1.2rem;border:1px dashed #4a361d;background:#0a0805;color:#e0a23e;font-family:'JetBrains Mono',monospace;font-size:0.7rem;line-height:1.6;text-align:left;">
+        <b style="color:#e0a23e;">Phase 2 — payouts not yet live.</b> The $bMovies token, the bonding curve, the BRC-100 buy flow, and the per-film 1% allocation are all in production today. The on-chain mechanism that converts ticket revenue, snapshots holders, and fans royalty payouts out to wallets is planned for the next phase. See <b>How payouts work</b> below — every step in that diagram is the design intent, not the current behaviour.
+      </div>
       <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
         <a href="investor-deck.html" target="_blank" style="display:inline-block;padding:0.7rem 1.4rem;border:1px solid #E50914;color:#E50914;text-decoration:none;font-size:0.65rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;">Investor overview (printable PDF) &rarr;</a>
         <a href="legal/platform-token-prospectus.html" style="display:inline-block;padding:0.7rem 1.4rem;border:1px solid #333;color:#999;text-decoration:none;font-size:0.65rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;">Prospectus</a>
@@ -425,9 +428,9 @@
 
     <div class="stat-strip">
       <div class="stat accent">
-        <div class="stat-label">Platform fee on every film</div>
+        <div class="stat-label">Per-film royalty allocation</div>
         <div class="stat-val">1%</div>
-        <div class="stat-sub">flows to $bMovies holders</div>
+        <div class="stat-sub">payout mechanism: Phase 2</div>
       </div>
       <div class="stat">
         <div class="stat-label">Total supply</div>
@@ -452,8 +455,8 @@
       <div class="values">
         <div class="vcard">
           <div class="n">01</div>
-          <h3>Revenue, not hype</h3>
-          <p>Every film made on bMovies sets aside <b>1% of its royalty shares</b> for the $bMovies pool. When films earn ticket revenue, $bMovies holders earn pro-rata, automatically — paid to whoever holds the $bMovies shares at each payout event.</p>
+          <h3>Revenue share by design</h3>
+          <p>Every film made on bMovies sets aside <b>1% of its royalty shares</b> for the $bMovies pool. The pro-rata payout mechanism — converting ticket revenue, snapshotting holders, and fanning out to wallets — is <b>planned for Phase 2</b>. Buying today gets you the share; the on-chain payout pipeline lights up when Phase 2 ships.</p>
         </div>
         <div class="vcard">
           <div class="n">02</div>
@@ -478,7 +481,7 @@
         <div class="vcard">
           <div class="n">06</div>
           <h3>Transparent treasury</h3>
-          <p>The 1% pool is a published account you can inspect. Watch it collect from every film in real time. No foundation, no custodian, no opaque reporting.</p>
+          <p>The treasury that receives $bMovies primary issuance is a single published BSV address you can inspect on-chain. The accumulating ticket-revenue side of the pool will be visible the same way once Phase 2 payouts ship.</p>
         </div>
       </div>
     </div>
@@ -575,28 +578,31 @@
     </div>
 
     <div class="section">
-      <div class="section-label">How payouts work</div>
-      <h2>From ticket sale to your wallet</h2>
+      <div class="section-label">How payouts will work · Phase 2</div>
+      <h2>From ticket sale to your wallet <span style="font-size:0.5em;color:#e0a23e;letter-spacing:0.15em;font-family:'JetBrains Mono',monospace;">[ DESIGN INTENT — NOT YET LIVE ]</span></h2>
+      <p style="color:#aaa;font-size:0.85rem;line-height:1.6;max-width:740px;margin:0 0 1.4rem;">
+        The four steps below describe the payout pipeline as designed. Steps 01 and 02 are partly live today (ticket sales record into <code style="font-family:'JetBrains Mono',monospace;color:#E50914;">bct_ticket_sales</code>; per-film royalty splits are calculated). Steps 03 and 04 — Stripe-USD to BSV conversion, holder snapshot, and pro-rata fan-out — are <b style="color:#e0a23e;">scheduled for Phase 2</b>.
+      </p>
       <div class="payout-flow">
         <div class="pflow-step">
           <div class="n">01</div>
           <h3>Film earns</h3>
-          <p>A viewer pays $2.99 to watch a bMovies feature (or $0.99 for a short). Every ticket flows straight into a public treasury -- no opaque intermediaries.</p>
+          <p>A viewer pays $2.99 to watch a bMovies feature (or $0.99 for a short) via Stripe. Each ticket sale records into the platform ledger. <b style="color:#6bff8a;">Live today.</b></p>
         </div>
         <div class="pflow-step">
           <div class="n">02</div>
           <h3>Cascade split</h3>
-          <p>1% of every ticket goes into the $bMovies platform pool. The other 99% goes to the film's own shareholders plus any parent works it was derived from.</p>
+          <p>1% of every ticket is allocated to the $bMovies platform pool. The other 99% is split between the film's own shareholders and any parent works it was derived from. <b style="color:#6bff8a;">Allocation logic live; on-chain settlement pending Phase 2.</b></p>
         </div>
         <div class="pflow-step">
           <div class="n">03</div>
           <h3>Pro-rata settle</h3>
-          <p>The treasury batches incoming ticket revenue and distributes pro-rata to every $bMovies holder. Your share = (your holdings / total supply sold) x pool balance.</p>
+          <p>A scheduled job will batch unsettled ticket revenue, convert USD → BSV at a published rate, snapshot $bMovies holders, and compute each holder's share = (your holdings / total supply sold) × pool balance. <b style="color:#e0a23e;">Phase 2.</b></p>
         </div>
         <div class="pflow-step">
           <div class="n">04</div>
-          <h3>Your account</h3>
-          <p>Payouts land in your bMovies account's payout address. Sign in anytime to see your accumulated dividends and withdraw.</p>
+          <h3>Your wallet</h3>
+          <p>Each cadence will fan out a multi-output BSV transaction paying every holder their pro-rata share to a payout address registered to their account. <b style="color:#e0a23e;">Phase 2.</b></p>
         </div>
       </div>
     </div>
@@ -606,7 +612,8 @@
       <h2>Read before you buy</h2>
       <div class="risk">
         <h3>Please note</h3>
-        <p>$bMovies is a revenue-share instrument, not a currency or a security. Returns depend entirely on how many films are commissioned, how much ticket revenue they earn, and how many $bMovies are outstanding. There is no guarantee of any return.</p>
+        <p><b style="color:#e0a23e;">Payout mechanism is not yet live.</b> The on-chain pipeline that converts ticket revenue into BSV, snapshots holders, and pays each holder pro-rata is planned for Phase 2 and has not shipped. Buying $bMovies today gets you the share of the platform's design — including the 1% per-film royalty allocation — but no payout will be received until Phase 2 ships. There is no commitment to a specific Phase 2 ship date. Do not buy $bMovies expecting near-term cashflow.</p>
+        <p>$bMovies is a revenue-share instrument, not a currency or a security. Returns depend entirely on how many films are commissioned, how much ticket revenue they earn, how many $bMovies are outstanding, and whether the Phase 2 payout pipeline ships and operates correctly. There is no guarantee of any return.</p>
         <p>You must be KYC-verified before your purchase is processed. If your verification fails, your purchase will not proceed.</p>
         <p>Primary issuance is the only venue for new $bMovies. Secondary resale may or may not exist. Do not buy $bMovies with capital you cannot afford to hold indefinitely.</p>
         <p>bMovies is a new platform. We run the production pipeline, the agent swarm, and the payment rails. If any of these fail, your revenue share may be delayed or reduced.</p>
