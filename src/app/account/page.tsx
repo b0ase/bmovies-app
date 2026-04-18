@@ -374,6 +374,17 @@ function AccountContent() {
       </div>
     )
   }
+  if (section === 'pitch') {
+    // Pitch flow lives on the static /commission.html page (the refine +
+    // Make-tier path), not inside the account shell. Previously this
+    // branch rendered a <PitchView> component that never got written,
+    // breaking the typecheck. Redirect to the canonical page so the
+    // ?section=pitch deep-link still works.
+    if (typeof window !== 'undefined') {
+      window.location.replace('/commission.html')
+    }
+    return null
+  }
 
   // Default: Studio view
   return (
