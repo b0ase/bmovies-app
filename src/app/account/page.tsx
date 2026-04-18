@@ -1417,6 +1417,16 @@ function ProjectOverviewView({ film }: { film: Film }) {
               block isn't blocked on the fetch. */}
           <ProjectMetricsStrip film={film} />
 
+          {/* ── Tier ladder — upgrade inside the project ────────
+              Shows the four tiers as a progression (pitch → trailer →
+              short → feature). Tiers that already exist as derivatives
+              link out to their own overview; tiers that don't yet exist
+              become "Make · $X" buttons that go straight to Stripe and
+              return here with ?commissioned=1. Mirrors the film.html
+              tier-row but lives inside the workbench so the user can
+              upgrade without leaving the project. */}
+          <TierLadder film={film} />
+
           {/* ── Primary action ──────────────────────────────────
               One decision that matters at the current state.
               Draft → Publish [tier]. Anything else → nothing here
@@ -1485,6 +1495,273 @@ function ProjectOverviewView({ film }: { film: Film }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ─── Tier ladder — in-project Make-tier upgrade UI ─── */
+
+const TIER_ORDER = ['pitch', 'trailer', 'short', 'feature'] as const
+type Tier = (typeof TIER_ORDER)[number]
+
+const TIER_PRICE_DISPLAY: Record<Tier, string> = {
+  pitch:   '$0.99',
+  trailer: '$9.99',
+  short:   '$99',
+  feature: '$999',
+}
+
+interface LineageOffer { id: string; tier: string; title: string; token_ticker: string | null }
+
+function TierLadder({ film }: { film: Film }) {
+  const [lineage, setLineage] = useState<Partial<Record<Tier, LineageOffer>>>({})
+  const [loading, setLoading] = useState(true)
+  const [pendingTier, setPendingTier] = useState<Tier | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        // Walk up parent chain from the current film to the root pitch.
+        const chain: LineageOffer[] = []
+        let cursorId: string | null = film.id
+        while (cursorId) {
+          const { data }: { data: (LineageOffer & { parent_offer_id: string | null }) | null } = await bmovies
+            .from('bct_offers')
+            .select('id, tier, title, token_ticker, parent_offer_id')
+            .eq('id', cursorId)
+            .maybeSingle()
+          if (!data) break
+          chain.unshift({ id: data.id, tier: data.tier, title: data.title, token_ticker: data.token_ticker })
+          cursorId = data.parent_offer_id
+        }
+        if (chain.length === 0) { if (!cancelled) { setLineage({}); setLoading(false) }; return }
+
+        // Now walk DOWN from the root, looking for one derivative at
+        // each next tier. Linear by construction (a pitch has at most
+        // one trailer; a trailer has at most one short; etc.).
+        const found: Partial<Record<Tier, LineageOffer>> = {}
+        for (const o of chain) {
+          if ((TIER_ORDER as readonly string[]).includes(o.tier)) {
+            found[o.tier as Tier] = o
+          }
+        }
+        const leaf = chain[chain.length - 1]
+        let parentId: string = leaf.id
+        let parentTier = leaf.tier as Tier
+        while (true) {
+          const nextIdx = TIER_ORDER.indexOf(parentTier) + 1
+          if (nextIdx <= 0 || nextIdx >= TIER_ORDER.length) break
+          const nextTier = TIER_ORDER[nextIdx]
+          const { data }: { data: LineageOffer | null } = await bmovies
+            .from('bct_offers')
+            .select('id, tier, title, token_ticker')
+            .eq('parent_offer_id', parentId)
+            .eq('tier', nextTier)
+            .maybeSingle()
+          if (!data) break
+          found[nextTier] = data
+          parentId = data.id
+          parentTier = nextTier
+        }
+        if (!cancelled) setLineage(found)
+      } catch (error) {
+        if (!cancelled) console.warn('[tier-ladder] load failed:', error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [film.id])
+
+  // Parent for upgrade = the last existing tier. The Make-button fires
+  // /api/checkout with parentOfferId=leaf and tier=next. Stripe's
+  // success redirect lands on this same overview with ?commissioned=1.
+  const leafTier: Tier | null = (() => {
+    let last: Tier | null = null
+    for (const t of TIER_ORDER) if (lineage[t]) last = t
+    return last
+  })()
+  const leaf = leafTier ? lineage[leafTier] : null
+
+  async function makeTier(target: Tier) {
+    if (!leaf) return
+    setPendingTier(target)
+    setErr(null)
+    try {
+      const { data: s } = await bmovies.auth.getSession()
+      const session = s?.session
+      if (!session) throw new Error('Sign in required')
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier: target,
+          title: leaf.title,
+          ticker: leaf.token_ticker || '',
+          synopsis: film.synopsis || '',
+          parentOfferId: leaf.id,
+          email: session.user?.email,
+          supabaseUserId: session.user?.id,
+          successPath: `/account?project=${encodeURIComponent(film.id)}&tab=overview&commissioned=1`,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || `checkout failed (${res.status})`)
+      if (!body.url) throw new Error('Stripe URL missing')
+      window.location.href = body.url
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      setErr(msg)
+      setPendingTier(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="mb-6">
+        <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
+          Tier progression
+        </div>
+        <div className="flex gap-2 animate-pulse">
+          {TIER_ORDER.map((t) => (
+            <div key={t} className="flex-1 h-14 bg-[#0a0a0a] border border-[#1a1a1a]" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const currentIdx = leafTier ? TIER_ORDER.indexOf(leafTier) : -1
+
+  return (
+    <div className="mb-6">
+      <div className="text-[0.55rem] uppercase tracking-wider text-[#666] font-bold mb-2">
+        Tier progression
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {TIER_ORDER.map((t, idx) => {
+          const existing = lineage[t]
+          const isCurrent = existing && existing.id === film.id
+          const isAncestor = existing && !isCurrent
+          const isNextUpgrade = !existing && idx === currentIdx + 1
+          const isLocked = !existing && idx > currentIdx + 1
+          const label = t.charAt(0).toUpperCase() + t.slice(1)
+          const price = TIER_PRICE_DISPLAY[t]
+          const pending = pendingTier === t
+
+          if (isCurrent) {
+            return (
+              <div
+                key={t}
+                className="flex-1 min-w-[7rem] border border-[#E50914] bg-[#1a0003] px-3 py-2.5 text-center"
+              >
+                <div className="text-[0.55rem] uppercase tracking-wider text-[#E50914] font-bold mb-0.5">
+                  Current
+                </div>
+                <div
+                  className="text-base font-black text-white leading-none"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {label}
+                </div>
+              </div>
+            )
+          }
+
+          if (isAncestor && existing) {
+            return (
+              <a
+                key={t}
+                href={`/account?project=${encodeURIComponent(existing.id)}&tab=overview`}
+                className="flex-1 min-w-[7rem] border border-[#2a6a2a] bg-[#0a1a0a] px-3 py-2.5 text-center hover:border-[#6bff8a] transition-colors"
+              >
+                <div className="text-[0.55rem] uppercase tracking-wider text-[#6bff8a] font-bold mb-0.5">
+                  Done
+                </div>
+                <div
+                  className="text-base font-black text-white leading-none"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {label}
+                </div>
+              </a>
+            )
+          }
+
+          // A descendant tier that ALREADY exists (e.g. user is viewing
+          // the pitch but the trailer is already produced) — link out.
+          if (existing) {
+            return (
+              <a
+                key={t}
+                href={`/account?project=${encodeURIComponent(existing.id)}&tab=overview`}
+                className="flex-1 min-w-[7rem] border border-[#333] bg-[#0a0a0a] px-3 py-2.5 text-center hover:border-[#E50914] transition-colors"
+              >
+                <div className="text-[0.55rem] uppercase tracking-wider text-[#888] font-bold mb-0.5">
+                  Open
+                </div>
+                <div
+                  className="text-base font-black text-white leading-none"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {label}
+                </div>
+              </a>
+            )
+          }
+
+          if (isNextUpgrade) {
+            return (
+              <button
+                key={t}
+                disabled={pending}
+                onClick={() => makeTier(t)}
+                className="flex-1 min-w-[7rem] border border-[#E50914] bg-[#E50914] text-white px-3 py-2.5 text-center hover:bg-[#b00610] transition-colors disabled:opacity-50"
+              >
+                <div className="text-[0.55rem] uppercase tracking-wider font-bold mb-0.5">
+                  {pending ? 'Redirecting…' : `Make · ${price}`}
+                </div>
+                <div
+                  className="text-base font-black leading-none"
+                  style={{ fontFamily: 'var(--font-bebas)' }}
+                >
+                  {label}
+                </div>
+              </button>
+            )
+          }
+
+          // Locked: a later tier that requires the intermediate one
+          // first. Show it faded with the price so the user can see
+          // where the ladder leads but can't skip ahead.
+          return (
+            <div
+              key={t}
+              className="flex-1 min-w-[7rem] border border-[#1a1a1a] bg-[#050505] px-3 py-2.5 text-center opacity-50"
+              title="Commission the previous tier first"
+            >
+              <div className="text-[0.55rem] uppercase tracking-wider text-[#555] font-bold mb-0.5">
+                Locked · {price}
+              </div>
+              <div
+                className="text-base font-black text-[#666] leading-none"
+                style={{ fontFamily: 'var(--font-bebas)' }}
+              >
+                {label}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {err && (
+        <div className="text-[#ff6b7a] text-[0.65rem] mt-2">
+          Upgrade failed: {err}
+        </div>
+      )}
     </div>
   )
 }
