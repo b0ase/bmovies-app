@@ -717,11 +717,14 @@
   </footer>
 
   <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
+    // Use the shared auth-scoped client so a session established on
+    // /account is visible here. The previous anonymous client used the
+    // default storageKey ("sb-api-auth-token") while /account stores
+    // sessions under "bmovies-auth" — causing the Make-tier handler to
+    // think the user was signed out and redirect to /commission.html.
+    import { supabase } from './js/auth.js';
     import { renderCascade, WATCH_PRICE_SATS } from './js/cascade.js';
     import { openPayPicker } from './js/pay-picker.js';
-    const supabase = createClient('https://api.b0ase.com',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3Mzk3ODYzLCJleHAiOjE5MjUwNzc4NjN9.dJlnc64RLPA1jwDaPk8gA1suwnBn7r0I5L5eojM3Iig');
 
     // ─── Direct-to-Stripe handler for Make-tier buttons ───
     //
