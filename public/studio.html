@@ -346,8 +346,29 @@
               }
             });
           });
-        </script>
+        <\/script>
       `;
+
+      // The template above contains an inline <script type="module"> block
+      // for the commission buttons. We render it as text via innerHTML, but
+      // browsers don't EXECUTE script tags inserted that way — and worse,
+      // a literal "</script>" inside this outer module script terminates
+      // the OUTER script early at the HTML-parser level, killing load()
+      // entirely (page stuck on "Loading…"). Two fixes in one:
+      //   1. Inner </script> is escaped to <\/script> above so the parser
+      //      doesn't see it.
+      //   2. After setting innerHTML we extract the inner <script>'s text
+      //      and re-inject it as a fresh <script type="module"> node so
+      //      the commission-button handlers actually wire up.
+      const inlineScript = root.querySelector('script[type="module"]');
+      if (inlineScript) {
+        const code = inlineScript.textContent || '';
+        inlineScript.remove();
+        const fresh = document.createElement('script');
+        fresh.type = 'module';
+        fresh.textContent = code;
+        root.appendChild(fresh);
+      }
     }
 
     load();
