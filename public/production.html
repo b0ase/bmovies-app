@@ -1540,10 +1540,28 @@
                style="display:inline-block;padding:0.65rem 1.1rem;background:#E50914;color:#fff;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
               Buy a share →
             </a>
-            <a href="/marketplace.html?offer=${encodeURIComponent(offer.id)}"
-               style="display:inline-block;padding:0.65rem 1.1rem;background:transparent;color:#E50914;border:1px solid #E50914;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
-              Secondary market
-            </a>
+            ${(() => {
+              // Secondary-market button points at 1sat.market for THIS film's
+              // BSV-21 token when it's minted on-chain. Format matches
+              // agent.html: https://1sat.market/market/bsv21/<mintTxid>_0.
+              // If the token hasn't minted yet (rare — mint is step 1 of the
+              // pipeline, but some legacy offers predate it), fall back to
+              // the internal /exchange.html cap-table view.
+              const mintTxid = offer.token_mint_txid || '';
+              const isHex = /^[0-9a-f]{64}$/i.test(mintTxid);
+              const secondaryHref = isHex
+                ? `https://1sat.market/market/bsv21/${mintTxid}_0`
+                : `/exchange.html?id=${encodeURIComponent(offer.id)}`;
+              const secondaryTarget = isHex ? '_blank' : '_self';
+              const secondaryRel = isHex ? 'noopener' : '';
+              return `
+                <a href="${secondaryHref}" target="${secondaryTarget}" ${secondaryRel ? `rel="${secondaryRel}"` : ''}
+                   title="${isHex ? `Trade $${esc(offer.token_ticker)} on 1sat.market` : 'View cap table'}"
+                   style="display:inline-block;padding:0.65rem 1.1rem;background:transparent;color:#E50914;border:1px solid #E50914;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
+                  ${isHex ? `Trade $${esc(offer.token_ticker)} on 1sat.market ↗` : 'Secondary market'}
+                </a>
+              `;
+            })()}
             <a href="/film.html?id=${encodeURIComponent(offer.id)}"
                style="display:inline-block;padding:0.65rem 1.1rem;background:transparent;color:#888;border:1px solid #333;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;">
               Film page
