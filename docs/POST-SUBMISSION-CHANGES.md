@@ -151,7 +151,7 @@ rolls over.
   film promotion post-production) is NOT being built — that's explicit
   new scope and belongs to post-hackathon work per the guardrails.
 
-- **`<pending>`** — `feat(post-submission): full lifecycle nav + Market/Release explainer pages + footer index`
+- **`4d4a1bb`** — `feat(post-submission): full lifecycle nav + Market/Release explainer pages + footer index`
 
   **Primary nav is now the full film lifecycle.** Pure five-verb journey,
   left to right:
