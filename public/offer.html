@@ -521,9 +521,28 @@
       } else {
         box.innerHTML = `<strong>Purchase failed.</strong> ${reason ? `Reason: ${reason}` : 'No reason returned.'} You can try again below.`;
       }
+      // Insert into document.body, NOT #root. render() later sets
+      // root.innerHTML = `...` which wipes whatever's inside it — so a
+      // banner inside #root flashes on first paint then vanishes when
+      // the offer finishes loading. Living above #root keeps it sticky
+      // until the user dismisses or navigates away.
+      box.id = 'purchase-outcome-banner';
+      // Small close button so the user can clear the banner once they've
+      // read it, without relying on a page reload.
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.textContent = '×';
+      closeBtn.setAttribute('aria-label', 'Dismiss');
+      closeBtn.style.cssText = 'position:absolute;top:0.4rem;right:0.7rem;background:transparent;border:none;color:inherit;font-size:1.1rem;cursor:pointer;opacity:0.7;';
+      closeBtn.addEventListener('click', () => box.remove());
+      box.style.position = 'sticky';
+      box.style.paddingRight = '2.2rem';
+      box.appendChild(closeBtn);
       const insert = () => {
-        const root = document.getElementById('root') || document.body;
-        root.prepend(box);
+        // Defensive: if an older banner is still there (hot reload /
+        // stale prepend), swap rather than duplicating.
+        document.getElementById('purchase-outcome-banner')?.remove();
+        document.body.prepend(box);
       };
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', insert);
       else insert();
